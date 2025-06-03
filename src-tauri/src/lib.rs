@@ -112,7 +112,7 @@ pub fn run() {
 /// Handle backend events
 fn backend_event_handler(app: &AppHandle, event: RunEvent) {
     match event {
-        RunEvent::ExitRequested { api, .. } => {
+        RunEvent::ExitRequested { .. } => {
             // api.prevent_exit();
             quit_app(app);
         }
@@ -154,6 +154,15 @@ fn application_setup(app: &mut App) -> errors::Result<()> {
             println!("Error setting up system tray: {}", error);
         }
     };
+    
+    match misc::menu::init_window_menu(app) {
+        Ok(_) => {
+            println!("Window menu initialized !");
+        }
+        Err(error) => {
+            println!("Error setting up window menu: {}", error);
+        }
+    }
 
     // Fire the app initialized event
     match app.emit(env::EVENT_INIT, ()) {

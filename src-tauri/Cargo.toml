@@ -1,5 +1,5 @@
 [package]
-name = "genericunrealenginemanager"
+name = "generic-unreal-engine-manager"
 version = "0.1.0"
 description = "UE Project Manager is a free and open source tool to manage Unreal Engine projects, allowing you to execute many operation on all your project in a click."
 authors = ["Lucas Guichard <lucasguichard127@gmail.com>"]
@@ -11,7 +11,7 @@ edition = "2021"
 # The `_lib` suffix may seem redundant, but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "genericunrealenginemanager_lib"
+name = "generic_unreal_engine_manager_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [profile.release]
@@ -25,7 +25,7 @@ strip = true # Ensures debug symbols are removed.
 tauri-build = { version = "2.0.0", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0", features = ["tray-icon"] }
+tauri = { version = "2.0.0", features = ["tray-icon", "image-ico", "image-png"] }
 tauri-plugin-shell = "2.0.0"
 tauri-plugin-log = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v2", features = ["colored"] }
 tauri-plugin-store = "2.2.0"

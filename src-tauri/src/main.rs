@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    genericunrealenginemanager_lib::run()
+    generic_unreal_engine_manager_lib::run()
 }

@@ -17,7 +17,7 @@ use lazy_static::lazy_static;
 /// Store documentation webpage : https://v2.tauri.app/plugin/store
 
 /// The name of the local store file
-pub(crate) const STORE_FILE_NAME: &str = "vertex_store.json";
+pub(crate) const STORE_FILE_NAME: &str = "project_manager_store.json";
 
 ///# ====================================
 ///# == Logging configuration
