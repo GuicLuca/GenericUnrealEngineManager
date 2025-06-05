@@ -1,7 +1,7 @@
 #![allow(unused_doc_comments)]
 
 use std::process::exit;
-use log::error;
+use log::{error, info};
 use tauri::{App, AppHandle, Builder, Emitter, Manager, RunEvent, Window, WindowEvent, Wry};
 use tauri_plugin_fs::FsExt;
 use tauri_plugin_log::Target;
@@ -10,6 +10,7 @@ use crate::misc::errors;
 
 mod misc;
 mod env;
+mod projects;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -83,7 +84,7 @@ pub fn run() {
         tauri_builder.on_window_event(|window, event| {
             match frontend_event_handler(window, event) {
                 Ok(_) => (),
-                Err(e) => eprintln!("Error handling window event: {:?}", e),
+                Err(e) => error!("Error handling window event: {:?}", e),
             }
         });
 
@@ -92,7 +93,8 @@ pub fn run() {
     /// - **Warning**: always specify the crate of the command to prevent conflicts. (The frontend will ignore the prefix and will only use the function name)<br>
     /// - **See** the commands module to see the list of available commands.<br>
     let tauri_builder = tauri_builder.invoke_handler(tauri::generate_handler![
-        greet
+        greet,
+        projects::actions::behavior::open_file_explorer,
     ]);
 
     ///### Application building
@@ -148,21 +150,39 @@ fn application_setup(app: &mut App) -> errors::Result<()> {
     // Set up the system tray
     match misc::tray::setup_system_tray(app) {
         Ok(_) => {
-            println!("System tray initialized !");
+            info!("System tray initialized !");
         }
         Err(error) => {
-            println!("Error setting up system tray: {}", error);
+            info!("Error setting up system tray: {}", error);
         }
     };
     
     match misc::menu::init_window_menu(app) {
         Ok(_) => {
-            println!("Window menu initialized !");
+            info!("Window menu initialized !");
         }
         Err(error) => {
-            println!("Error setting up window menu: {}", error);
+            info!("Error setting up window menu: {}", error);
         }
     }
+    
+    tauri::async_runtime::spawn(async move {
+        let result = projects::actions::project_discovery::scan_folder_for_projects(
+            "D:/Dev", true, true, true
+        ).await;
+        match result {
+            Ok(projects) => {
+                info!("Found {} projects :", projects.len());
+                for project in projects {
+                    info!("-> {}", project);
+                }
+            }
+            Err(e) => {
+                error!("Error scanning folder for projects: {:?}", e);
+            }
+        }
+    });
+    
 
     // Fire the app initialized event
     match app.emit(env::EVENT_INIT, ()) {
@@ -188,7 +208,7 @@ pub fn quit_app(app: &AppHandle) {
         }
     };
 
-    println!("Quitting app...");
+    info!("Quitting app...");
     app.cleanup_before_exit();
     exit(0);
 }

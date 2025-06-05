@@ -1,9 +1,10 @@
 [package]
-name = "generic-unreal-engine-manager"
+name = "Generic_Unreal_Engine_Manager"
 version = "0.1.0"
 description = "UE Project Manager is a free and open source tool to manage Unreal Engine projects, allowing you to execute many operation on all your project in a click."
 authors = ["Lucas Guichard <lucasguichard127@gmail.com>"]
 edition = "2021"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -30,10 +31,12 @@ tauri-plugin-shell = "2.0.0"
 tauri-plugin-log = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v2", features = ["colored"] }
 tauri-plugin-store = "2.2.0"
 tauri-plugin-fs = "2.3.0"
+tokio = "1.45.1"
 serde = { version = "1", features = ["derive"] }
 thiserror = "2.0.12"
 log = "0.4.27"
 lazy_static = "1.5.0"
+glob = "0.3.2"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"

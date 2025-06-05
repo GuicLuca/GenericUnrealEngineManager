@@ -2,9 +2,35 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "shell:allow-open"
-  ]
+  ],
+  "allowlist": {
+    "shell": {
+      "all": false,
+      "execute": true,
+      "sidecar": false,
+      "scope": [
+        {
+          "name": "open-folder",
+          "cmd": "explorer",
+          "args": true
+        },
+        {
+          "name": "open-folder-mac",
+          "cmd": "open",
+          "args": true
+        },
+        {
+          "name": "open-folder-linux",
+          "cmd": "xdg-open",
+          "args": true
+        }
+      ]
+    }
+  }
 }
