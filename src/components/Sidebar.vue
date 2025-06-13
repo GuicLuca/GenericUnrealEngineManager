@@ -11,6 +11,8 @@
 </template>
 
 <script setup lang="ts">
+import SidebarItem from './SidebarItem.vue'
+
 export interface SidebarItem {
   name: string
   icon: string
@@ -31,10 +33,6 @@ const emit = defineEmits<Emits>()
 const handleItemClick = (item: SidebarItem) => {
   emit('item-click', item)
 }
-</script>
-
-<script setup lang="ts">
-import SidebarItem from './SidebarItem.vue'
 </script>
 
 <style scoped>
