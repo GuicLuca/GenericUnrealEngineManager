@@ -6,6 +6,7 @@ import Sidebar, { type SidebarItem } from './components/Sidebar.vue'
 import MainArea from './components/MainArea.vue'
 import InfoPanel from './components/InfoPanel.vue'
 import BottomPanel, { type BottomTab, type LogEntry } from './components/BottomPanel.vue'
+import PopupManager from './components/PopupManager.vue'
 
 // Reactive data
 const projectPath = ref<string>('D:\\Dev\\P4v\\TN_BoardGame\\BoardGame')
@@ -42,7 +43,8 @@ const logs = ref<LogEntry[]>([
 ])
 
 const bottomTabs = ref<BottomTab[]>([
-  { id: 'logs', title: 'Logs', icon: '📄' }
+  { id: 'logs', title: 'Logs', icon: '📄' },
+  { id: 'development', title: 'Development', icon: '🛠️' }
 ])
 
 // Panel dimensions
@@ -159,6 +161,9 @@ const addLog = (message: string): void => {
       @tab-change="handleTabChange"
       @clear-logs="handleClearLogs"
     />
+
+    <!-- Popup Manager -->
+    <PopupManager />
   </div>
 </template>
 

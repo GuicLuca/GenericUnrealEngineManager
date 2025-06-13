@@ -38,6 +38,7 @@ pub fn run() {
     /// For special configurations options, prefer using the env module
     let tauri_builder = tauri_builder
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
@@ -95,6 +96,7 @@ pub fn run() {
     let tauri_builder = tauri_builder.invoke_handler(tauri::generate_handler![
         greet,
         projects::actions::behavior::open_file_explorer,
+        projects::actions::project_discovery::discover_projects,
     ]);
 
     ///### Application building

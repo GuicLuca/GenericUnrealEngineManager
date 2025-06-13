@@ -22,7 +22,10 @@
     
     <div class="tabs-content">
       <div v-if="activeTab === 'logs'" class="tab-panel">
-        <LogsPanel :logs="logs" />
+        <LogsPanel :logs="logs" @clear-logs="$emit('clear-logs')" />
+      </div>
+      <div v-else-if="activeTab === 'development'" class="tab-panel">
+        <DevelopmentPanel />
       </div>
       <!-- Add more tab panels here as needed -->
     </div>
@@ -32,6 +35,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import LogsPanel from './LogsPanel.vue'
+import DevelopmentPanel from './DevelopmentPanel.vue'
 
 export interface BottomTab {
   id: string
@@ -56,6 +60,7 @@ interface Props {
 interface Emits {
   (e: 'resize', height: number): void
   (e: 'tab-change', tabId: string): void
+  (e: 'clear-logs'): void
 }
 
 const props = defineProps<Props>()
