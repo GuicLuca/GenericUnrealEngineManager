@@ -1,45 +1,25 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { invoke } from "@tauri-apps/api/core"
+import { ref, onMounted } from 'vue'
 import ProjectBar from './components/ProjectBar.vue'
 import Sidebar, { type SidebarItem } from './components/Sidebar.vue'
 import MainArea from './components/MainArea.vue'
 import InfoPanel from './components/InfoPanel.vue'
-import BottomPanel, { type BottomTab, type LogEntry } from './components/BottomPanel.vue'
+import BottomPanel, { type BottomTab } from './components/BottomPanel.vue'
 import PopupManager from './components/PopupManager.vue'
+import { useLogStore } from './stores/logStore'
 
-// Reactive data
-const projectPath = ref<string>('D:\\Dev\\P4v\\TN_BoardGame\\BoardGame')
-const lastScan = ref<string>('04/08/2025 00:40')
-const engineVersion = ref<string>('5.4.3')
-const description = ref<string>('hgkjh kjhws ekjhlk xksghx gs ixu hxhj iohuxosi osixgqwo pzswuiouyxgo ieuygdwsh qwiodugho jedk eiouocp riuhg exsgie uehjexh dh h jdoj weqo olekdmoed ieuh qakmjowekjd iuwhd hed wojs diwkj qsuiahsjd f feko fepo.')
+// Initialize stores
+const { addLog, initLogListener } = useLogStore()
 
 const sidebarItems = ref<SidebarItem[]>([
-  { name: 'Refresh', icon: '🔄', action: 'refresh' },
-  { name: 'Open', icon: '↰', action: 'open' },
-  { name: 'Build', icon: '🔨', action: 'build' },
-  { name: 'Package', icon: '📦', action: 'package' },
-  { name: 'Clean', icon: '🧹', action: 'clean' },
-  { name: 'Compress', icon: '🗜️', action: 'compress' },
-  { name: 'Delete', icon: '🗑️', action: 'delete' }
-])
-
-const logs = ref<LogEntry[]>([
-  {
-    id: 1,
-    timestamp: '20250804 00:37',
-    message: 'Application started successfully. Scanning for Unreal Engine projects...'
-  },
-  {
-    id: 2,
-    timestamp: '20250804 00:42',
-    message: 'Found 3 projects in the specified directory.'
-  },
-  {
-    id: 3,
-    timestamp: '20250804 01:07',
-    message: 'Project analysis completed. Ready for operations.'
-  }
+  { name: 'Discover', icon: '🔍', action: 'discover', requiresProject: false },
+  { name: 'Refresh', icon: '🔄', action: 'refresh', requiresProject: true },
+  { name: 'Open', icon: '↰', action: 'open', requiresProject: true },
+  { name: 'Build', icon: '🔨', action: 'build', requiresProject: true },
+  { name: 'Package', icon: '📦', action: 'package', requiresProject: true },
+  { name: 'Clean', icon: '🧹', action: 'clean', requiresProject: true },
+  { name: 'Compress', icon: '🗜️', action: 'compress', requiresProject: true },
+  { name: 'Delete', icon: '🗑️', action: 'delete', requiresProject: true }
 ])
 
 const bottomTabs = ref<BottomTab[]>([
@@ -58,38 +38,6 @@ const minInfoPanelWidth = 200
 const maxInfoPanelWidth = 600
 
 // Event handlers
-const handleOpenExplorer = async (path: string): Promise<void> => {
-  try {
-    await invoke('open_file_explorer', { path })
-  } catch (error) {
-    console.error('Failed to open file explorer:', error)
-    addLog('Error: Failed to open file explorer. Check console for details.')
-  }
-}
-
-const handleSidebarItemClick = (item: SidebarItem): void => {
-  addLog(`Action triggered: ${item.name}`)
-  console.log('Sidebar item clicked:', item)
-  
-  // Handle specific actions
-  switch (item.action) {
-    case 'refresh':
-      handleRefresh()
-      break
-    case 'open':
-      handleOpenExplorer(projectPath.value)
-      break
-    // Add more action handlers as needed
-    default:
-      console.log(`Action ${item.action} not implemented yet`)
-  }
-}
-
-const handleRefresh = (): void => {
-  addLog('Refreshing project data...')
-  // Implement refresh logic here
-}
-
 const handleLogsResize = (height: number): void => {
   logsHeight.value = height
 }
@@ -102,48 +50,23 @@ const handleTabChange = (tabId: string): void => {
   console.log('Tab changed to:', tabId)
 }
 
-const handleClearLogs = (): void => {
-  logs.value = []
-  addLog('Logs cleared')
-}
-
-// Utility functions
-const addLog = (message: string): void => {
-  const now = new Date()
-  const timestamp = now.toISOString().slice(0, 19).replace('T', ' ')
-  
-  logs.value.push({
-    id: Date.now(),
-    timestamp,
-    message
-  })
-  
-  // Keep only last 100 logs to prevent memory issues
-  if (logs.value.length > 100) {
-    logs.value = logs.value.slice(-100)
-  }
-}
+// Initialize application
+onMounted(async () => {
+  await initLogListener()
+  addLog('Application started successfully')
+})
 </script>
 
 <template>
   <div class="app-container">
-    <ProjectBar 
-      :project-path="projectPath"
-      @open-explorer="handleOpenExplorer"
-    />
+    <ProjectBar />
 
     <div class="main-content">
-      <Sidebar 
-        :items="sidebarItems"
-        @item-click="handleSidebarItemClick"
-      />
+      <Sidebar :items="sidebarItems" />
 
       <MainArea />
 
       <InfoPanel
-        :last-scan="lastScan"
-        :engine-version="engineVersion"
-        :description="description"
         :width="infoPanelWidth"
         :min-width="minInfoPanelWidth"
         :max-width="maxInfoPanelWidth"
@@ -153,13 +76,11 @@ const addLog = (message: string): void => {
 
     <BottomPanel
       :tabs="bottomTabs"
-      :logs="logs"
       :height="logsHeight"
       :min-height="minLogsHeight"
       :max-height="maxLogsHeight"
       @resize="handleLogsResize"
       @tab-change="handleTabChange"
-      @clear-logs="handleClearLogs"
     />
 
     <!-- Popup Manager -->

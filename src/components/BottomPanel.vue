@@ -22,7 +22,7 @@
     
     <div class="tabs-content">
       <div v-if="activeTab === 'logs'" class="tab-panel">
-        <LogsPanel :logs="logs" @clear-logs="$emit('clear-logs')" />
+        <LogsPanel />
       </div>
       <div v-else-if="activeTab === 'development'" class="tab-panel">
         <DevelopmentPanel />
@@ -43,15 +43,8 @@ export interface BottomTab {
   icon: string
 }
 
-export interface LogEntry {
-  id: number
-  timestamp: string
-  message: string
-}
-
 interface Props {
   tabs: BottomTab[]
-  logs: LogEntry[]
   height: number
   minHeight: number
   maxHeight: number
@@ -60,7 +53,6 @@ interface Props {
 interface Emits {
   (e: 'resize', height: number): void
   (e: 'tab-change', tabId: string): void
-  (e: 'clear-logs'): void
 }
 
 const props = defineProps<Props>()

@@ -2,7 +2,7 @@
   <div class="logs-panel">
     <div class="logs-header">
       <h4 class="logs-title">Application Logs</h4>
-      <button class="clear-logs-btn" @click="$emit('clear-logs')" title="Clear logs">
+      <button class="clear-logs-btn" @click="clearLogs" title="Clear logs">
         🗑️
       </button>
     </div>
@@ -11,8 +11,10 @@
         v-for="log in logs" 
         :key="log.id"
         class="log-entry"
+        :class="{ [`log-${log.level}`]: log.level }"
       >
         <span class="log-timestamp">{{ formatTimestamp(log.timestamp) }}</span>
+        <span class="log-level" v-if="log.level">{{ log.level.toUpperCase() }}</span>
         <span class="log-message">{{ log.message }}</span>
       </div>
       <div v-if="logs.length === 0" class="no-logs">
@@ -23,18 +25,9 @@
 </template>
 
 <script setup lang="ts">
-import type { LogEntry } from './BottomPanel.vue'
+import { useLogStore } from '../stores/logStore'
 
-interface Props {
-  logs: LogEntry[]
-}
-
-interface Emits {
-  (e: 'clear-logs'): void
-}
-
-defineProps<Props>()
-defineEmits<Emits>()
+const { logs, clearLogs } = useLogStore()
 
 const formatTimestamp = (timestamp: string): string => {
   // Simple timestamp formatting - can be enhanced later
@@ -107,6 +100,30 @@ const formatTimestamp = (timestamp: string): string => {
   white-space: nowrap;
   font-weight: var(--font-weight-medium);
   min-width: 8rem;
+}
+
+.log-level {
+  color: var(--text-secondary);
+  white-space: nowrap;
+  font-weight: var(--font-weight-bold);
+  min-width: 3rem;
+  font-size: var(--font-size-xs);
+}
+
+.log-info .log-level {
+  color: #3182ce;
+}
+
+.log-warn .log-level {
+  color: #d69e2e;
+}
+
+.log-error .log-level {
+  color: #e53e3e;
+}
+
+.log-debug .log-level {
+  color: #805ad5;
 }
 
 .log-message {

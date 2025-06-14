@@ -1,5 +1,9 @@
 <template>
-  <div class="sidebar-item" @click="$emit('click')">
+  <div 
+    class="sidebar-item" 
+    :class="{ disabled }"
+    @click="handleClick"
+  >
     <div class="sidebar-icon">{{ icon }}</div>
     <div class="sidebar-label">{{ label }}</div>
   </div>
@@ -9,14 +13,21 @@
 interface Props {
   icon: string
   label: string
+  disabled?: boolean
 }
 
 interface Emits {
   (e: 'click'): void
 }
 
-defineProps<Props>()
-defineEmits<Emits>()
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
+
+const handleClick = () => {
+  if (!props.disabled) {
+    emit('click')
+  }
+}
 </script>
 
 <style scoped>
@@ -32,12 +43,17 @@ defineEmits<Emits>()
   user-select: none;
 }
 
-.sidebar-item:hover {
+.sidebar-item:not(.disabled):hover {
   background-color: var(--hover-color);
 }
 
-.sidebar-item:active {
+.sidebar-item:not(.disabled):active {
   background-color: var(--active-color);
+}
+
+.sidebar-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .sidebar-icon {
@@ -46,7 +62,7 @@ defineEmits<Emits>()
   transition: color var(--transition-fast);
 }
 
-.sidebar-item:hover .sidebar-icon {
+.sidebar-item:not(.disabled):hover .sidebar-icon {
   color: var(--text-primary);
 }
 

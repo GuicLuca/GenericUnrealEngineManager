@@ -8,23 +8,29 @@
     <div class="info-content">
       <h3 class="info-title">Project Information</h3>
       
-      <div class="info-section">
+      <div v-if="selectedProject" class="info-section">
         <InfoItem 
           label="Last scan" 
-          :value="lastScan" 
+          :value="selectedProject.lastScan" 
           icon="🔍"
         />
         <InfoItem 
           label="Engine version" 
-          :value="engineVersion" 
+          :value="selectedProject.engineVersion" 
           icon="⚙️"
         />
         <InfoItem 
           label="Description" 
-          :value="description" 
+          :value="selectedProject.description" 
           icon="📝"
           multiline
         />
+      </div>
+      
+      <div v-else class="no-project">
+        <div class="no-project-icon">📂</div>
+        <div class="no-project-text">No project selected</div>
+        <div class="no-project-subtext">Select a project to view its information</div>
       </div>
     </div>
   </div>
@@ -33,11 +39,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import InfoItem from './InfoItem.vue'
+import { useProjectStore } from '../stores/projectStore'
 
 interface Props {
-  lastScan: string
-  engineVersion: string
-  description: string
   width: number
   minWidth: number
   maxWidth: number
@@ -50,6 +54,7 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
+const { selectedProject } = useProjectStore()
 const isResizing = ref(false)
 
 const startResize = (event: MouseEvent) => {
@@ -126,5 +131,34 @@ const stopResize = () => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+}
+
+.no-project {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: var(--spacing-xl);
+}
+
+.no-project-icon {
+  font-size: var(--icon-size-xl);
+  margin-bottom: var(--spacing-md);
+  opacity: 0.5;
+}
+
+.no-project-text {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.no-project-subtext {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  opacity: 0.7;
 }
 </style>

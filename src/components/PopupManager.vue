@@ -20,6 +20,13 @@
               @submit="handleProjectDiscoverySubmit"
             />
             
+            <!-- Project Manager Popup -->
+            <ProjectManagerPopup
+              v-if="popupState.config?.component === 'ProjectManager'"
+              v-bind="popupState.config.props"
+              @close="hidePopup"
+            />
+            
             <!-- Add more popup components here as needed -->
           </div>
         </Transition>
@@ -31,9 +38,12 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { usePopup } from '../composables/usePopup'
+import { useLogStore } from '../stores/logStore'
 import ProjectDiscoveryPopup from './popups/ProjectDiscoveryPopup.vue'
+import ProjectManagerPopup from './popups/ProjectManagerPopup.vue'
 
 const { popupState, hidePopup, initPopupListener } = usePopup()
+const { addLog } = useLogStore()
 
 const handleOverlayClick = () => {
   if (!popupState.config?.persistent) {
@@ -42,6 +52,7 @@ const handleOverlayClick = () => {
 }
 
 const handleProjectDiscoverySubmit = (data: any) => {
+  addLog('Starting project discovery...')
   console.log('Project discovery submitted:', data)
   // Here you would typically call a Tauri command to start the discovery
   hidePopup()
