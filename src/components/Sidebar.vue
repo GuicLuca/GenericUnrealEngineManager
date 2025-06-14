@@ -16,7 +16,6 @@ import { computed } from 'vue'
 import SidebarItem from './SidebarItem.vue'
 import { useProjectStore } from '../stores/projectStore'
 import { useLogStore } from '../stores/logStore'
-import { usePopup } from '../composables/usePopup'
 import { invoke } from "@tauri-apps/api/core"
 
 export interface SidebarItem {
@@ -34,7 +33,6 @@ const props = defineProps<Props>()
 
 const { selectedProject, hasSelectedProject } = useProjectStore()
 const { addLog } = useLogStore()
-const { showPopup } = usePopup()
 
 const handleItemClick = (item: SidebarItem) => {
   if (item.requiresProject && !hasSelectedProject.value) {
@@ -51,9 +49,6 @@ const handleItemClick = (item: SidebarItem) => {
       break
     case 'open':
       handleOpenExplorer()
-      break
-    case 'discover':
-      handleDiscoverProjects()
       break
     // Add more action handlers as needed
     default:
@@ -77,14 +72,6 @@ const handleOpenExplorer = async () => {
     console.error('Failed to open file explorer:', error)
     addLog('Error: Failed to open file explorer. Check console for details.', 'error')
   }
-}
-
-const handleDiscoverProjects = () => {
-  showPopup({
-    id: 'project-discovery',
-    component: 'ProjectDiscovery',
-    props: {}
-  })
 }
 </script>
 

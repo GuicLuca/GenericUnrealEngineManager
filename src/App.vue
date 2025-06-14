@@ -7,12 +7,13 @@ import InfoPanel from './components/InfoPanel.vue'
 import BottomPanel, { type BottomTab } from './components/BottomPanel.vue'
 import PopupManager from './components/PopupManager.vue'
 import { useLogStore } from './stores/logStore'
+import { useProjectStore } from './stores/projectStore'
 
 // Initialize stores
 const { addLog, initLogListener } = useLogStore()
+const { addProject } = useProjectStore()
 
 const sidebarItems = ref<SidebarItem[]>([
-  { name: 'Discover', icon: '🔍', action: 'discover', requiresProject: false },
   { name: 'Refresh', icon: '🔄', action: 'refresh', requiresProject: true },
   { name: 'Open', icon: '↰', action: 'open', requiresProject: true },
   { name: 'Build', icon: '🔨', action: 'build', requiresProject: true },
@@ -50,10 +51,57 @@ const handleTabChange = (tabId: string): void => {
   console.log('Tab changed to:', tabId)
 }
 
+// TODO: fake projects for testing purpose, comment this before build
+const initializeFakeProjects = () => {
+  const fakeProjects = [
+    {
+      id: 'fake-1',
+      name: 'ActionRPG',
+      path: 'C:/UnrealProjects/ActionRPG/ActionRPG.uproject',
+      engineVersion: '5.4.3',
+      description: 'A sample action RPG game demonstrating combat mechanics, inventory systems, and character progression.',
+      lastScan: '2025-01-04 14:30'
+    },
+    {
+      id: 'fake-2',
+      name: 'ArchVizInterior',
+      path: 'D:/Projects/ArchViz/ArchVizInterior/ArchVizInterior.uproject',
+      engineVersion: '5.3.2',
+      description: 'Architectural visualization project showcasing realistic interior lighting and materials.',
+      lastScan: '2025-01-03 09:15'
+    },
+    {
+      id: 'fake-3',
+      name: 'MultiplayerShooter',
+      path: 'E:/GameDev/MultiplayerShooter/MultiplayerShooter.uproject',
+      engineVersion: '5.4.1',
+      description: 'Competitive multiplayer first-person shooter with dedicated server support and anti-cheat integration.',
+      lastScan: '2025-01-04 16:45'
+    },
+    {
+      id: 'fake-4',
+      name: 'VRExperience',
+      path: 'C:/VRProjects/VRExperience/VRExperience.uproject',
+      engineVersion: '5.2.1',
+      description: 'Immersive virtual reality experience featuring hand tracking and spatial audio.',
+      lastScan: '2025-01-02 11:20'
+    }
+  ]
+
+  fakeProjects.forEach(project => {
+    addProject(project)
+  })
+
+  addLog('Initialized with 4 fake test projects')
+}
+
 // Initialize application
 onMounted(async () => {
   await initLogListener()
   addLog('Application started successfully')
+  
+  // TODO: fake projects for testing purpose, comment this before build
+  initializeFakeProjects()
 })
 </script>
 

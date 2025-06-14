@@ -17,6 +17,13 @@
         </option>
       </select>
       <button 
+        class="discover-btn"
+        @click="openProjectDiscovery"
+        title="Discover projects"
+      >
+        🔍
+      </button>
+      <button 
         class="manage-projects-btn"
         @click="openProjectManager"
         title="Manage tracked projects"
@@ -76,6 +83,14 @@ const handleOpenExplorer = async (): Promise<void> => {
   }
 }
 
+const openProjectDiscovery = () => {
+  showPopup({
+    id: 'project-discovery',
+    component: 'ProjectDiscovery',
+    props: {}
+  })
+}
+
 const openProjectManager = () => {
   showPopup({
     id: 'project-manager',
@@ -124,6 +139,7 @@ const openProjectManager = () => {
   box-shadow: 0 0 0 2px var(--accent-color-alpha);
 }
 
+.discover-btn,
 .manage-projects-btn {
   background: none;
   border: var(--border-width) solid var(--border-color);
@@ -140,6 +156,7 @@ const openProjectManager = () => {
   background-color: var(--surface-color);
 }
 
+.discover-btn:hover,
 .manage-projects-btn:hover {
   background-color: var(--hover-color);
   border-color: var(--accent-color);
