@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { listen } from '@tauri-apps/api/event'
+import { appWindow } from '@tauri-apps/api/window'
 
 export interface LogEntry {
   id: number
@@ -36,7 +36,7 @@ export const useLogStore = () => {
   // Listen for backend log events
   const initLogListener = async () => {
     try {
-      await listen('add-log', (event: any) => {
+      await appWindow.listen('add-log', (event: any) => {
         const { message, level } = event.payload
         addLog(message, level || 'info')
       })

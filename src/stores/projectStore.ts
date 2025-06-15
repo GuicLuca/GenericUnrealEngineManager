@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
-import { listen } from '@tauri-apps/api/event'
+import { appWindow } from '@tauri-apps/api/window'
 
 // Match the backend Project structure
 export interface Project {
@@ -36,7 +36,7 @@ export const useProjectStore = () => {
   const initializeStore = async () => {
     try {
       // Listen for app initialization event
-      await listen('app_initialized', (event: any) => {
+      await appWindow.listen('app_initialized', (event: any) => {
         const payload = event.payload
         if (payload && payload.projects) {
           setProjects(payload.projects)
@@ -44,7 +44,7 @@ export const useProjectStore = () => {
       })
 
       // Listen for project updates from backend
-      await listen('projects_updated', (event: any) => {
+      await appWindow.listen('projects_updated', (event: any) => {
         const payload = event.payload
         if (payload && payload.projects) {
           setProjects(payload.projects)
