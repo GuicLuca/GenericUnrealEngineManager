@@ -1,8 +1,9 @@
+use serde::{Deserialize, Serialize};
 
 /// Represents a plugin in an Unreal Engine project read from the .uplugin file.
 /// It does not include all the metadata from the .uplugin file, but only the 
 /// data related to the plugin's association with a project.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectPlugin {
     pub name: String, // Name of the plugin (from .uplugin file)
     pub is_enabled: bool, // Indicates if the plugin is enabled

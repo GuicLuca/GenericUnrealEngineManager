@@ -1,16 +1,21 @@
 #![allow(unused_doc_comments)]
 
 use std::process::exit;
+use std::sync::Arc;
 use log::{error, info};
+use serde_json::json;
 use tauri::{App, AppHandle, Builder, Emitter, Manager, RunEvent, Window, WindowEvent, Wry};
 use tauri_plugin_fs::FsExt;
 use tauri_plugin_log::Target;
-use tauri_plugin_store::StoreExt;
+use tauri_plugin_store::{Store, StoreExt};
 use crate::misc::errors;
+use crate::prelude::AppInitializedPayload;
+use crate::projects::models::project::Project;
 
 mod misc;
 mod env;
 mod projects;
+mod prelude;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -167,27 +172,35 @@ fn application_setup(app: &mut App) -> errors::Result<()> {
             info!("Error setting up window menu: {}", error);
         }
     }
-    
-    tauri::async_runtime::spawn(async move {
-        let result = projects::actions::project_discovery::scan_folder_for_projects(
-            "D:/Dev", true, true, true
-        ).await;
-        match result {
-            Ok(projects) => {
-                info!("Found {} projects :", projects.len());
-                for project in projects {
-                    info!("-> {}", project);
+
+    /// ### Initialize the store
+    /// In this step, ensure that all entries in the store are initialized
+    /// to avoid dealing with null values in the future.
+    /// - If the store fails to open, log the error and close the app.
+    let store: Arc<Store<Wry>>;
+    {
+        info!("- Initializing store...");
+        match app.store(env::STORE_FILE_NAME) {
+            Ok(fetched_store) => {
+                store = fetched_store;
+
+                if store.get(env::STORE_PROJECTS).is_none() {
+                    store.set(env::STORE_PROJECTS, json!([]));
                 }
+                info!("Store has been initialized.");
             }
             Err(e) => {
-                error!("Error scanning folder for projects: {:?}", e);
+                eprintln!("The store failed to open. {}", e);
+                quit_app(app.handle()); // END OF EXECUTION
             }
-        }
-    });
-    
+        };
+    }
+    // At this point the store variable is initialized and can be used.
 
     // Fire the app initialized event
-    match app.emit(env::EVENT_INIT, ()) {
+    match app.emit(env::EVENT_INIT, AppInitializedPayload{
+        projects: Project::get_projects()?
+    }) {
         Ok(_) => {}
         Err(e) => {
             error!("Error emitting app_initialized event: {:?}", e);

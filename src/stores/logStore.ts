@@ -22,9 +22,9 @@ export const useLogStore = () => {
       level
     })
     
-    // Keep only last 100 logs to prevent memory issues
-    if (logs.value.length > 100) {
-      logs.value = logs.value.slice(-100)
+    // Keep only last 200 logs to prevent memory issues
+    if (logs.value.length > 200) {
+      logs.value = logs.value.slice(-200)
     }
   }
 

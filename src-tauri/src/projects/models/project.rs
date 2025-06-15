@@ -1,21 +1,152 @@
-use std::path::{PathBuf};
+use crate::env;
+use crate::prelude::{log, ErrorLevel};
 use crate::projects::models::plugins::ProjectPlugin;
+use log::error;
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+use std::path::PathBuf;
+use tauri_plugin_store::StoreExt;
 
 /// Represents the association of a project with a specific Unreal Engine version.
 #[derive(Debug, Clone)]
 pub enum EngineAssociation {
     Standard(String), // For standard version (4.27, 5.0, etc.)
-    Custom, // For custom engines (Unreal Source, etc.)
+    Custom,           // For custom engines (Unreal Source, etc.)
 }
 
 /// A project represents an Unreal Engine project with its associated metadata.
 /// It's build from the .uproject file and allows to access various properties.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Project {
-    pub name: String, // Name of the project (from .uproject file)
+    pub name: String,        // Name of the project (from .uproject file)
     pub description: String, // Description of the project (from .uproject file)
     pub engine_association: EngineAssociation, // Engine version or "Custom" for Unreal Source
-    pub path: PathBuf, // Path to the project (.uproject file)
-    pub has_cpp: bool, // Indicates if the project has C++ code
+    pub path: PathBuf,       // Path to the project (.uproject file)
+    pub has_cpp: bool,       // Indicates if the project has C++ code
     pub plugins: Vec<ProjectPlugin>, // List of plugins associated with the project
+}
+
+impl Project {
+    /// Creates a new project instance.
+    pub fn try_from_path(path: PathBuf) -> Result<Project, Box<dyn std::error::Error>> {
+        // try to read the contents of the .uproject file
+        let contents = std::fs::read_to_string(&path)?;
+        let uproject_content: serde_json::Value = serde_json::from_str(&contents)?;
+
+        // Extract the descritpion, engine association, and plugins from the .uproject file
+        let description = uproject_content
+            .get("Description")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_string();
+
+        let engine_association = {
+            if let Some(engine_version) = uproject_content.get("EngineAssociation") {
+                if engine_version.is_string() && !engine_version.as_str().unwrap().is_empty() {
+                    EngineAssociation::Standard(engine_version.as_str().unwrap().to_string())
+                } else {
+                    EngineAssociation::Custom
+                }
+            } else {
+                EngineAssociation::Custom // Default to Custom if not specified
+            }
+        };
+
+        // todo: implement plugin discovery
+
+        // Fetch the project name from the file name
+        let name = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default()
+            .to_string();
+
+        // fetch if there is a Source folder in the project
+        let has_cpp = path
+            .parent()
+            .map(|p| p.join("Source").exists())
+            .unwrap_or(false);
+
+        Ok(Project {
+            name,
+            description,
+            engine_association,
+            path,
+            has_cpp,
+            plugins: Vec::new(), // Initialize with an empty vector for plugins
+        })
+    }
+
+    pub fn get_projects(
+        app_handle: &tauri::AppHandle,
+    ) -> Result<Vec<Project>, Box<dyn std::error::Error>> {
+        let store = match app_handle.store(env::STORE_FILE_NAME) {
+            Ok(store) => store,
+            Err(e) => return Err(Box::new(e)),
+        };
+
+        let projects_list: Vec<Project> = serde_json::from_value::<Vec<Project>>(
+            store.get(env::STORE_PROJECTS).unwrap_or(json!([])),
+        )
+        .unwrap_or_else(|e| {
+            error!("Error parsing projects from store: {}", e);
+            log(
+                &app_handle,
+                ErrorLevel::Error,
+                &format!("Error parsing projects from store: {}", e),
+            );
+            vec![]
+        });
+
+        Ok(projects_list)
+    }
+    
+    pub fn save_projects(
+        app_handle: &tauri::AppHandle,
+        projects: &[Project],
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let store = match app_handle.store(env::STORE_FILE_NAME) {
+            Ok(store) => store,
+            Err(e) => return Err(Box::new(e)),
+        };
+
+        let projects_json = serde_json::to_value(projects)?;
+        store.set(env::STORE_PROJECTS, projects_json);
+        store.save()?;
+
+        Ok(())
+    }
+    
+    pub fn add_projects(
+        app_handle: &tauri::AppHandle,
+        projects: &Vec<Project>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut known_projects = Project::get_projects(app_handle)?;
+        
+        // Check if the project already exists
+        for project in projects {
+            if !known_projects.iter().any(|p| p.path == project.path) {
+                known_projects.push(project.clone());
+            }
+        }
+
+        Project::save_projects(app_handle, &known_projects)?;
+        
+        Ok(())
+    }
+    
+    pub fn remove_projects(
+        app_handle: &tauri::AppHandle,
+        project_paths: &Vec<PathBuf>,
+    ) -> Result<(), Box<dyn std::error::Error>>
+    {
+        let mut known_projects = Project::get_projects(app_handle)?;
+        
+        // Filter out the projects that are in the project_paths
+        known_projects.retain(|p| !project_paths.contains(&p.path));
+        
+        Project::save_projects(app_handle, &known_projects)?;
+        
+        Ok(())
+    }
 }

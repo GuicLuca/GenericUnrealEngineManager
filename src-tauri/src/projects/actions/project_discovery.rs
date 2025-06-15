@@ -1,6 +1,11 @@
-use std::path::Path;
-use tauri::command;
+use std::path::{Path, PathBuf};
+use tauri::{command, AppHandle, Emitter};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
+use tauri_plugin_store::StoreExt;
+use crate::env;
+use crate::prelude::{log, ErrorLevel};
+use crate::projects::models::project::Project;
 
 /// # Project Discovery Actions
 /// This module provides actions for discovering Unreal Engine projects
@@ -17,16 +22,17 @@ pub struct ProjectDiscoveryRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProjectDiscoveryResult {
-    pub projects: Vec<String>,
+    pub projects: Vec<Project>,
     pub total_found: usize,
     pub scan_duration_ms: u128,
 }
 
 #[command]
-pub async fn discover_projects(request: ProjectDiscoveryRequest) -> Result<ProjectDiscoveryResult, String> {
+pub async fn discover_projects(app_handle: AppHandle, request: ProjectDiscoveryRequest) -> Result<ProjectDiscoveryResult, String> {
     let start_time = std::time::Instant::now();
     
     match scan_folder_for_projects(
+        &app_handle,
         &request.base_folder,
         request.ignore_templates,
         request.ignore_engine,
@@ -34,6 +40,14 @@ pub async fn discover_projects(request: ProjectDiscoveryRequest) -> Result<Proje
     ).await {
         Ok(projects) => {
             let duration = start_time.elapsed();
+            
+            Project::add_projects(&app_handle, &projects)
+                .unwrap_or_else(|e| {
+                    eprintln!("Error adding projects to store: {}", e);
+                    log(&app_handle, ErrorLevel::Error, 
+                        &format!("Error adding projects to store: {}", e));
+                });
+            
             Ok(ProjectDiscoveryResult {
                 total_found: projects.len(),
                 projects,
@@ -45,12 +59,13 @@ pub async fn discover_projects(request: ProjectDiscoveryRequest) -> Result<Proje
 }
 
 pub async fn scan_folder_for_projects(
+    app_handle: &AppHandle,
     folder_path: &str,
     ignore_template: bool,
     ignore_engine: bool,
     ignore_samples: bool,
-) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let mut projects = Vec::new();
+) -> Result<Vec<Project>, Box<dyn std::error::Error>> {
+    let mut detected_projects = Vec::new();
 
     // Use glob to find all .uproject files in the specified folder
     let pattern = format!("{}/**/*.uproject", folder_path);
@@ -67,13 +82,46 @@ pub async fn scan_folder_for_projects(
                             continue 'entries;
                         }
                     }
-                    
-                    projects.push(project_path.to_string());
+
+                    detected_projects.push(path);
                 }
             }
             Err(e) => eprintln!("Error reading glob entry: {}", e),
         }
     }
-
-    Ok(projects)
+    
+    // for each project found, create a Project object and if
+    // it's not already in the list, add it
+    let projects_list = Project::get_projects(app_handle)
+        .unwrap_or_else(|e| {
+            eprintln!("Error getting projects from store: {}", e);
+            log(&app_handle, ErrorLevel::Error, 
+                &format!("Error getting projects from store: {}", e));
+            vec![]
+        });
+    
+    let known_path = projects_list.iter()
+        .map(|p| p.path)
+        .collect::<Vec<PathBuf>>();
+    
+    let mut new_projects = Vec::new();
+    
+    for path in detected_projects {
+        if !known_path.contains(&path) {
+            // Create a new Project object
+            let new_project = match Project::try_from_path(path.clone()) {
+                Ok(project) => project,
+                Err(e) => {
+                    eprintln!("Error creating project from path {}: {}", path.display(), e);
+                    log(&app_handle, ErrorLevel::Error, 
+                        &format!("Error creating project from path {}: {}", path.display(), e));
+                    continue;
+                }
+            };
+            
+            new_projects.push(new_project);
+        }
+    }
+    
+    Ok(new_projects)
 }

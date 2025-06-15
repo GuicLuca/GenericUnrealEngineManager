@@ -1,12 +1,21 @@
 import { ref, computed } from 'vue'
 
+
 export interface Project {
-  id: string
-  name: string
-  path: string
-  engineVersion: string
-  description: string
-  lastScan: string
+  name: string,        // Name of the project (from .uproject file)
+  description: string, // Description of the project (from .uproject file)
+  engine_association: string, // Engine version or "Custom" for Unreal Source
+  path: string,       // Path to the project (.uproject file)
+  has_cpp: boolean,       // Indicates if the project has C++ code
+  plugins: ProjectPlugin[], // List of plugins associated with the project
+}
+
+export interface ProjectPlugin {
+  name: string, // Name of the plugin (from .uplugin file)
+  is_enabled: boolean, // Indicates if the plugin is enabled
+  is_in_project: boolean, // Indicates if the plugin is part of the project (in ./Plugins directory) or in the engine (in ENGINE/Plugins/... directory)
+  marketplace_url: string | null, // URL to the plugin on the Unreal Marketplace, if available
+  target_allow_list: string[], // List of target the plugin is embedded in (e.g., "Editor", "Game", etc.)
 }
 
 // Global project state

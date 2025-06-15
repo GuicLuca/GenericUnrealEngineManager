@@ -19,6 +19,9 @@ use lazy_static::lazy_static;
 /// The name of the local store file
 pub(crate) const STORE_FILE_NAME: &str = "project_manager_store.json";
 
+/// The key used to store the list of tracked project
+pub(crate) const STORE_PROJECTS: &str = "projects";
+
 ///# ====================================
 ///# == Logging configuration
 ///# ====================================
