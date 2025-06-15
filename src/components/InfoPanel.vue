@@ -10,20 +10,25 @@
       
       <div v-if="selectedProject" class="info-section">
         <InfoItem 
-          label="Last scan" 
-          :value="selectedProject.lastScan" 
-          icon="🔍"
-        />
-        <InfoItem 
           label="Engine version" 
-          :value="selectedProject.engineVersion" 
+          :value="getEngineVersionString(selectedProject.engine_association)" 
           icon="⚙️"
         />
         <InfoItem 
+          label="Has C++ code" 
+          :value="selectedProject.has_cpp ? 'Yes' : 'No'" 
+          icon="💻"
+        />
+        <InfoItem 
           label="Description" 
-          :value="selectedProject.description" 
+          :value="selectedProject.description || 'No description available'" 
           icon="📝"
           multiline
+        />
+        <InfoItem 
+          label="Plugins" 
+          :value="`${selectedProject.plugins.length} plugin(s)`" 
+          icon="🔌"
         />
       </div>
       
@@ -54,7 +59,7 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
-const { selectedProject } = useProjectStore()
+const { selectedProject, getEngineVersionString } = useProjectStore()
 const isResizing = ref(false)
 
 const startResize = (event: MouseEvent) => {

@@ -4,14 +4,15 @@
       <label class="project-label">Project:</label>
       <select 
         class="project-dropdown" 
-        :value="selectedProject?.id || ''"
+        :value="selectedProject?.path || ''"
         @change="handleProjectChange"
+        :disabled="isLoading"
       >
         <option value="">Select Project</option>
         <option 
           v-for="project in projects" 
-          :key="project.id" 
-          :value="project.id"
+          :key="project.path" 
+          :value="project.path"
         >
           {{ project.name }}
         </option>
@@ -20,13 +21,15 @@
         class="discover-btn"
         @click="openProjectDiscovery"
         title="Discover projects"
+        :disabled="isLoading"
       >
-        🔍
+        {{ isLoading ? '⏳' : '🔍' }}
       </button>
       <button 
         class="manage-projects-btn"
         @click="openProjectManager"
         title="Manage tracked projects"
+        :disabled="isLoading"
       >
         ⚙️
       </button>
@@ -37,7 +40,7 @@
         class="open-folder-btn" 
         @click="handleOpenExplorer" 
         title="Open in file explorer"
-        :disabled="!selectedProject"
+        :disabled="!selectedProject || isLoading"
       >
         📁
       </button>
@@ -51,16 +54,16 @@ import { useLogStore } from '../stores/logStore'
 import { usePopup } from '../composables/usePopup'
 import { invoke } from "@tauri-apps/api/core"
 
-const { selectedProject, projects, setSelectedProject } = useProjectStore()
+const { selectedProject, projects, setSelectedProject, isLoading, findProjectByPath } = useProjectStore()
 const { addLog } = useLogStore()
 const { showPopup } = usePopup()
 
 const handleProjectChange = (event: Event) => {
   const target = event.target as HTMLSelectElement
-  const projectId = target.value
+  const projectPath = target.value
   
-  if (projectId) {
-    const project = projects.value.find(p => p.id === projectId)
+  if (projectPath) {
+    const project = findProjectByPath(projectPath)
     setSelectedProject(project || null)
     if (project) {
       addLog(`Selected project: ${project.name}`)
@@ -75,7 +78,9 @@ const handleOpenExplorer = async (): Promise<void> => {
   if (!selectedProject.value) return
   
   try {
-    await invoke('open_file_explorer', { path: selectedProject.value.path })
+    // Extract directory path from the .uproject file path
+    const projectDir = selectedProject.value.path.replace(/[^/\\]*\.uproject$/, '')
+    await invoke('open_file_explorer', { path: projectDir })
     addLog(`Opened file explorer for: ${selectedProject.value.name}`)
   } catch (error) {
     console.error('Failed to open file explorer:', error)
@@ -139,6 +144,11 @@ const openProjectManager = () => {
   box-shadow: 0 0 0 2px var(--accent-color-alpha);
 }
 
+.project-dropdown:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .discover-btn,
 .manage-projects-btn {
   background: none;
@@ -156,10 +166,16 @@ const openProjectManager = () => {
   background-color: var(--surface-color);
 }
 
-.discover-btn:hover,
-.manage-projects-btn:hover {
+.discover-btn:hover:not(:disabled),
+.manage-projects-btn:hover:not(:disabled) {
   background-color: var(--hover-color);
   border-color: var(--accent-color);
+}
+
+.discover-btn:disabled,
+.manage-projects-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .project-path {

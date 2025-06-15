@@ -1,56 +1,166 @@
 import { ref, computed } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 
-
+// Match the backend Project structure
 export interface Project {
-  name: string,        // Name of the project (from .uproject file)
-  description: string, // Description of the project (from .uproject file)
-  engine_association: string, // Engine version or "Custom" for Unreal Source
-  path: string,       // Path to the project (.uproject file)
-  has_cpp: boolean,       // Indicates if the project has C++ code
-  plugins: ProjectPlugin[], // List of plugins associated with the project
+  name: string
+  description: string
+  engine_association: EngineAssociation
+  path: string
+  has_cpp: boolean
+  plugins: ProjectPlugin[]
 }
 
+// Match the backend EngineAssociation enum
+export type EngineAssociation = 
+  | { Standard: string }
+  | "Custom"
+
+// Match the backend ProjectPlugin structure
 export interface ProjectPlugin {
-  name: string, // Name of the plugin (from .uplugin file)
-  is_enabled: boolean, // Indicates if the plugin is enabled
-  is_in_project: boolean, // Indicates if the plugin is part of the project (in ./Plugins directory) or in the engine (in ENGINE/Plugins/... directory)
-  marketplace_url: string | null, // URL to the plugin on the Unreal Marketplace, if available
-  target_allow_list: string[], // List of target the plugin is embedded in (e.g., "Editor", "Game", etc.)
+  name: string
+  is_enabled: boolean
+  is_in_project: boolean
+  marketplace_url: string | null
+  target_allow_list: string[]
 }
 
 // Global project state
 const selectedProject = ref<Project | null>(null)
 const projects = ref<Project[]>([])
+const isLoading = ref(false)
 
 export const useProjectStore = () => {
+  // Initialize the store by listening to backend events
+  const initializeStore = async () => {
+    try {
+      // Listen for app initialization event
+      await listen('app_initialized', (event: any) => {
+        const payload = event.payload
+        if (payload && payload.projects) {
+          setProjects(payload.projects)
+        }
+      })
+
+      // Listen for project updates from backend
+      await listen('projects_updated', (event: any) => {
+        const payload = event.payload
+        if (payload && payload.projects) {
+          setProjects(payload.projects)
+        }
+      })
+    } catch (error) {
+      console.error('Failed to initialize project store listeners:', error)
+    }
+  }
+
+  // Set projects from backend (internal function)
+  const setProjects = (backendProjects: Project[]) => {
+    projects.value = backendProjects
+    
+    // If current selected project is no longer in the list, clear selection
+    if (selectedProject.value) {
+      const stillExists = backendProjects.some(p => 
+        p.path === selectedProject.value?.path
+      )
+      if (!stillExists) {
+        selectedProject.value = null
+      }
+    }
+  }
+
+  // Set selected project (UI only)
   const setSelectedProject = (project: Project | null) => {
     selectedProject.value = project
   }
 
-  const addProject = (project: Project) => {
-    const existingIndex = projects.value.findIndex(p => p.id === project.id)
-    if (existingIndex >= 0) {
-      projects.value[existingIndex] = project
-    } else {
-      projects.value.push(project)
+  // Discover projects by calling backend
+  const discoverProjects = async (request: {
+    base_folder: string
+    ignore_engine: boolean
+    ignore_templates: boolean
+    ignore_samples: boolean
+  }) => {
+    try {
+      isLoading.value = true
+      const result = await invoke('discover_projects', { request })
+      // Backend will emit events to update the store
+      return result
+    } catch (error) {
+      console.error('Failed to discover projects:', error)
+      throw error
+    } finally {
+      isLoading.value = false
     }
   }
 
-  const removeProject = (projectId: string) => {
-    projects.value = projects.value.filter(p => p.id !== projectId)
-    if (selectedProject.value?.id === projectId) {
-      selectedProject.value = null
+  // Remove projects by calling backend
+  const removeProjects = async (projectPaths: string[]) => {
+    try {
+      isLoading.value = true
+      await invoke('remove_projects', { projectPaths })
+      // Backend will emit events to update the store
+    } catch (error) {
+      console.error('Failed to remove projects:', error)
+      throw error
+    } finally {
+      isLoading.value = false
     }
+  }
+
+  // Get projects from backend (refresh)
+  const refreshProjects = async () => {
+    try {
+      isLoading.value = true
+      const backendProjects = await invoke('get_projects')
+      setProjects(backendProjects as Project[])
+    } catch (error) {
+      console.error('Failed to refresh projects:', error)
+      throw error
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // Helper to get engine version string
+  const getEngineVersionString = (engineAssociation: EngineAssociation): string => {
+    if (typeof engineAssociation === 'string' && engineAssociation === 'Custom') {
+      return 'Custom'
+    }
+    if (typeof engineAssociation === 'object' && engineAssociation.Standard) {
+      return engineAssociation.Standard
+    }
+    return 'Unknown'
+  }
+
+  // Helper to find project by path
+  const findProjectByPath = (path: string): Project | undefined => {
+    return projects.value.find(p => p.path === path)
   }
 
   const hasSelectedProject = computed(() => selectedProject.value !== null)
+  const projectCount = computed(() => projects.value.length)
 
   return {
+    // State
     selectedProject,
     projects,
+    isLoading,
+    
+    // Computed
     hasSelectedProject,
+    projectCount,
+    
+    // Actions
+    initializeStore,
     setSelectedProject,
-    addProject,
-    removeProject
+    discoverProjects,
+    removeProjects,
+    refreshProjects,
+    
+    // Helpers
+    getEngineVersionString,
+    findProjectByPath
   }
 }

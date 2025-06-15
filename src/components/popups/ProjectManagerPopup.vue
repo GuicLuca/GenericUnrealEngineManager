@@ -13,7 +13,15 @@
     <div class="popup-content">
       <div class="projects-section">
         <div class="section-header">
-          <h3 class="section-title">Tracked Projects</h3>
+          <h3 class="section-title">Tracked Projects ({{ projectCount }})</h3>
+          <button 
+            class="refresh-btn"
+            @click="handleRefresh"
+            :disabled="isLoading"
+            title="Refresh projects from backend"
+          >
+            {{ isLoading ? '⏳' : '🔄' }}
+          </button>
         </div>
 
         <div v-if="projects.length === 0" class="no-projects">
@@ -25,31 +33,33 @@
         <div v-else class="projects-list">
           <div 
             v-for="project in projects" 
-            :key="project.id"
+            :key="project.path"
             class="project-item"
-            :class="{ selected: selectedProject?.id === project.id }"
+            :class="{ selected: selectedProject?.path === project.path }"
           >
             <div class="project-info">
               <div class="project-name">{{ project.name }}</div>
               <div class="project-path">{{ project.path }}</div>
               <div class="project-meta">
-                <span class="engine-version">{{ project.engineVersion }}</span>
-                <span class="last-scan">Last scan: {{ project.lastScan }}</span>
+                <span class="engine-version">{{ getEngineVersionString(project.engine_association) }}</span>
+                <span class="has-cpp">{{ project.has_cpp ? 'C++' : 'Blueprint' }}</span>
+                <span class="plugin-count">{{ project.plugins.length }} plugin(s)</span>
               </div>
             </div>
             <div class="project-actions">
               <button 
                 class="action-btn select-btn"
                 @click="selectProject(project)"
-                :disabled="selectedProject?.id === project.id"
+                :disabled="selectedProject?.path === project.path"
                 title="Select this project"
               >
-                {{ selectedProject?.id === project.id ? '✓' : '👆' }}
+                {{ selectedProject?.path === project.path ? '✓' : '👆' }}
               </button>
               <button 
                 class="action-btn remove-btn"
                 @click="confirmRemoveProject(project)"
-                title="Remove project"
+                title="Remove project from tracking"
+                :disabled="isLoading"
               >
                 🗑️
               </button>
@@ -71,7 +81,17 @@ interface Emits {
 
 const emit = defineEmits<Emits>()
 
-const { projects, selectedProject, setSelectedProject, removeProject } = useProjectStore()
+const { 
+  projects, 
+  selectedProject, 
+  projectCount,
+  isLoading,
+  setSelectedProject, 
+  removeProjects,
+  refreshProjects,
+  getEngineVersionString 
+} = useProjectStore()
+
 const { addLog } = useLogStore()
 
 const selectProject = (project: Project) => {
@@ -79,10 +99,23 @@ const selectProject = (project: Project) => {
   addLog(`Selected project: ${project.name}`)
 }
 
-const confirmRemoveProject = (project: Project) => {
+const confirmRemoveProject = async (project: Project) => {
   if (confirm(`Are you sure you want to remove "${project.name}" from tracked projects?`)) {
-    removeProject(project.id)
-    addLog(`Removed project: ${project.name}`)
+    try {
+      await removeProjects([project.path])
+      addLog(`Removed project: ${project.name}`)
+    } catch (error) {
+      addLog(`Failed to remove project: ${project.name}`, 'error')
+    }
+  }
+}
+
+const handleRefresh = async () => {
+  try {
+    await refreshProjects()
+    addLog('Projects refreshed from backend')
+  } catch (error) {
+    addLog('Failed to refresh projects', 'error')
   }
 }
 </script>
@@ -166,6 +199,32 @@ const confirmRemoveProject = (project: Project) => {
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
   margin: 0;
+}
+
+.refresh-btn {
+  background: none;
+  border: var(--border-width) solid var(--border-color);
+  cursor: pointer;
+  font-size: var(--font-size-md);
+  padding: var(--spacing-xs);
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  width: 2rem;
+  height: 2rem;
+  background-color: var(--surface-color);
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background-color: var(--hover-color);
+  border-color: var(--accent-color);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .no-projects {

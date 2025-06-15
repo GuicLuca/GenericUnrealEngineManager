@@ -24,12 +24,14 @@
             class="folder-input"
             placeholder="Select or enter folder path..."
             required
+            :disabled="isDiscovering"
           />
           <button
             type="button"
             class="browse-button"
             @click="selectFolder"
             title="Browse for folder"
+            :disabled="isDiscovering"
           >
             📂
           </button>
@@ -45,6 +47,7 @@
               v-model="formData.ignoreEngine"
               type="checkbox"
               class="checkbox-input"
+              :disabled="isDiscovering"
             />
             <label for="ignore-engine" class="checkbox-label">
               Ignore Engine Projects
@@ -60,6 +63,7 @@
               v-model="formData.ignoreTemplates"
               type="checkbox"
               class="checkbox-input"
+              :disabled="isDiscovering"
             />
             <label for="ignore-templates" class="checkbox-label">
               Ignore Template Projects
@@ -75,6 +79,7 @@
               v-model="formData.ignoreSamples"
               type="checkbox"
               class="checkbox-input"
+              :disabled="isDiscovering"
             />
             <label for="ignore-samples" class="checkbox-label">
               Ignore Sample Projects
@@ -91,16 +96,17 @@
           type="button"
           class="cancel-button"
           @click="$emit('close')"
+          :disabled="isDiscovering"
         >
           Cancel
         </button>
         <button
           type="submit"
           class="search-button"
-          :disabled="!formData.baseFolder.trim()"
+          :disabled="!formData.baseFolder.trim() || isDiscovering"
         >
-          <span class="button-icon">🔍</span>
-          Start Discovery
+          <span class="button-icon">{{ isDiscovering ? '⏳' : '🔍' }}</span>
+          {{ isDiscovering ? 'Discovering...' : 'Start Discovery' }}
         </button>
       </div>
     </form>
@@ -108,9 +114,11 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { open } from '@tauri-apps/plugin-dialog'
 import InfoTooltip from '../InfoTooltip.vue'
+import { useProjectStore } from '../../stores/projectStore'
+import { useLogStore } from '../../stores/logStore'
 
 interface ProjectDiscoveryData {
   baseFolder: string
@@ -121,10 +129,14 @@ interface ProjectDiscoveryData {
 
 interface Emits {
   (e: 'close'): void
-  (e: 'submit', data: ProjectDiscoveryData): void
 }
 
 const emit = defineEmits<Emits>()
+
+const { discoverProjects } = useProjectStore()
+const { addLog } = useLogStore()
+
+const isDiscovering = ref(false)
 
 const formData = reactive<ProjectDiscoveryData>({
   baseFolder: '',
@@ -134,6 +146,8 @@ const formData = reactive<ProjectDiscoveryData>({
 })
 
 const selectFolder = async () => {
+  if (isDiscovering.value) return
+  
   try {
     const selected = await open({
       directory: true,
@@ -146,15 +160,37 @@ const selectFolder = async () => {
     }
   } catch (error) {
     console.error('Failed to open folder dialog:', error)
+    addLog('Failed to open folder dialog', 'error')
   }
 }
 
-const handleSubmit = () => {
-  if (!formData.baseFolder.trim()) {
+const handleSubmit = async () => {
+  if (!formData.baseFolder.trim() || isDiscovering.value) {
     return
   }
   
-  emit('submit', { ...formData })
+  try {
+    isDiscovering.value = true
+    addLog('Starting project discovery...')
+    
+    const request = {
+      base_folder: formData.baseFolder,
+      ignore_engine: formData.ignoreEngine,
+      ignore_templates: formData.ignoreTemplates,
+      ignore_samples: formData.ignoreSamples
+    }
+    
+    const result = await discoverProjects(request)
+    
+    addLog(`Project discovery completed. Found ${result.total_found} new projects in ${result.scan_duration_ms}ms`)
+    emit('close')
+    
+  } catch (error) {
+    console.error('Project discovery failed:', error)
+    addLog('Project discovery failed. Check console for details.', 'error')
+  } finally {
+    isDiscovering.value = false
+  }
 }
 </script>
 
@@ -260,6 +296,11 @@ const handleSubmit = () => {
   box-shadow: 0 0 0 2px var(--accent-color-alpha);
 }
 
+.folder-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .browse-button {
   padding: var(--spacing-sm);
   border: var(--border-width) solid var(--border-color);
@@ -274,9 +315,14 @@ const handleSubmit = () => {
   justify-content: center;
 }
 
-.browse-button:hover {
+.browse-button:hover:not(:disabled) {
   background-color: var(--hover-color);
   border-color: var(--accent-color);
+}
+
+.browse-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .section-title {
@@ -303,6 +349,11 @@ const handleSubmit = () => {
   width: 1rem;
   height: 1rem;
   accent-color: var(--accent-color);
+}
+
+.checkbox-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .checkbox-label {
@@ -343,9 +394,14 @@ const handleSubmit = () => {
   color: var(--text-secondary);
 }
 
-.cancel-button:hover {
+.cancel-button:hover:not(:disabled) {
   background-color: var(--hover-color);
   color: var(--text-primary);
+}
+
+.cancel-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .search-button {
