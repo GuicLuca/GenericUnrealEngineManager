@@ -5,10 +5,12 @@ use log::error;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::path::PathBuf;
+use tauri::Emitter;
 use tauri_plugin_store::StoreExt;
+use crate::projects::payloads::ProjectsUpdatedPayload;
 
 /// Represents the association of a project with a specific Unreal Engine version.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EngineAssociation {
     Standard(String), // For standard version (4.27, 5.0, etc.)
     Custom,           // For custom engines (Unreal Source, etc.)
@@ -114,6 +116,8 @@ impl Project {
         store.set(env::STORE_PROJECTS, projects_json);
         store.save()?;
 
+        Self::emit_project_updated(app_handle)?;
+
         Ok(())
     }
     
@@ -147,6 +151,15 @@ impl Project {
         
         Project::save_projects(app_handle, &known_projects)?;
         
+        Ok(())
+    }
+    
+    pub fn emit_project_updated(
+        app_handle: &tauri::AppHandle,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        app_handle.emit(env::EVENT_PROJECTS_UPDATED, ProjectsUpdatedPayload{
+            projects: Project::get_projects(app_handle)?
+        })?;
         Ok(())
     }
 }

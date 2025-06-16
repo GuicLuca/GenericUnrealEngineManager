@@ -6,12 +6,6 @@ import MainArea from './components/MainArea.vue'
 import InfoPanel from './components/InfoPanel.vue'
 import BottomPanel, { type BottomTab } from './components/BottomPanel.vue'
 import PopupManager from './components/PopupManager.vue'
-import { useLogStore } from './stores/logStore'
-import { useProjectStore } from './stores/projectStore'
-
-// Initialize stores
-const { addLog, initLogListener } = useLogStore()
-const { initializeStore } = useProjectStore()
 
 const sidebarItems = ref<SidebarItem[]>([
   { name: 'Refresh', icon: '🔄', action: 'refresh', requiresProject: true },
@@ -53,19 +47,7 @@ const handleTabChange = (tabId: string): void => {
 
 // Initialize application
 onMounted(async () => {
-  try {
-    // Initialize log system
-    await initLogListener()
-    addLog('Application started successfully')
-    
-    // Initialize project store and listen for backend events
-    await initializeStore()
-    addLog('Project store initialized')
-    
-  } catch (error) {
-    console.error('Failed to initialize application:', error)
-    addLog('Error: Failed to initialize application. Check console for details.', 'error')
-  }
+  
 })
 </script>
 

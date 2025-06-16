@@ -93,3 +93,7 @@ pub(crate) const LOG_TIMEZONE: tauri_plugin_log::TimezoneStrategy =
 /// The event name used to broadcast the initialization of the launcher on startup
 pub(crate) const EVENT_INIT: &str = "app_initialized";
 
+pub(crate) const EVENT_ADD_LOG: &str = "add_log";
+
+pub(crate) const EVENT_PROJECTS_UPDATED: &str = "projects_updated";
+

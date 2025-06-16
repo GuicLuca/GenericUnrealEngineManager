@@ -102,6 +102,8 @@ pub fn run() {
         greet,
         projects::actions::behavior::open_file_explorer,
         projects::actions::project_discovery::discover_projects,
+        projects::actions::project_discovery::get_projects,
+        projects::actions::project_discovery::remove_project
     ]);
 
     ///### Application building
@@ -151,8 +153,8 @@ fn frontend_event_handler(window: &Window, event: &WindowEvent) -> errors::Resul
 /// run on startup
 fn application_setup(app: &mut App) -> errors::Result<()> {
     // Allow the app to access the app directory only
-    app.fs_scope()
-        .allow_directory(app.handle().path().app_data_dir()?, true)?;
+    // app.fs_scope()
+    //     .allow_directory(app.handle().path().app_data_dir()?, true)?;
 
     // Set up the system tray
     match misc::tray::setup_system_tray(app) {
@@ -199,9 +201,12 @@ fn application_setup(app: &mut App) -> errors::Result<()> {
 
     // Fire the app initialized event
     match app.emit(env::EVENT_INIT, AppInitializedPayload{
-        projects: Project::get_projects()?
+        projects: Project::get_projects(app.handle())?
     }) {
-        Ok(_) => {}
+        Ok(_) => {
+            info!("App initialized event emitted successfully, sent {} projects.", 
+                Project::get_projects(app.handle())?.len());
+        }
         Err(e) => {
             error!("Error emitting app_initialized event: {:?}", e);
         }

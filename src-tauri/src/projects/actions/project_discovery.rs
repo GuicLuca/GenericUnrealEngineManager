@@ -1,31 +1,14 @@
 use std::path::{Path, PathBuf};
-use tauri::{command, AppHandle, Emitter};
+use tauri::{command, AppHandle};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use tauri_plugin_store::StoreExt;
-use crate::env;
 use crate::prelude::{log, ErrorLevel};
 use crate::projects::models::project::Project;
+use crate::projects::payloads::{ProjectDiscoveryRequest, ProjectDiscoveryResult};
 
 /// # Project Discovery Actions
 /// This module provides actions for discovering Unreal Engine projects
 /// and their associated metadata, such as plugins and engine versions from
-/// the user's file system. 
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ProjectDiscoveryRequest {
-    pub base_folder: String,
-    pub ignore_engine: bool,
-    pub ignore_templates: bool,
-    pub ignore_samples: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ProjectDiscoveryResult {
-    pub projects: Vec<Project>,
-    pub total_found: usize,
-    pub scan_duration_ms: u128,
-}
+/// the user's file system.
 
 #[command]
 pub async fn discover_projects(app_handle: AppHandle, request: ProjectDiscoveryRequest) -> Result<ProjectDiscoveryResult, String> {
@@ -101,7 +84,7 @@ pub async fn scan_folder_for_projects(
         });
     
     let known_path = projects_list.iter()
-        .map(|p| p.path)
+        .map(|p| p.path.clone())
         .collect::<Vec<PathBuf>>();
     
     let mut new_projects = Vec::new();
@@ -124,4 +107,41 @@ pub async fn scan_folder_for_projects(
     }
     
     Ok(new_projects)
+}
+
+#[command]
+pub fn remove_project(
+    app_handle: AppHandle,
+    project_path: String,
+) -> Result<(), String> {
+    // Remove the project from the store
+    match Project::remove_projects(&app_handle, &vec![PathBuf::from(project_path.clone())]) {
+        Ok(_) => {
+            log(&app_handle, ErrorLevel::Info, 
+                &format!("Project at {} removed successfully.", project_path));
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("Error removing project: {}", e);
+            log(&app_handle, ErrorLevel::Error, 
+                &format!("Error removing project: {}", e));
+            Err(format!("Failed to remove project: {}", e))
+        }
+    }
+}
+
+#[command]
+pub fn get_projects(
+    app_handle: AppHandle,
+) -> Result<Vec<Project>, String> {
+    // Get the list of projects from the store
+    match Project::get_projects(&app_handle) {
+        Ok(projects) => Ok(projects),
+        Err(e) => {
+            eprintln!("Error getting projects: {}", e);
+            log(&app_handle, ErrorLevel::Error, 
+                &format!("Error getting projects: {}", e));
+            Err(format!("Failed to get projects: {}", e))
+        }
+    }
 }
