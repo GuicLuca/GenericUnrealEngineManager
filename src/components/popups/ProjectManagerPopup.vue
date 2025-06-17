@@ -14,14 +14,24 @@
       <div class="projects-section">
         <div class="section-header">
           <h3 class="section-title">Tracked Projects ({{ projectCount }})</h3>
-          <button 
-            class="refresh-btn"
-            @click="handleRefresh"
-            :disabled="isLoading"
-            title="Refresh projects from backend"
-          >
-            {{ isLoading ? '⏳' : '🔄' }}
-          </button>
+          <div class="header-actions">
+            <button 
+              class="discover-btn"
+              @click="openProjectDiscovery"
+              :disabled="isLoading"
+              title="Discover new projects"
+            >
+              {{ isLoading ? '⏳' : '🔍' }}
+            </button>
+            <button 
+              class="refresh-btn"
+              @click="handleRefresh"
+              :disabled="isLoading"
+              title="Refresh projects from backend"
+            >
+              {{ isLoading ? '⏳' : '🔄' }}
+            </button>
+          </div>
         </div>
 
         <div v-if="projects.length === 0" class="no-projects">
@@ -37,7 +47,6 @@
             class="project-item"
             :class="{ selected: selectedProject?.path === project.path }"
             @click="selectProject(project)"
-            :disabled="selectedProject?.path === project.path"
           >
             <div class="project-info">
               <div class="project-name">{{ project.name }}</div>
@@ -49,9 +58,15 @@
               </div>
             </div>
             <div class="project-actions">
+              <FileExplorerButton
+                :project-path="project.path"
+                :project-name="project.name"
+                size="small"
+                :disabled="isLoading"
+              />
               <button 
                 class="action-btn remove-btn"
-                @click="confirmRemoveProject(project)"
+                @click.stop="confirmRemoveProject(project)"
                 title="Remove project from tracking"
                 :disabled="isLoading"
               >
@@ -68,6 +83,8 @@
 <script setup lang="ts">
 import { useProjectStore, type Project } from '../../stores/projectStore'
 import { useLogStore } from '../../stores/logStore'
+import { usePopup } from '../../composables/usePopup'
+import FileExplorerButton from '../FileExplorerButton.vue'
 
 const { 
   projects, 
@@ -81,6 +98,7 @@ const {
 } = useProjectStore()
 
 const { addLog } = useLogStore()
+const { showPopup } = usePopup()
 
 const selectProject = (project: Project) => {
   setSelectedProject(project)
@@ -104,6 +122,14 @@ const handleRefresh = async () => {
     // Ignore errors, the backend will handle it.
   }
 }
+
+const openProjectDiscovery = () => {
+  showPopup({
+    id: 'project-discovery',
+    component: 'ProjectDiscovery',
+    props: {}
+  })
+}
 </script>
 
 <style scoped>
@@ -112,7 +138,7 @@ const handleRefresh = async () => {
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-lg);
   width: 100%;
-  max-width: 48rem;
+  max-width: 56rem;
   max-height: 80vh;
   overflow: hidden;
   display: flex;
@@ -187,6 +213,12 @@ const handleRefresh = async () => {
   margin: 0;
 }
 
+.header-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.discover-btn,
 .refresh-btn {
   background: none;
   border: var(--border-width) solid var(--border-color);
@@ -203,11 +235,13 @@ const handleRefresh = async () => {
   background-color: var(--surface-color);
 }
 
+.discover-btn:hover:not(:disabled),
 .refresh-btn:hover:not(:disabled) {
   background-color: var(--hover-color);
   border-color: var(--accent-color);
 }
 
+.discover-btn:disabled,
 .refresh-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -257,6 +291,7 @@ const handleRefresh = async () => {
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-md);
   transition: all var(--transition-fast);
+  cursor: pointer;
 }
 
 .project-item:hover {
@@ -271,6 +306,8 @@ const handleRefresh = async () => {
 
 .project-info {
   flex-grow: 1;
+  margin-right: var(--spacing-lg);
+  min-width: 0;
 }
 
 .project-name {
@@ -286,6 +323,7 @@ const handleRefresh = async () => {
   font-family: var(--font-mono);
   margin-bottom: var(--spacing-xs);
   word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .project-meta {
@@ -293,11 +331,13 @@ const handleRefresh = async () => {
   gap: var(--spacing-md);
   font-size: var(--font-size-xs);
   color: var(--text-secondary);
+  flex-wrap: wrap;
 }
 
 .project-actions {
   display: flex;
   gap: var(--spacing-xs);
+  flex-shrink: 0;
 }
 
 .action-btn {
@@ -308,8 +348,8 @@ const handleRefresh = async () => {
   cursor: pointer;
   font-size: var(--font-size-sm);
   transition: all var(--transition-fast);
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   display: flex;
   align-items: center;
   justify-content: center;

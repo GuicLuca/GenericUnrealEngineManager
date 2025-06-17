@@ -18,14 +18,6 @@
         </option>
       </select>
       <button 
-        class="discover-btn"
-        @click="openProjectDiscovery"
-        title="Discover projects"
-        :disabled="isLoading"
-      >
-        {{ isLoading ? '⏳' : '🔍' }}
-      </button>
-      <button 
         class="manage-projects-btn"
         @click="openProjectManager"
         title="Manage tracked projects"
@@ -36,14 +28,12 @@
     </div>
     <div class="project-path">
       <span class="path-text">{{ selectedProject?.path || 'No project selected' }}</span>
-      <button 
-        class="open-folder-btn" 
-        @click="handleOpenExplorer" 
-        title="Open in file explorer"
+      <FileExplorerButton
+        v-if="selectedProject"
+        :project-path="selectedProject.path"
+        :project-name="selectedProject.name"
         :disabled="!selectedProject || isLoading"
-      >
-        📁
-      </button>
+      />
     </div>
   </div>
 </template>
@@ -52,7 +42,7 @@
 import { useProjectStore } from '../stores/projectStore'
 import { useLogStore } from '../stores/logStore'
 import { usePopup } from '../composables/usePopup'
-import { invoke } from "@tauri-apps/api/core"
+import FileExplorerButton from './FileExplorerButton.vue'
 
 const { selectedProject, projects, setSelectedProject, isLoading, findProjectByPath } = useProjectStore()
 const { addLog } = useLogStore()
@@ -74,28 +64,6 @@ const handleProjectChange = (event: Event) => {
   }
 }
 
-const handleOpenExplorer = async (): Promise<void> => {
-  if (!selectedProject.value) return
-  
-  try {
-    // Extract directory path from the .uproject file path
-    const projectDir = selectedProject.value.path.replace(/[^/\\]*\.uproject$/, '')
-    await invoke('open_file_explorer', { path: projectDir })
-    addLog(`Opened file explorer for: ${selectedProject.value.name}`)
-  } catch (error) {
-    console.error('Failed to open file explorer:', error)
-    addLog('Error: Failed to open file explorer. Check console for details.', 'error')
-  }
-}
-
-const openProjectDiscovery = () => {
-  showPopup({
-    id: 'project-discovery',
-    component: 'ProjectDiscovery',
-    props: {}
-  })
-}
-
 const openProjectManager = () => {
   showPopup({
     id: 'project-manager',
@@ -108,12 +76,12 @@ const openProjectManager = () => {
 <style scoped>
 .project-bar {
   background-color: var(--surface-color);
-  padding: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
   display: flex;
   align-items: center;
   border-bottom: var(--border-width) solid var(--border-color);
   gap: var(--spacing-lg);
-  min-height: var(--project-bar-height);
+  min-height: 3rem;
 }
 
 .project-section {
@@ -149,7 +117,6 @@ const openProjectManager = () => {
   cursor: not-allowed;
 }
 
-.discover-btn,
 .manage-projects-btn {
   background: none;
   border: var(--border-width) solid var(--border-color);
@@ -166,13 +133,11 @@ const openProjectManager = () => {
   background-color: var(--surface-color);
 }
 
-.discover-btn:hover:not(:disabled),
 .manage-projects-btn:hover:not(:disabled) {
   background-color: var(--hover-color);
   border-color: var(--accent-color);
 }
 
-.discover-btn:disabled,
 .manage-projects-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -199,34 +164,5 @@ const openProjectManager = () => {
   font-size: var(--font-size-sm);
   color: var(--text-primary);
   font-family: var(--font-mono);
-}
-
-.open-folder-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: var(--font-size-md);
-  padding: var(--spacing-xs);
-  border-radius: var(--border-radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color var(--transition-fast);
-  flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
-}
-
-.open-folder-btn:hover:not(:disabled) {
-  background-color: var(--hover-color);
-}
-
-.open-folder-btn:active:not(:disabled) {
-  background-color: var(--active-color);
-}
-
-.open-folder-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 </style>
