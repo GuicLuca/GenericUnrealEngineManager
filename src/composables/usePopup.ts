@@ -9,28 +9,49 @@ export interface PopupConfig {
 }
 
 interface PopupState {
-  isVisible: boolean
-  config: PopupConfig | null
+  stack: PopupConfig[]
 }
 
 const popupState = reactive<PopupState>({
-  isVisible: false,
-  config: null
+  stack: []
 })
 
 export const usePopup = () => {
   const showPopup = (config: PopupConfig) => {
-    popupState.config = config
-    popupState.isVisible = true
+    // Check if popup with same ID already exists in stack
+    const existingIndex = popupState.stack.findIndex(p => p.id === config.id)
+    if (existingIndex !== -1) {
+      // Remove existing popup and add new one to top
+      popupState.stack.splice(existingIndex, 1)
+    }
+    
+    // Add new popup to top of stack
+    popupState.stack.push(config)
   }
 
-  const hidePopup = () => {
-    popupState.isVisible = false
-    popupState.config = null
+  const hidePopup = (popupId?: string) => {
+    if (popupId) {
+      // Remove specific popup by ID
+      const index = popupState.stack.findIndex(p => p.id === popupId)
+      if (index !== -1) {
+        popupState.stack.splice(index, 1)
+      }
+    } else {
+      // Remove top popup (most recent)
+      popupState.stack.pop()
+    }
   }
 
-  const isPopupVisible = ref(() => popupState.isVisible)
-  const currentPopup = ref(() => popupState.config)
+  const hideAllPopups = () => {
+    popupState.stack.length = 0
+  }
+
+  const getCurrentPopup = () => {
+    return popupState.stack.length > 0 ? popupState.stack[popupState.stack.length - 1] : null
+  }
+
+  const isPopupVisible = ref(() => popupState.stack.length > 0)
+  const currentPopup = ref(() => getCurrentPopup())
 
   // Listen for backend events to show popups
   const initPopupListener = async () => {
@@ -48,6 +69,8 @@ export const usePopup = () => {
     popupState,
     showPopup,
     hidePopup,
+    hideAllPopups,
+    getCurrentPopup,
     isPopupVisible,
     currentPopup,
     initPopupListener

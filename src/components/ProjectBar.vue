@@ -17,6 +17,12 @@
           {{ project.name }}
         </option>
       </select>
+      <FileExplorerButton
+        v-if="selectedProject"
+        :project-path="selectedProject.path"
+        :project-name="selectedProject.name"
+        :disabled="!selectedProject || isLoading"
+      />
       <button 
         class="manage-projects-btn"
         @click="openProjectManager"
@@ -28,12 +34,6 @@
     </div>
     <div class="project-path">
       <span class="path-text">{{ selectedProject?.path || 'No project selected' }}</span>
-      <FileExplorerButton
-        v-if="selectedProject"
-        :project-path="selectedProject.path"
-        :project-name="selectedProject.name"
-        :disabled="!selectedProject || isLoading"
-      />
     </div>
   </div>
 </template>

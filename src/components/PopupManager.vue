@@ -1,37 +1,41 @@
 <template>
   <Teleport to="body">
-    <Transition name="popup-overlay">
-      <div 
-        v-if="popupState.isVisible" 
-        class="popup-overlay"
-        @click="handleOverlayClick"
-      >
-        <Transition name="popup-content">
-          <div 
-            v-if="popupState.isVisible"
-            class="popup-container"
-            @click.stop
-          >
-            <!-- Project Discovery Popup -->
-            <ProjectDiscoveryPopup
-              v-if="popupState.config?.component === 'ProjectDiscovery'"
-              v-bind="popupState.config.props"
-              @close="hidePopup"
-              @submit="handleProjectDiscoverySubmit"
-            />
-            
-            <!-- Project Manager Popup -->
-            <ProjectManagerPopup
-              v-if="popupState.config?.component === 'ProjectManager'"
-              v-bind="popupState.config.props"
-              @close="hidePopup"
-            />
-            
-            <!-- Add more popup components here as needed -->
-          </div>
-        </Transition>
-      </div>
-    </Transition>
+    <!-- Render all popups in the stack -->
+    <div v-for="(popup, index) in popupState.stack" :key="popup.id">
+      <Transition name="popup-overlay">
+        <div 
+          v-if="popup"
+          class="popup-overlay"
+          :style="{ zIndex: 1000 + index }"
+          @click="handleOverlayClick(popup)"
+        >
+          <Transition name="popup-content">
+            <div 
+              v-if="popup"
+              class="popup-container"
+              @click.stop
+            >
+              <!-- Project Discovery Popup -->
+              <ProjectDiscoveryPopup
+                v-if="popup.component === 'ProjectDiscovery'"
+                v-bind="popup.props"
+                @close="hidePopup(popup.id)"
+                @submit="handleProjectDiscoverySubmit"
+              />
+              
+              <!-- Project Manager Popup -->
+              <ProjectManagerPopup
+                v-if="popup.component === 'ProjectManager'"
+                v-bind="popup.props"
+                @close="hidePopup(popup.id)"
+              />
+              
+              <!-- Add more popup components here as needed -->
+            </div>
+          </Transition>
+        </div>
+      </Transition>
+    </div>
   </Teleport>
 </template>
 
@@ -45,9 +49,9 @@ import ProjectManagerPopup from './popups/ProjectManagerPopup.vue'
 const { popupState, hidePopup, initPopupListener } = usePopup()
 const { addLog } = useLogStore()
 
-const handleOverlayClick = () => {
-  if (!popupState.config?.persistent) {
-    hidePopup()
+const handleOverlayClick = (popup: any) => {
+  if (!popup.persistent) {
+    hidePopup(popup.id)
   }
 }
 
@@ -55,7 +59,7 @@ const handleProjectDiscoverySubmit = (data: any) => {
   addLog('Starting project discovery...')
   console.log('Project discovery submitted:', data)
   // Here you would typically call a Tauri command to start the discovery
-  hidePopup()
+  hidePopup() // Close the top popup
 }
 
 onMounted(() => {
@@ -74,7 +78,6 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
   backdrop-filter: blur(2px);
 }
 
