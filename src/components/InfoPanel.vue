@@ -14,6 +14,11 @@
           :value="getEngineVersionString(selectedProject.engine_association)" 
           icon="⚙️"
         />
+        <InfoItem
+            label="Size on disk"
+            :value="formatSize(selectedProject.size_on_disk)"
+            icon="📥"
+        />
         <InfoItem 
           label="Has C++ code" 
           :value="selectedProject.has_cpp ? 'Yes' : 'No'" 
@@ -44,7 +49,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import InfoItem from './InfoItem.vue'
-import { useProjectStore } from '../stores/projectStore'
+import { useProjectStore, formatSize } from '../stores/projectStore'
 
 interface Props {
   width: number

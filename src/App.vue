@@ -23,13 +23,13 @@ const bottomTabs = ref<BottomTab[]>([
 ])
 
 // Panel dimensions
-const logsHeight = ref<number>(120)
-const infoPanelWidth = ref<number>(300)
+const logsHeight = ref<number>(170)
+const infoPanelWidth = ref<number>(250)
 
 // Constants for panel constraints
-const minLogsHeight = 80
-const maxLogsHeight = 400
-const minInfoPanelWidth = 200
+const minLogsHeight = 66
+const maxLogsHeight = 600
+const minInfoPanelWidth = 220
 const maxInfoPanelWidth = 600
 
 // Event handlers

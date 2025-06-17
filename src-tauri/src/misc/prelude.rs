@@ -1,33 +1,8 @@
 use log::error;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, Env};
+use tauri::{AppHandle, Emitter};
 use crate::env;
-use crate::projects::models::project::Project;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AppInitializedPayload {
-    pub projects: Vec<Project>,
-}
-
-
-#[allow(dead_code)]
-pub enum ErrorLevel {
-    Info,
-    Warning,
-    Error,
-    Debug,
-}
-
-impl ErrorLevel {
-    pub fn as_str(&self) -> &str {
-        match self {
-            ErrorLevel::Info => "info",
-            ErrorLevel::Warning => "warning",
-            ErrorLevel::Error => "error",
-            ErrorLevel::Debug => "debug",
-        }
-    }
-}
+use crate::misc::errors::ErrorLevel;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LogEntry<'a> {

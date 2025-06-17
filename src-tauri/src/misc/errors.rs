@@ -1,4 +1,23 @@
 pub type Result<T> = std::result::Result<T, Verror>;
+
+#[allow(dead_code)]
+pub enum ErrorLevel {
+    Info,
+    Warning,
+    Error,
+    Debug,
+}
+
+impl ErrorLevel {
+    pub fn as_str(&self) -> &str {
+        match self {
+            ErrorLevel::Info => "info",
+            ErrorLevel::Warning => "warning",
+            ErrorLevel::Error => "error",
+            ErrorLevel::Debug => "debug",
+        }
+    }
+}
 #[allow(dead_code)]
 #[derive(Debug, thiserror::Error)]
 pub enum Verror {

@@ -5,17 +5,15 @@ use std::sync::Arc;
 use log::{error, info};
 use serde_json::json;
 use tauri::{App, AppHandle, Builder, Emitter, Manager, RunEvent, Window, WindowEvent, Wry};
-use tauri_plugin_fs::FsExt;
 use tauri_plugin_log::Target;
 use tauri_plugin_store::{Store, StoreExt};
 use crate::misc::errors;
-use crate::prelude::AppInitializedPayload;
+use crate::misc::payloads::AppInitializedPayload;
 use crate::projects::models::project::Project;
 
 mod misc;
 mod env;
 mod projects;
-mod prelude;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]

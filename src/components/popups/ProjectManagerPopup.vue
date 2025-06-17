@@ -27,7 +27,7 @@
               class="refresh-btn"
               @click="handleRefresh"
               :disabled="isLoading"
-              title="Refresh projects from backend"
+              title="Refresh project list"
             >
               {{ isLoading ? '⏳' : '🔄' }}
             </button>
@@ -55,6 +55,7 @@
                 <span class="engine-version">{{ getEngineVersionString(project.engine_association) }}</span>
                 <span class="has-cpp">{{ project.has_cpp ? 'C++' : 'Blueprint' }}</span>
                 <span class="plugin-count">{{ project.plugins.length }} plugin(s)</span>
+                <span class="size-on-disk">{{ formatSize(project.size_on_disk) }}</span>
               </div>
             </div>
             <div class="project-actions">
@@ -81,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { useProjectStore, type Project } from '../../stores/projectStore'
+import {useProjectStore, type Project, formatSize} from '../../stores/projectStore'
 import { useLogStore } from '../../stores/logStore'
 import { usePopup } from '../../composables/usePopup'
 import FileExplorerButton from '../FileExplorerButton.vue'

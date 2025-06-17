@@ -1,6 +1,11 @@
 use serde::{Deserialize, Serialize};
 use crate::projects::models::project::Project;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppInitializedPayload {
+    pub projects: Vec<Project>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProjectDiscoveryRequest {
     pub base_folder: String,

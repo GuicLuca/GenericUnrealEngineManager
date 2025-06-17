@@ -10,6 +10,16 @@ export interface Project {
     path: string
     has_cpp: boolean
     plugins: ProjectPlugin[]
+    size_on_disk: number
+}
+
+// Helper function that returns the project size in human-readable format
+// size is in bytes
+export function formatSize(size: number): string {
+    if (size < 1024) return `${size} B`
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} KB`
+    if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(2)} MB`
+    return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
 
 // Match the backend EngineAssociation enum
@@ -137,7 +147,7 @@ export const useProjectStore = () => {
         return 'Unknown'
     }
 
-    // Helper to find project by path
+    // Helper to find a project by path
     const findProjectByPath = (path: string): Project | undefined => {
         return projects.value.find(p => p.path === path)
     }

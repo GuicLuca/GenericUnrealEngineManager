@@ -1,5 +1,5 @@
 use crate::env;
-use crate::prelude::{log, ErrorLevel};
+use crate::misc::prelude::{log};
 use crate::projects::models::plugins::ProjectPlugin;
 use log::error;
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,8 @@ use serde_json::json;
 use std::path::PathBuf;
 use tauri::Emitter;
 use tauri_plugin_store::StoreExt;
-use crate::projects::payloads::ProjectsUpdatedPayload;
+use crate::misc::errors::ErrorLevel;
+use crate::misc::payloads::ProjectsUpdatedPayload;
 
 /// Represents the association of a project with a specific Unreal Engine version.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,6 +27,7 @@ pub struct Project {
     pub path: PathBuf,       // Path to the project (.uproject file)
     pub has_cpp: bool,       // Indicates if the project has C++ code
     pub plugins: Vec<ProjectPlugin>, // List of plugins associated with the project
+    pub size_on_disk: u64, // Size on disk in bytes
 }
 
 impl Project {
@@ -35,7 +37,7 @@ impl Project {
         let contents = std::fs::read_to_string(&path)?;
         let uproject_content: serde_json::Value = serde_json::from_str(&contents)?;
 
-        // Extract the descritpion, engine association, and plugins from the .uproject file
+        // Extract the description, engine association, and plugins from the .uproject file
         let description = uproject_content
             .get("Description")
             .and_then(|v| v.as_str())
@@ -68,6 +70,10 @@ impl Project {
             .parent()
             .map(|p| p.join("Source").exists())
             .unwrap_or(false);
+        
+        // Calculate the size on the disk
+        let size_on_disk = fs_extra::dir::get_size(&path.parent().unwrap())
+            .unwrap_or(0); // Default to 0 if size cannot be determined
 
         Ok(Project {
             name,
@@ -76,6 +82,7 @@ impl Project {
             path,
             has_cpp,
             plugins: Vec::new(), // Initialize with an empty vector for plugins
+            size_on_disk,
         })
     }
 

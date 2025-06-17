@@ -13,12 +13,11 @@ const { initializeStore } = useProjectStore()
 try {
     // Initialize log system
     await initLogListener()
-    addLog('Application started successfully')
-
-    // Initialize project store and listen for backend events
+    // Initialize the project store and listen for backend events
     await initializeStore()
-    addLog('Project store initialized with '+ useProjectStore().projectCount.value +' tracked project(s).')
-
+    
+    // Frontend initialization complete
+    addLog('Application started successfully')
 } catch (error) {
     console.error('Failed to initialize application:', error)
     addLog('Error: Failed to initialize application. Check console for details.', 'error')

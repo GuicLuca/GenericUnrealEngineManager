@@ -51,7 +51,7 @@ const handleScroll = () => {
   if (!scrollDiv.value) return
 
   const { scrollTop, scrollHeight, clientHeight } = scrollDiv.value
-  // If we're near bottom, enable auto-scroll
+  // If we're near the bottom, enable auto-scroll
   shouldAutoScroll.value = scrollHeight - scrollTop - clientHeight < 50
 }
 
