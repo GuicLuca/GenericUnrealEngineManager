@@ -1,8 +1,5 @@
 <template>
   <div class="development-panel">
-    <div class="panel-header">
-      <h4 class="panel-title">Development Tools</h4>
-    </div>
     <div class="panel-content">
       <div class="tool-section">
         <h5 class="section-title">Popup System Testing</h5>
@@ -67,19 +64,6 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-.panel-header {
-  padding: var(--spacing-sm) var(--spacing-md);
-  background-color: var(--surface-color);
-  border-bottom: var(--border-width) solid var(--border-color);
-}
-
-.panel-title {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-  margin: 0;
 }
 
 .panel-content {

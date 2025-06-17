@@ -41,6 +41,7 @@ pub fn init_window_menu(app: &mut App) -> Result<(), Box<dyn std::error::Error>>
     Ok(())
 }
 
+
 fn handle_menu_event(_app: &AppHandle, event: MenuEvent) {
     match event.id().0.as_str() {
         "projects" => {

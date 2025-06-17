@@ -103,7 +103,7 @@ pub fn run() {
         projects::actions::behavior::open_file_explorer,
         projects::actions::project_discovery::discover_projects,
         projects::actions::project_discovery::get_projects,
-        projects::actions::project_discovery::remove_project
+        projects::actions::project_discovery::remove_projects
     ]);
 
     ///### Application building
@@ -166,14 +166,14 @@ fn application_setup(app: &mut App) -> errors::Result<()> {
         }
     };
     
-    match misc::menu::init_window_menu(app) {
-        Ok(_) => {
-            info!("Window menu initialized !");
-        }
-        Err(error) => {
-            info!("Error setting up window menu: {}", error);
-        }
-    }
+    // match misc::menu::init_window_menu(app) {
+    //     Ok(_) => {
+    //         info!("Window menu initialized !");
+    //     }
+    //     Err(error) => {
+    //         info!("Error setting up window menu: {}", error);
+    //     }
+    // }
 
     /// ### Initialize the store
     /// In this step, ensure that all entries in the store are initialized

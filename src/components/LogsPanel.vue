@@ -1,19 +1,13 @@
 <template>
   <div class="logs-panel">
-    <div class="logs-header">
-      <h4 class="logs-title">Application Logs</h4>
-      <button class="clear-logs-btn" @click="clearLogs" title="Clear logs">
-        🗑️
-      </button>
-    </div>
-    <div class="logs-content">
+    <div class="logs-content" ref="scrollDiv" @scroll="handleScroll">
       <div 
         v-for="log in logs" 
         :key="log.id"
         class="log-entry"
         :class="{ [`log-${log.level}`]: log.level }"
       >
-        <span class="log-timestamp">{{ formatTimestamp(log.timestamp) }}</span>
+        <span class="log-timestamp">{{ log.timestamp }}</span>
         <span class="log-level" v-if="log.level">{{ log.level.toUpperCase() }}</span>
         <span class="log-message">{{ log.message }}</span>
       </div>
@@ -26,13 +20,36 @@
 
 <script setup lang="ts">
 import { useLogStore } from '../stores/logStore'
+const { logs } = useLogStore()
 
-const { logs, clearLogs } = useLogStore()
+import { ref, onMounted, onUpdated } from 'vue'
 
-const formatTimestamp = (timestamp: string): string => {
-  // Simple timestamp formatting - can be enhanced later
-  return timestamp
+const scrollDiv = ref<HTMLElement | null>(null)
+const shouldAutoScroll = ref(true)
+
+
+const handleScroll = () => {
+  if (!scrollDiv.value) return
+
+  const { scrollTop, scrollHeight, clientHeight } = scrollDiv.value
+  // If we're near bottom, enable auto-scroll
+  shouldAutoScroll.value = scrollHeight - scrollTop - clientHeight < 50
 }
+
+const scrollToBottom = () => {
+  if (scrollDiv.value && shouldAutoScroll.value) {
+    scrollDiv.value.scrollTop = scrollDiv.value.scrollHeight
+  }
+}
+
+onMounted(() => {
+  scrollToBottom()
+})
+
+onUpdated(() => {
+  scrollToBottom()
+})
+
 </script>
 
 <style scoped>
@@ -41,36 +58,6 @@ const formatTimestamp = (timestamp: string): string => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-.logs-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-sm) var(--spacing-md);
-  background-color: var(--surface-color);
-  border-bottom: var(--border-width) solid var(--border-color);
-}
-
-.logs-title {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.clear-logs-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: var(--spacing-xs);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-sm);
-  transition: background-color var(--transition-fast);
-}
-
-.clear-logs-btn:hover {
-  background-color: var(--hover-color);
 }
 
 .logs-content {

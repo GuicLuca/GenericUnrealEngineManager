@@ -139,11 +139,13 @@ const stopResize = () => {
 }
 
 .no-project {
+  position: relative;
+  top: 28%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
+  align-self: center;
   text-align: center;
   padding: var(--spacing-xl);
 }

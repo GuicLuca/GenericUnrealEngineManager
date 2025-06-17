@@ -32,10 +32,12 @@
 
         <div v-else class="projects-list">
           <div 
-            v-for="project in projects" 
+            v-for="project in projects"
             :key="project.path"
             class="project-item"
             :class="{ selected: selectedProject?.path === project.path }"
+            @click="selectProject(project)"
+            :disabled="selectedProject?.path === project.path"
           >
             <div class="project-info">
               <div class="project-name">{{ project.name }}</div>
@@ -47,14 +49,6 @@
               </div>
             </div>
             <div class="project-actions">
-              <button 
-                class="action-btn select-btn"
-                @click="selectProject(project)"
-                :disabled="selectedProject?.path === project.path"
-                title="Select this project"
-              >
-                {{ selectedProject?.path === project.path ? '✓' : '👆' }}
-              </button>
               <button 
                 class="action-btn remove-btn"
                 @click="confirmRemoveProject(project)"
@@ -74,12 +68,6 @@
 <script setup lang="ts">
 import { useProjectStore, type Project } from '../../stores/projectStore'
 import { useLogStore } from '../../stores/logStore'
-
-interface Emits {
-  (e: 'close'): void
-}
-
-const emit = defineEmits<Emits>()
 
 const { 
   projects, 
@@ -103,9 +91,8 @@ const confirmRemoveProject = async (project: Project) => {
   if (confirm(`Are you sure you want to remove "${project.name}" from tracked projects?`)) {
     try {
       await removeProjects([project.path])
-      addLog(`Removed project: ${project.name}`)
     } catch (error) {
-      addLog(`Failed to remove project: ${project.name}`, 'error')
+      // Ignore errors, the backend will handle it.
     }
   }
 }
@@ -113,9 +100,8 @@ const confirmRemoveProject = async (project: Project) => {
 const handleRefresh = async () => {
   try {
     await refreshProjects()
-    addLog('Projects refreshed from backend')
   } catch (error) {
-    addLog('Failed to refresh projects', 'error')
+    // Ignore errors, the backend will handle it.
   }
 }
 </script>
@@ -336,10 +322,6 @@ const handleRefresh = async () => {
 .action-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.select-btn:hover:not(:disabled) {
-  border-color: var(--accent-color);
 }
 
 .remove-btn:hover:not(:disabled) {
