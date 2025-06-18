@@ -17,15 +17,15 @@
           <div class="info-value-with-action">
             <div class="info-value">
               {{ getEngineVersionString(selectedProject.engine_association) }}
+              <FileExplorerButton
+                  v-if="isCustomEngine(selectedProject.engine_association)"
+                  :project-path="getCustomEngineDirectory(selectedProject.path)"
+                  :project-name="`${selectedProject.name} (Custom Engine)`"
+                  size="mini"
+                  title="Open custom engine directory"
+                  class="engine-dir-button"
+              />
             </div>
-            <FileExplorerButton
-              v-if="isCustomEngine(selectedProject.engine_association)"
-              :project-path="getCustomEngineDirectory(selectedProject.path)"
-              :project-name="`${selectedProject.name} (Custom Engine)`"
-              size="small"
-              title="Open custom engine directory"
-              class="engine-dir-button"
-            />
           </div>
         </div>
         
@@ -215,6 +215,8 @@ const stopResize = () => {
   border-radius: var(--border-radius-sm);
   border: var(--border-width) solid var(--border-color);
   flex-grow: 1;
+  display: flex;
+  justify-content: space-between;
 }
 
 .engine-dir-button {

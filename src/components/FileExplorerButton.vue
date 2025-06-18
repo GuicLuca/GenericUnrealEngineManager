@@ -1,23 +1,23 @@
 <template>
-  <button 
-    class="file-explorer-btn"
-    :class="{ 'btn-small': size === 'small' }"
-    @click="handleOpenExplorer" 
-    :title="title"
-    :disabled="disabled"
+  <button
+      class="file-explorer-btn"
+      :class="{ 'btn-small': size === 'small', 'btn-mini': size === 'mini' }"
+      @click="handleOpenExplorer"
+      :title="title"
+      :disabled="disabled"
   >
     📁
   </button>
 </template>
 
 <script setup lang="ts">
-import { invoke } from "@tauri-apps/api/core"
-import { useLogStore } from '../stores/logStore'
+import {invoke} from "@tauri-apps/api/core"
+import {useLogStore} from '../stores/logStore'
 
 interface Props {
   projectPath: string
   projectName?: string
-  size?: 'normal' | 'small'
+  size?: 'normal' | 'small' | 'mini'
   title?: string
   disabled?: boolean
 }
@@ -28,16 +28,16 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false
 })
 
-const { addLog } = useLogStore()
+const {addLog} = useLogStore()
 
 const handleOpenExplorer = async (): Promise<void> => {
   if (!props.projectPath || props.disabled) return
-  
+
   try {
     // Extract directory path from the .uproject file path
     const projectDir = props.projectPath.replace(/[^/\\]*\.uproject$/, '')
-    await invoke('open_file_explorer', { path: projectDir })
-    
+    await invoke('open_file_explorer', {path: projectDir})
+
     const projectDisplayName = props.projectName || 'project'
     addLog(`Opened file explorer for: ${projectDisplayName}`)
   } catch (error) {
@@ -68,6 +68,13 @@ const handleOpenExplorer = async (): Promise<void> => {
   width: 1.75rem;
   height: 1.75rem;
   font-size: var(--font-size-sm);
+  padding: var(--spacing-xs);
+}
+
+.file-explorer-btn.btn-mini {
+  width: 1rem;
+  height: 1rem;
+  font-size: var(--font-size-xs);
   padding: var(--spacing-xs);
 }
 
