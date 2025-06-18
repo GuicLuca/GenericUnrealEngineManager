@@ -101,7 +101,8 @@ pub fn run() {
         projects::actions::behavior::open_file_explorer,
         projects::actions::project_discovery::discover_projects,
         projects::actions::project_discovery::get_projects,
-        projects::actions::project_discovery::remove_projects
+        projects::actions::project_discovery::remove_projects,
+        projects::actions::project_discovery::rescan_projects,
     ]);
 
     ///### Application building

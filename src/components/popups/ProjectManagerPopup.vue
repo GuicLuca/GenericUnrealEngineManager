@@ -56,6 +56,7 @@
                 <span class="has-cpp">{{ project.has_cpp ? 'C++' : 'Blueprint' }}</span>
                 <span class="plugin-count">{{ project.plugins.length }} plugin(s)</span>
                 <span class="size-on-disk">{{ formatSize(project.size_on_disk) }}</span>
+                <span class="last-modified">{{ timeSince(project.last_scan_date) }}</span>
               </div>
             </div>
             <div class="project-actions">
@@ -82,10 +83,11 @@
 </template>
 
 <script setup lang="ts">
-import {useProjectStore, type Project, formatSize} from '../../stores/projectStore'
+import {useProjectStore, type Project} from '../../stores/projectStore'
 import { useLogStore } from '../../stores/logStore'
 import { usePopup } from '../../composables/usePopup'
 import FileExplorerButton from '../FileExplorerButton.vue'
+import {formatSize, timeSince} from "../../utils.ts";
 
 const { 
   projects, 

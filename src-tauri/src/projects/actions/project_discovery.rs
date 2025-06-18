@@ -2,6 +2,7 @@ use crate::misc::prelude::{log};
 use crate::projects::models::project::Project;
 use crate::misc::payloads::{ProjectDiscoveryRequest, ProjectDiscoveryResult};
 use std::path::{Path, PathBuf};
+use log::error;
 use tauri::{command, AppHandle};
 use crate::misc::errors::ErrorLevel;
 
@@ -103,7 +104,7 @@ pub async fn scan_folder_for_projects(
     for path in detected_projects {
         if !known_path.contains(&path) {
             // Create a new Project object
-            let new_project = match Project::try_from_path(path.clone()) {
+            let new_project = match Project::try_from_path(&path) {
                 Ok(project) => project,
                 Err(e) => {
                     eprintln!("Error creating project from path {}: {}", path.display(), e);
@@ -185,6 +186,43 @@ pub fn get_projects(app_handle: AppHandle) -> Result<Vec<Project>, String> {
                 &format!("Error refreshing project(s): {}", e),
             );
             Err(format!("Failed to get project(s): {}", e))
+        }
+    }
+}
+
+#[command]
+pub fn rescan_projects(app_handle: AppHandle, project_paths: Vec<String>) -> Result<(), String> {
+    // Convert the project paths from strings to PathBuf
+    let paths_to_refresh = project_paths
+        .into_iter()
+        .map(PathBuf::from)
+        .collect::<Vec<PathBuf>>();
+    
+    // Refresh the projects in the store
+    match Project::scan_projects(&app_handle, &paths_to_refresh) {
+        Ok(_) => {
+            log(
+                &app_handle,
+                ErrorLevel::Info,
+                &format!(
+                    "Refreshed following project(s):\n\t-> {}",
+                    paths_to_refresh
+                        .iter()
+                        .map(|p| p.display().to_string())
+                        .collect::<Vec<String>>()
+                        .join("\n\t-> ")
+                ),
+            );
+            Ok(())
+        }
+        Err(e) => {
+            error!("Error refreshing project(s): {}", e);
+            log(
+                &app_handle,
+                ErrorLevel::Error,
+                &format!("Error refreshing project(s): {}", e),
+            );
+            Err(format!("Failed to refresh project(s): {}", e))
         }
     }
 }

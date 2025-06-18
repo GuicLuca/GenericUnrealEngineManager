@@ -8,7 +8,7 @@ import BottomPanel, { type BottomTab } from './components/BottomPanel.vue'
 import PopupManager from './components/PopupManager.vue'
 
 const sidebarItems = ref<SidebarItem[]>([
-  { name: 'Refresh', icon: '🔄', action: 'refresh', requiresProject: true },
+  { name: 'Rescan', icon: '🔄', action: 'rescan', requiresProject: true },
   { name: 'Open', icon: '↰', action: 'open', requiresProject: true },
   { name: 'Build', icon: '🔨', action: 'build', requiresProject: true },
   { name: 'Package', icon: '📦', action: 'package', requiresProject: true },

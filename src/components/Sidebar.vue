@@ -39,16 +39,11 @@ const handleItemClick = (item: SidebarItem) => {
     addLog(`Action "${item.name}" requires a project to be selected`, 'warn')
     return
   }
-
-  addLog(`Action triggered: ${item.name}`)
   
   // Handle specific actions
   switch (item.action) {
-    case 'refresh':
-      handleRefresh()
-      break
-    case 'open':
-      handleOpenExplorer()
+    case 'rescan':
+      handleReScan()
       break
     // Add more action handlers as needed
     default:
@@ -56,22 +51,12 @@ const handleItemClick = (item: SidebarItem) => {
   }
 }
 
-const handleRefresh = () => {
+const handleReScan = async () => {
   if (!selectedProject.value) return
-  addLog('Refreshing project data...')
-  // Implement refresh logic here
-}
 
-const handleOpenExplorer = async () => {
-  if (!selectedProject.value) return
-  
-  try {
-    await invoke('open_file_explorer', { path: selectedProject.value.path })
-    addLog(`Opened file explorer for: ${selectedProject.value.name}`)
-  } catch (error) {
-    console.error('Failed to open file explorer:', error)
-    addLog('Error: Failed to open file explorer. Check console for details.', 'error')
-  }
+  await invoke('rescan_projects', {
+    projectPaths: [selectedProject.value.path]
+  });
 }
 </script>
 

@@ -28,11 +28,12 @@ pub struct Project {
     pub has_cpp: bool,       // Indicates if the project has C++ code
     pub plugins: Vec<ProjectPlugin>, // List of plugins associated with the project
     pub size_on_disk: u64, // Size on disk in bytes
+    pub last_scan_date: u64, // Last scan date of the project
 }
 
 impl Project {
     /// Creates a new project instance.
-    pub fn try_from_path(path: PathBuf) -> Result<Project, Box<dyn std::error::Error>> {
+    pub fn try_from_path(path: &PathBuf) -> Result<Project, Box<dyn std::error::Error>> {
         // try to read the contents of the .uproject file
         let contents = std::fs::read_to_string(&path)?;
         let uproject_content: serde_json::Value = serde_json::from_str(&contents)?;
@@ -79,11 +80,49 @@ impl Project {
             name,
             description,
             engine_association,
-            path,
+            path: path.clone(),
             has_cpp,
             plugins: Vec::new(), // Initialize with an empty vector for plugins
             size_on_disk,
+            last_scan_date: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
         })
+    }
+    
+    pub fn scan_projects(
+        app_handle: &tauri::AppHandle,
+        project_paths: &[PathBuf],
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut projects = Project::get_projects(app_handle)?;
+        
+        for project_path in project_paths {
+            let project = Project::try_from_path(project_path)?;
+            
+            // Check if the project already exists
+            if let Some(existing_project) = projects.iter_mut().find(|p| p.path == project.path) {
+                *existing_project = project.clone(); // Update the existing project
+            } else {
+                projects.push(project.clone()); // Else, add the project
+            }
+        }
+        
+        // Save the updated projects list to the store
+        let store = match app_handle.store(env::STORE_FILE_NAME) {
+            Ok(store) => store,
+            Err(e) => return Err(Box::new(e)),
+        };
+        
+        let projects_json = serde_json::to_value(projects)?;
+        store.set(env::STORE_PROJECTS, projects_json);
+        store.save()?;
+        
+        
+        // Emit the updated projects event
+        Project::emit_project_updated(app_handle)?;
+        
+        Ok(())
     }
 
     pub fn get_projects(
@@ -130,7 +169,7 @@ impl Project {
     
     pub fn add_projects(
         app_handle: &tauri::AppHandle,
-        projects: &Vec<Project>,
+        projects: &[Project],
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut known_projects = Project::get_projects(app_handle)?;
         
@@ -148,7 +187,7 @@ impl Project {
     
     pub fn remove_projects(
         app_handle: &tauri::AppHandle,
-        project_paths: &Vec<PathBuf>,
+        project_paths: &[PathBuf],
     ) -> Result<(), Box<dyn std::error::Error>>
     {
         let mut known_projects = Project::get_projects(app_handle)?;

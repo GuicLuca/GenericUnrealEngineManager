@@ -34,7 +34,7 @@ const handleOpenExplorer = async (): Promise<void> => {
   if (!props.projectPath || props.disabled) return
 
   try {
-    // Extract directory path from the .uproject file path
+    // Extract the directory path from the .uproject file path
     const projectDir = props.projectPath.replace(/[^/\\]*\.uproject$/, '')
     await invoke('open_file_explorer', {path: projectDir})
 

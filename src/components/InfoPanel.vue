@@ -50,6 +50,11 @@
           :value="`${selectedProject.plugins.length} plugin(s)`" 
           icon="🔌"
         />
+        <InfoItem 
+          label="Last scan" 
+          :value="timeSince(selectedProject.last_scan_date)" 
+          icon="🕒"
+        />
       </div>
       
       <div v-else class="no-project">
@@ -65,7 +70,8 @@
 import { ref } from 'vue'
 import InfoItem from './InfoItem.vue'
 import FileExplorerButton from './FileExplorerButton.vue'
-import { useProjectStore, formatSize, type EngineAssociation } from '../stores/projectStore'
+import { useProjectStore, type EngineAssociation } from '../stores/projectStore'
+import {formatSize, timeSince} from '../utils.ts'
 
 interface Props {
   width: number
