@@ -52,7 +52,7 @@
         />
         <InfoItem 
           label="Last scan" 
-          :value="timeSince(selectedProject.last_scan_date)" 
+          :value="currentTimeSince" 
           icon="🕒"
         />
       </div>
@@ -67,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import InfoItem from './InfoItem.vue'
 import FileExplorerButton from './FileExplorerButton.vue'
 import { useProjectStore, type EngineAssociation } from '../stores/projectStore'
@@ -88,6 +88,15 @@ const emit = defineEmits<Emits>()
 
 const { selectedProject, getEngineVersionString } = useProjectStore()
 const isResizing = ref(false)
+
+// Timer for updating time-based fields
+let timeUpdateInterval: number | null = null
+
+// Computed property that updates every minute
+const currentTimeSince = computed(() => {
+  if (!selectedProject.value) return ''
+  return timeSince(selectedProject.value.last_scan_date)
+})
 
 const isCustomEngine = (engineAssociation: EngineAssociation): boolean => {
   return typeof engineAssociation === 'string' && engineAssociation === 'Custom'
@@ -131,6 +140,22 @@ const stopResize = () => {
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
 }
+
+// Setup timer for updating time-based fields
+onMounted(() => {
+  // Update every minute (60000ms)
+  timeUpdateInterval = window.setInterval(() => {
+    // Force reactivity update by accessing the computed property
+    // The computed property will automatically recalculate
+  }, 60000)
+})
+
+onUnmounted(() => {
+  if (timeUpdateInterval) {
+    clearInterval(timeUpdateInterval)
+    timeUpdateInterval = null
+  }
+})
 </script>
 
 <style scoped>

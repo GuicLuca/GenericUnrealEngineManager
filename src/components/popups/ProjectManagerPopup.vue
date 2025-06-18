@@ -56,7 +56,7 @@
                 <span class="has-cpp">{{ project.has_cpp ? 'C++' : 'Blueprint' }}</span>
                 <span class="plugin-count">{{ project.plugins.length }} plugin(s)</span>
                 <span class="size-on-disk">{{ formatSize(project.size_on_disk) }}</span>
-                <span class="last-modified">{{ timeSince(project.last_scan_date) }}</span>
+                <span class="last-modified">{{ getTimeSince(project.last_scan_date) }}</span>
               </div>
             </div>
             <div class="project-actions">
@@ -83,6 +83,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
 import {useProjectStore, type Project} from '../../stores/projectStore'
 import { useLogStore } from '../../stores/logStore'
 import { usePopup } from '../../composables/usePopup'
@@ -102,6 +103,17 @@ const {
 
 const { addLog } = useLogStore()
 const { showPopup } = usePopup()
+
+// Timer for updating time-based fields
+let timeUpdateInterval: number | null = null
+const forceUpdate = ref(0)
+
+// Function to get time since with forced reactivity
+const getTimeSince = (date: number) => {
+  // Access forceUpdate to trigger reactivity
+  forceUpdate.value
+  return timeSince(date)
+}
 
 const selectProject = (project: Project) => {
   setSelectedProject(project)
@@ -133,6 +145,21 @@ const openProjectDiscovery = () => {
     props: {}
   })
 }
+
+// Setup timer for updating time-based fields
+onMounted(() => {
+  // Update every minute (60000ms)
+  timeUpdateInterval = window.setInterval(() => {
+    forceUpdate.value++
+  }, 60000)
+})
+
+onUnmounted(() => {
+  if (timeUpdateInterval) {
+    clearInterval(timeUpdateInterval)
+    timeUpdateInterval = null
+  }
+})
 </script>
 
 <style scoped>

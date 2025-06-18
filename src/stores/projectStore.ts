@@ -32,6 +32,7 @@ export interface ProjectPlugin {
 const selectedProject = ref<Project | null>(null)
 const projects = ref<Project[]>([])
 const isLoading = ref(false)
+const lastUpdateTime = ref(Date.now()) // Track when projects were last updated
 
 export const useProjectStore = () => {
     // Initialize the store by listening to backend events
@@ -42,7 +43,6 @@ export const useProjectStore = () => {
                 const payload = event.payload
                 if (payload && payload.projects) {
                     setProjects(payload.projects)
-
                 }
             })
 
@@ -64,6 +64,7 @@ export const useProjectStore = () => {
     // Set projects from the backend (internal function)
     const setProjects = (backendProjects: Project[]) => {
         projects.value = backendProjects
+        lastUpdateTime.value = Date.now() // Update the timestamp
 
         // If the current selected project is no longer in the list, clear selection
         if (selectedProject.value) {
@@ -72,6 +73,14 @@ export const useProjectStore = () => {
             )
             if (!stillExists) {
                 selectedProject.value = null
+            } else {
+                // Update the selected project with the latest data
+                const updatedProject = backendProjects.find(p => 
+                    p.path === selectedProject.value?.path
+                )
+                if (updatedProject) {
+                    selectedProject.value = updatedProject
+                }
             }
         }
     }
@@ -152,6 +161,7 @@ export const useProjectStore = () => {
         selectedProject,
         projects,
         isLoading,
+        lastUpdateTime,
 
         // Computed
         hasSelectedProject,
