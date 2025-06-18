@@ -9,11 +9,26 @@
       <h3 class="info-title">Project Information</h3>
       
       <div v-if="selectedProject" class="info-section">
-        <InfoItem 
-          label="Engine version" 
-          :value="getEngineVersionString(selectedProject.engine_association)" 
-          icon="⚙️"
-        />
+        <div class="info-item">
+          <div class="info-header">
+            <span class="info-icon">⚙️</span>
+            <span class="info-label">Engine version</span>
+          </div>
+          <div class="info-value-with-action">
+            <div class="info-value">
+              {{ getEngineVersionString(selectedProject.engine_association) }}
+            </div>
+            <FileExplorerButton
+              v-if="isCustomEngine(selectedProject.engine_association)"
+              :project-path="getCustomEngineDirectory(selectedProject.path)"
+              :project-name="`${selectedProject.name} (Custom Engine)`"
+              size="small"
+              title="Open custom engine directory"
+              class="engine-dir-button"
+            />
+          </div>
+        </div>
+        
         <InfoItem
             label="Size on disk"
             :value="formatSize(selectedProject.size_on_disk)"
@@ -49,7 +64,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import InfoItem from './InfoItem.vue'
-import { useProjectStore, formatSize } from '../stores/projectStore'
+import FileExplorerButton from './FileExplorerButton.vue'
+import { useProjectStore, formatSize, type EngineAssociation } from '../stores/projectStore'
 
 interface Props {
   width: number
@@ -66,6 +82,25 @@ const emit = defineEmits<Emits>()
 
 const { selectedProject, getEngineVersionString } = useProjectStore()
 const isResizing = ref(false)
+
+const isCustomEngine = (engineAssociation: EngineAssociation): boolean => {
+  return typeof engineAssociation === 'string' && engineAssociation === 'Custom'
+}
+
+const getCustomEngineDirectory = (projectPath: string): string => {
+  // Extract the parent directory of the project directory
+  // Project path format: DISK:\...\CUSTOM_ENGINE_DIRECTORY\PROJECT\PROJECT.uproject
+  // We want to get: DISK:\...\CUSTOM_ENGINE_DIRECTORY
+  
+  // First, get the directory containing the .uproject file
+  const projectDir = projectPath.replace(/[^/\\]*\.uproject$/, '')
+  
+  // Then get the parent of that directory (the custom engine directory)
+  const pathParts = projectDir.replace(/[/\\]+$/, '').split(/[/\\]/)
+  pathParts.pop() // Remove the project directory name
+  
+  return pathParts.join('/') || projectDir
+}
 
 const startResize = (event: MouseEvent) => {
   isResizing.value = true
@@ -141,6 +176,49 @@ const stopResize = () => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.info-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.info-icon {
+  font-size: var(--font-size-sm);
+}
+
+.info-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+}
+
+.info-value-with-action {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.info-value {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  line-height: 1.4;
+  padding: var(--spacing-xs);
+  background-color: var(--background-color);
+  border-radius: var(--border-radius-sm);
+  border: var(--border-width) solid var(--border-color);
+  flex-grow: 1;
+}
+
+.engine-dir-button {
+  flex-shrink: 0;
 }
 
 .no-project {
