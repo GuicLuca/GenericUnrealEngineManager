@@ -127,4 +127,3 @@ const handleOpen = async () => {
   background-color: var(--scrollbar-thumb-hover);
 }
 </style>
-</script>
