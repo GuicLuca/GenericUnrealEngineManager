@@ -30,6 +30,20 @@
                 @close="hidePopup(popup.id)"
               />
               
+              <!-- Project Launch Choice Popup -->
+              <ProjectLaunchChoicePopup
+                v-if="popup.component === 'ProjectLaunchChoice'"
+                v-bind="popup.props"
+                @close="hidePopup(popup.id)"
+              />
+              
+              <!-- Settings Popup -->
+              <SettingsPopup
+                v-if="popup.component === 'Settings'"
+                v-bind="popup.props"
+                @close="hidePopup(popup.id)"
+              />
+              
               <!-- Add more popup components here as needed -->
             </div>
           </Transition>
@@ -45,6 +59,8 @@ import { usePopup } from '../composables/usePopup'
 import { useLogStore } from '../stores/logStore'
 import ProjectDiscoveryPopup from './popups/ProjectDiscoveryPopup.vue'
 import ProjectManagerPopup from './popups/ProjectManagerPopup.vue'
+import ProjectLaunchChoicePopup from './popups/ProjectLaunchChoicePopup.vue'
+import SettingsPopup from './popups/SettingsPopup.vue'
 
 const { popupState, hidePopup, initPopupListener } = usePopup()
 const { addLog } = useLogStore()
