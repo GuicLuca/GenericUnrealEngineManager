@@ -12,9 +12,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import SidebarItem from './SidebarItem.vue'
-import { useProjectStore } from '../stores/projectStore'
+import { useProjectStore} from '../stores/projectStore'
 import { useLogStore } from '../stores/logStore'
 import { invoke } from "@tauri-apps/api/core"
 
@@ -25,16 +24,17 @@ export interface SidebarItem {
   requiresProject?: boolean
 }
 
+const props = defineProps<Props>()
 interface Props {
   items: SidebarItem[]
 }
 
-const props = defineProps<Props>()
 
-const { selectedProject, hasSelectedProject } = useProjectStore()
+
+const { selectedProject, hasSelectedProject, removeProjects } = useProjectStore()
 const { addLog } = useLogStore()
 
-const handleItemClick = (item: SidebarItem) => {
+const handleItemClick = async (item: SidebarItem) => {
   if (item.requiresProject && !hasSelectedProject.value) {
     addLog(`Action "${item.name}" requires a project to be selected`, 'warn')
     return
@@ -44,6 +44,10 @@ const handleItemClick = (item: SidebarItem) => {
   switch (item.action) {
     case 'rescan':
       handleReScan()
+      break
+    case 'untrack':
+      if (!selectedProject.value) return
+      await removeProjects([selectedProject.value.path])
       break
     // Add more action handlers as needed
     default:

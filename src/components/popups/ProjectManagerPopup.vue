@@ -83,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import {ref, onMounted, onUnmounted, nextTick} from 'vue'
 import {useProjectStore, type Project} from '../../stores/projectStore'
 import { useLogStore } from '../../stores/logStore'
 import { usePopup } from '../../composables/usePopup'
@@ -106,12 +106,11 @@ const { showPopup } = usePopup()
 
 // Timer for updating time-based fields
 let timeUpdateInterval: number | null = null
-const forceUpdate = ref(0)
+let forceUpdate = ref(0)
 
 // Function to get time since with forced reactivity
 const getTimeSince = (date: number) => {
-  // Access forceUpdate to trigger reactivity
-  forceUpdate.value
+  forceUpdate.value // Add forceUpdate to ensure reactivity
   return timeSince(date)
 }
 
@@ -121,13 +120,7 @@ const selectProject = (project: Project) => {
 }
 
 const confirmRemoveProject = async (project: Project) => {
-  if (confirm(`Are you sure you want to remove "${project.name}" from tracked projects?`)) {
-    try {
-      await removeProjects([project.path])
-    } catch (error) {
-      // Ignore errors, the backend will handle it.
-    }
-  }
+  await removeProjects([project.path])
 }
 
 const handleRefresh = async () => {
@@ -148,9 +141,9 @@ const openProjectDiscovery = () => {
 
 // Setup timer for updating time-based fields
 onMounted(() => {
-  // Update every minute (60000ms)
-  timeUpdateInterval = window.setInterval(() => {
-    forceUpdate.value++
+  // Update every minute (60 000 ms)
+  timeUpdateInterval = window.setInterval(async () => {
+    forceUpdate.value = (forceUpdate.value + 1) % 60
   }, 60000)
 })
 

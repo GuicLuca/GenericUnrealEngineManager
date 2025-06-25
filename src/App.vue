@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import ProjectBar from './components/ProjectBar.vue'
 import Sidebar, { type SidebarItem } from './components/Sidebar.vue'
 import MainArea from './components/MainArea.vue'
@@ -14,7 +14,7 @@ const sidebarItems = ref<SidebarItem[]>([
   { name: 'Package', icon: '📦', action: 'package', requiresProject: true },
   { name: 'Clean', icon: '🧹', action: 'clean', requiresProject: true },
   { name: 'Compress', icon: '🗜️', action: 'compress', requiresProject: true },
-  { name: 'Delete', icon: '🗑️', action: 'delete', requiresProject: true }
+  { name: 'Untrack', icon: '🖇️', action: 'untrack', requiresProject: true }
 ])
 
 const bottomTabs = ref<BottomTab[]>([
@@ -44,11 +44,6 @@ const handleInfoPanelResize = (width: number): void => {
 const handleTabChange = (tabId: string): void => {
   console.log('Tab changed to:', tabId)
 }
-
-// Initialize application
-onMounted(async () => {
-  
-})
 </script>
 
 <template>

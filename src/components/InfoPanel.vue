@@ -67,11 +67,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import {ref, computed, onMounted, onUnmounted, nextTick} from 'vue'
 import InfoItem from './InfoItem.vue'
 import FileExplorerButton from './FileExplorerButton.vue'
 import { useProjectStore, type EngineAssociation } from '../stores/projectStore'
 import {formatSize, timeSince} from '../utils.ts'
+import {useLogStore} from "../stores/logStore.ts";
+const { addLog } = useLogStore()
 
 interface Props {
   width: number
@@ -91,10 +93,12 @@ const isResizing = ref(false)
 
 // Timer for updating time-based fields
 let timeUpdateInterval: number | null = null
+let forceUpdate = ref(0)
 
 // Computed property that updates every minute
 const currentTimeSince = computed(() => {
   if (!selectedProject.value) return ''
+  forceUpdate.value
   return timeSince(selectedProject.value.last_scan_date)
 })
 
@@ -143,10 +147,9 @@ const stopResize = () => {
 
 // Setup timer for updating time-based fields
 onMounted(() => {
-  // Update every minute (60000ms)
-  timeUpdateInterval = window.setInterval(() => {
-    // Force reactivity update by accessing the computed property
-    // The computed property will automatically recalculate
+  // Update every minute (60 000 ms)
+  timeUpdateInterval = window.setInterval(async () => {
+    forceUpdate.value = (forceUpdate.value + 1) % 60
   }, 60000)
 })
 
