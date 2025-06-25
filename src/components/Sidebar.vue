@@ -15,6 +15,7 @@
 import SidebarItem from './SidebarItem.vue'
 import { useProjectStore} from '../stores/projectStore'
 import { useLogStore } from '../stores/logStore'
+import { usePopup } from '../composables/usePopup'
 import { invoke } from "@tauri-apps/api/core"
 
 export interface SidebarItem {
@@ -33,6 +34,7 @@ interface Props {
 
 const { selectedProject, hasSelectedProject, removeProjects } = useProjectStore()
 const { addLog } = useLogStore()
+const { showPopup } = usePopup()
 
 const handleItemClick = async (item: SidebarItem) => {
   if (item.requiresProject && !hasSelectedProject.value) {
@@ -49,6 +51,9 @@ const handleItemClick = async (item: SidebarItem) => {
       if (!selectedProject.value) return
       await removeProjects([selectedProject.value.path])
       break
+    case 'open':
+      handleOpen()
+      break
     // Add more action handlers as needed
     default:
       console.log(`Action ${item.action} not implemented yet`)
@@ -61,6 +66,36 @@ const handleReScan = async () => {
   await invoke('rescan_projects', {
     projectPaths: [selectedProject.value.path]
   });
+}
+
+const handleOpen = async () => {
+  if (!selectedProject.value) return
+
+  try {
+    // Check if project has C++ code
+    const hasCpp = selectedProject.value.has_cpp
+    
+    if (!hasCpp) {
+      // Blueprint project - launch directly with Unreal Engine
+      addLog(`Launching Blueprint project: ${selectedProject.value.name}`)
+      await invoke('launch_project_with_engine', {
+        projectPath: selectedProject.value.path
+      })
+    } else {
+      // C++ project - show popup to choose launch method
+      showPopup({
+        id: 'project-launch-choice',
+        component: 'ProjectLaunchChoice',
+        props: {
+          projectName: selectedProject.value.name,
+          projectPath: selectedProject.value.path
+        }
+      })
+    }
+  } catch (error) {
+    console.error('Failed to open project:', error)
+    addLog('Failed to open project. Check console for details.', 'error')
+  }
 }
 </script>
 

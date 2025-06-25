@@ -15,6 +15,20 @@
       </div>
       
       <div class="tool-section">
+        <h5 class="section-title">Project Testing</h5>
+        <div class="button-group">
+          <button 
+            class="dev-button"
+            @click="addMockProjects"
+            :disabled="isAddingMockProjects"
+          >
+            <span class="button-icon">{{ isAddingMockProjects ? '⏳' : '📁' }}</span>
+            {{ isAddingMockProjects ? 'Adding Projects...' : 'Add 5 Mock Projects' }}
+          </button>
+        </div>
+      </div>
+      
+      <div class="tool-section">
         <h5 class="section-title">System Information</h5>
         <div class="info-grid">
           <div class="info-item">
@@ -34,11 +48,17 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { usePopup } from '../composables/usePopup'
+import { useProjectStore } from '../stores/projectStore'
+import { useLogStore } from '../stores/logStore'
+import { mockProjects } from '../utils/mockProjects'
 
 const { showPopup } = usePopup()
+const { projects } = useProjectStore()
+const { addLog } = useLogStore()
 
 const platformInfo = ref('Unknown')
 const appVersion = ref('0.1.0')
+const isAddingMockProjects = ref(false)
 
 const openProjectDiscoveryPopup = () => {
   showPopup({
@@ -46,6 +66,35 @@ const openProjectDiscoveryPopup = () => {
     component: 'ProjectDiscovery',
     props: {}
   })
+}
+
+const addMockProjects = async () => {
+  if (isAddingMockProjects.value) return
+  
+  try {
+    isAddingMockProjects.value = true
+    addLog('Adding mock projects for testing...')
+    
+    // Filter out projects that already exist (by path)
+    const existingPaths = new Set(projects.value.map(p => p.path))
+    const newProjects = mockProjects.filter(project => !existingPaths.has(project.path))
+    
+    if (newProjects.length === 0) {
+      addLog('All mock projects already exist', 'warn')
+      return
+    }
+    
+    // Add projects to the store (simulate backend behavior)
+    projects.value.push(...newProjects)
+    
+    addLog(`Added ${newProjects.length} mock projects successfully`)
+    
+  } catch (error) {
+    console.error('Failed to add mock projects:', error)
+    addLog('Failed to add mock projects', 'error')
+  } finally {
+    isAddingMockProjects.value = false
+  }
 }
 
 onMounted(async () => {
@@ -110,13 +159,18 @@ onMounted(async () => {
   text-align: left;
 }
 
-.dev-button:hover {
+.dev-button:hover:not(:disabled) {
   background-color: var(--hover-color);
   border-color: var(--accent-color);
 }
 
-.dev-button:active {
+.dev-button:active:not(:disabled) {
   background-color: var(--active-color);
+}
+
+.dev-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .button-icon {

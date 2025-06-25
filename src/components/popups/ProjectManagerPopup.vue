@@ -19,9 +19,9 @@
               class="discover-btn"
               @click="openProjectDiscovery"
               :disabled="isLoading"
-              title="Discover new projects"
             >
-              {{ isLoading ? '⏳' : '🔍' }}
+              <span class="button-icon">➕</span>
+              Add Projects
             </button>
             <button 
               class="refresh-btn"
@@ -37,7 +37,7 @@
         <div v-if="projects.length === 0" class="no-projects">
           <div class="no-projects-icon">📂</div>
           <div class="no-projects-text">No projects tracked yet</div>
-          <div class="no-projects-subtext">Use the Discover button to find projects</div>
+          <div class="no-projects-subtext">Use the Add Projects button to find projects</div>
         </div>
 
         <div v-else class="projects-list">
@@ -162,7 +162,9 @@ onUnmounted(() => {
   border-radius: var(--border-radius-lg);
   width: 100%;
   max-width: 56rem;
+  min-width: 56rem;
   max-height: 80vh;
+  min-height: 32rem;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -241,7 +243,31 @@ onUnmounted(() => {
   gap: var(--spacing-xs);
 }
 
-.discover-btn,
+.discover-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  background: var(--accent-color);
+  border: var(--border-width) solid var(--accent-color);
+  color: white;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.discover-btn:hover:not(:disabled) {
+  background-color: #2c5aa0;
+  border-color: #2c5aa0;
+}
+
+.discover-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .refresh-btn {
   background: none;
   border: var(--border-width) solid var(--border-color);
@@ -258,16 +284,18 @@ onUnmounted(() => {
   background-color: var(--surface-color);
 }
 
-.discover-btn:hover:not(:disabled),
 .refresh-btn:hover:not(:disabled) {
   background-color: var(--hover-color);
   border-color: var(--accent-color);
 }
 
-.discover-btn:disabled,
 .refresh-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.button-icon {
+  font-size: var(--font-size-sm);
 }
 
 .no-projects {

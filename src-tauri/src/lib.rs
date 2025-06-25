@@ -10,10 +10,12 @@ use tauri_plugin_store::{Store, StoreExt};
 use crate::misc::errors;
 use crate::misc::payloads::AppInitializedPayload;
 use crate::projects::models::project::Project;
+use crate::settings::actions::settings_manager;
 
 mod misc;
 mod env;
 mod projects;
+mod settings;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -103,6 +105,11 @@ pub fn run() {
         projects::actions::project_discovery::get_projects,
         projects::actions::project_discovery::remove_projects,
         projects::actions::project_discovery::rescan_projects,
+        projects::actions::project_launcher::launch_project_with_engine,
+        projects::actions::project_launcher::launch_project_with_ide,
+        projects::actions::project_launcher::project_has_cpp,
+        settings::actions::settings_manager::get_settings,
+        settings::actions::settings_manager::save_settings,
     ]);
 
     ///### Application building
@@ -197,6 +204,17 @@ fn application_setup(app: &mut App) -> errors::Result<()> {
         };
     }
     // At this point the store variable is initialized and can be used.
+
+    /// ### Initialize settings
+    /// Initialize default settings if they don't exist
+    match settings_manager::initialize_settings(app.handle()) {
+        Ok(_) => {
+            info!("Settings initialized successfully");
+        }
+        Err(e) => {
+            error!("Failed to initialize settings: {}", e);
+        }
+    }
 
     // Fire the app initialized event
     match app.emit(env::EVENT_INIT, AppInitializedPayload{

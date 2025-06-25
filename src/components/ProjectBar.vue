@@ -20,10 +20,10 @@
       <button 
         class="manage-projects-btn"
         @click="openProjectManager"
-        title="Manage tracked projects"
+        title="Add projects"
         :disabled="isLoading"
       >
-        ⚙️
+        ➕
       </button>
     </div>
     <div class="project-path">
@@ -34,6 +34,15 @@
           :project-name="selectedProject.name"
           :disabled="!selectedProject || isLoading"
       />
+    </div>
+    <div class="top-bar-actions">
+      <button 
+        class="settings-btn"
+        @click="openSettings"
+        title="Settings"
+      >
+        ⚙️
+      </button>
     </div>
   </div>
 </template>
@@ -68,6 +77,14 @@ const openProjectManager = () => {
   showPopup({
     id: 'project-manager',
     component: 'ProjectManager',
+    props: {}
+  })
+}
+
+const openSettings = () => {
+  showPopup({
+    id: 'settings',
+    component: 'Settings',
     props: {}
   })
 }
@@ -117,7 +134,8 @@ const openProjectManager = () => {
   cursor: not-allowed;
 }
 
-.manage-projects-btn {
+.manage-projects-btn,
+.settings-btn {
   background: none;
   border: var(--border-width) solid var(--border-color);
   cursor: pointer;
@@ -133,7 +151,8 @@ const openProjectManager = () => {
   background-color: var(--surface-color);
 }
 
-.manage-projects-btn:hover:not(:disabled) {
+.manage-projects-btn:hover:not(:disabled),
+.settings-btn:hover {
   background-color: var(--hover-color);
   border-color: var(--accent-color);
 }
@@ -164,5 +183,10 @@ const openProjectManager = () => {
   font-size: var(--font-size-sm);
   color: var(--text-primary);
   font-family: var(--font-mono);
+}
+
+.top-bar-actions {
+  display: flex;
+  gap: var(--spacing-xs);
 }
 </style>
