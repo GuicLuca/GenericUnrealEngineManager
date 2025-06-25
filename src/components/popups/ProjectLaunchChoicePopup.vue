@@ -62,8 +62,8 @@
           
           <div v-if="availableIdes.length === 0" class="no-ides">
             <div class="no-ides-icon">⚠️</div>
-            <div class="no-ides-text">No IDEs detected</div>
-            <div class="no-ides-subtext">Configure IDE paths in settings</div>
+            <div class="no-ides-text">No IDEs configured</div>
+            <div class="no-ides-subtext">Configure IDE programs in settings</div>
             <button class="settings-button" @click="openSettings">
               Open Settings
             </button>
@@ -93,10 +93,6 @@ interface IdeInfo {
 
 interface AppSettings {
   ide_programs: {
-    visual_studio?: string
-    visual_studio_code?: string
-    clion?: string
-    rider?: string
     custom_programs: Record<string, string>
   }
 }
@@ -117,47 +113,16 @@ const availableIdes = computed(() => {
   if (!settings.value) return []
   
   const ides: IdeInfo[] = []
-  const idePrograms = settings.value.ide_programs
-  
-  if (idePrograms.visual_studio) {
-    ides.push({
-      name: 'Visual Studio',
-      path: idePrograms.visual_studio,
-      icon: '🔷'
-    })
-  }
-  
-  if (idePrograms.visual_studio_code) {
-    ides.push({
-      name: 'Visual Studio Code',
-      path: idePrograms.visual_studio_code,
-      icon: '📘'
-    })
-  }
-  
-  if (idePrograms.clion) {
-    ides.push({
-      name: 'CLion',
-      path: idePrograms.clion,
-      icon: '🔶'
-    })
-  }
-  
-  if (idePrograms.rider) {
-    ides.push({
-      name: 'JetBrains Rider',
-      path: idePrograms.rider,
-      icon: '🔴'
-    })
-  }
   
   // Add custom programs
-  Object.entries(idePrograms.custom_programs).forEach(([name, path]) => {
-    ides.push({
-      name,
-      path,
-      icon: '⚙️'
-    })
+  Object.entries(settings.value.ide_programs.custom_programs).forEach(([name, path]) => {
+    if (path.trim()) { // Only include programs with valid paths
+      ides.push({
+        name,
+        path,
+        icon: '⚙️'
+      })
+    }
   })
   
   return ides

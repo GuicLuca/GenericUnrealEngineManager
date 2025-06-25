@@ -14,108 +14,27 @@
       <div class="settings-section">
         <h3 class="section-title">IDE Programs</h3>
         <div class="section-description">
-          Configure the paths to your preferred IDEs for opening C++ projects.
-        </div>
-
-        <div class="ide-settings">
-          <div class="ide-setting">
-            <label class="setting-label">
-              <span class="label-icon">🔷</span>
-              Visual Studio
-            </label>
-            <div class="setting-input-group">
-              <input
-                v-model="localSettings.ide_programs.visual_studio"
-                type="text"
-                class="setting-input"
-                placeholder="Path to Visual Studio executable..."
-              />
-              <button
-                class="browse-button"
-                @click="browseForIde('visual_studio')"
-                title="Browse for Visual Studio"
-              >
-                📂
-              </button>
-            </div>
-          </div>
-
-          <div class="ide-setting">
-            <label class="setting-label">
-              <span class="label-icon">📘</span>
-              Visual Studio Code
-            </label>
-            <div class="setting-input-group">
-              <input
-                v-model="localSettings.ide_programs.visual_studio_code"
-                type="text"
-                class="setting-input"
-                placeholder="Path to VS Code executable..."
-              />
-              <button
-                class="browse-button"
-                @click="browseForIde('visual_studio_code')"
-                title="Browse for VS Code"
-              >
-                📂
-              </button>
-            </div>
-          </div>
-
-          <div class="ide-setting">
-            <label class="setting-label">
-              <span class="label-icon">🔶</span>
-              CLion
-            </label>
-            <div class="setting-input-group">
-              <input
-                v-model="localSettings.ide_programs.clion"
-                type="text"
-                class="setting-input"
-                placeholder="Path to CLion executable..."
-              />
-              <button
-                class="browse-button"
-                @click="browseForIde('clion')"
-                title="Browse for CLion"
-              >
-                📂
-              </button>
-            </div>
-          </div>
-
-          <div class="ide-setting">
-            <label class="setting-label">
-              <span class="label-icon">🔴</span>
-              JetBrains Rider
-            </label>
-            <div class="setting-input-group">
-              <input
-                v-model="localSettings.ide_programs.rider"
-                type="text"
-                class="setting-input"
-                placeholder="Path to Rider executable..."
-              />
-              <button
-                class="browse-button"
-                @click="browseForIde('rider')"
-                title="Browse for Rider"
-              >
-                📂
-              </button>
-            </div>
-          </div>
+          Configure your preferred IDEs for opening C++ projects. Add any IDE or code editor you want to use.
         </div>
 
         <!-- Custom Programs Section -->
         <div class="custom-programs">
-          <h4 class="subsection-title">Custom Programs</h4>
           <div class="custom-program-list">
             <div 
               v-for="(path, name) in localSettings.ide_programs.custom_programs"
               :key="name"
               class="custom-program-item"
             >
+              <div class="program-icon">
+                <img 
+                  v-if="programIcons[name]" 
+                  :src="programIcons[name]" 
+                  :alt="name"
+                  class="icon-image"
+                  @error="handleIconError(name)"
+                />
+                <span v-else class="fallback-icon">⚙️</span>
+              </div>
               <input
                 v-model="customProgramNames[name]"
                 type="text"
@@ -128,6 +47,7 @@
                 type="text"
                 class="custom-path-input"
                 placeholder="Path to executable..."
+                @change="extractIcon(name, localSettings.ide_programs.custom_programs[name])"
               />
               <button
                 class="browse-button"
@@ -147,7 +67,7 @@
           </div>
           <button class="add-custom-button" @click="addCustomProgram">
             <span class="button-icon">➕</span>
-            Add Custom Program
+            Add IDE Program
           </button>
         </div>
       </div>
@@ -173,10 +93,6 @@ import { useLogStore } from '../../stores/logStore'
 
 interface AppSettings {
   ide_programs: {
-    visual_studio?: string
-    visual_studio_code?: string
-    clion?: string
-    rider?: string
     custom_programs: Record<string, string>
   }
 }
@@ -189,13 +105,10 @@ const { addLog } = useLogStore()
 
 const isSaving = ref(false)
 const customProgramNames = ref<Record<string, string>>({})
+const programIcons = ref<Record<string, string>>({})
 
 const localSettings = reactive<AppSettings>({
   ide_programs: {
-    visual_studio: '',
-    visual_studio_code: '',
-    clion: '',
-    rider: '',
     custom_programs: {}
   }
 })
@@ -205,15 +118,12 @@ const loadSettings = async () => {
     const settings = await invoke('get_settings') as AppSettings
     
     // Update local settings
-    localSettings.ide_programs.visual_studio = settings.ide_programs.visual_studio || ''
-    localSettings.ide_programs.visual_studio_code = settings.ide_programs.visual_studio_code || ''
-    localSettings.ide_programs.clion = settings.ide_programs.clion || ''
-    localSettings.ide_programs.rider = settings.ide_programs.rider || ''
     localSettings.ide_programs.custom_programs = { ...settings.ide_programs.custom_programs }
     
     // Initialize custom program names
     Object.keys(localSettings.ide_programs.custom_programs).forEach(name => {
       customProgramNames.value[name] = name
+      extractIcon(name, localSettings.ide_programs.custom_programs[name])
     })
     
   } catch (error) {
@@ -229,10 +139,6 @@ const saveSettings = async () => {
     // Clean up empty values
     const settingsToSave: AppSettings = {
       ide_programs: {
-        visual_studio: localSettings.ide_programs.visual_studio || undefined,
-        visual_studio_code: localSettings.ide_programs.visual_studio_code || undefined,
-        clion: localSettings.ide_programs.clion || undefined,
-        rider: localSettings.ide_programs.rider || undefined,
         custom_programs: { ...localSettings.ide_programs.custom_programs }
       }
     }
@@ -246,29 +152,6 @@ const saveSettings = async () => {
     addLog('Failed to save settings', 'error')
   } finally {
     isSaving.value = false
-  }
-}
-
-const browseForIde = async (ideType: keyof AppSettings['ide_programs']) => {
-  if (ideType === 'custom_programs') return
-  
-  try {
-    const selected = await open({
-      directory: false,
-      multiple: false,
-      title: `Select ${ideType.replace('_', ' ')} executable`,
-      filters: [{
-        name: 'Executable',
-        extensions: ['exe', 'app', 'AppImage']
-      }]
-    })
-    
-    if (selected && typeof selected === 'string') {
-      localSettings.ide_programs[ideType] = selected
-    }
-  } catch (error) {
-    console.error('Failed to browse for IDE:', error)
-    addLog('Failed to browse for IDE', 'error')
   }
 }
 
@@ -286,6 +169,7 @@ const browseForCustomIde = async (programName: string) => {
     
     if (selected && typeof selected === 'string') {
       localSettings.ide_programs.custom_programs[programName] = selected
+      extractIcon(programName, selected)
     }
   } catch (error) {
     console.error('Failed to browse for custom IDE:', error)
@@ -294,7 +178,7 @@ const browseForCustomIde = async (programName: string) => {
 }
 
 const addCustomProgram = () => {
-  const newName = `Custom Program ${Object.keys(localSettings.ide_programs.custom_programs).length + 1}`
+  const newName = `IDE Program ${Object.keys(localSettings.ide_programs.custom_programs).length + 1}`
   localSettings.ide_programs.custom_programs[newName] = ''
   customProgramNames.value[newName] = newName
 }
@@ -302,17 +186,47 @@ const addCustomProgram = () => {
 const removeCustomProgram = (programName: string) => {
   delete localSettings.ide_programs.custom_programs[programName]
   delete customProgramNames.value[programName]
+  delete programIcons.value[programName]
 }
 
 const updateCustomProgramName = (oldName: string, newName: string) => {
   if (oldName === newName || !newName.trim()) return
   
   const path = localSettings.ide_programs.custom_programs[oldName]
+  const icon = programIcons.value[oldName]
+  
   delete localSettings.ide_programs.custom_programs[oldName]
   delete customProgramNames.value[oldName]
+  delete programIcons.value[oldName]
   
   localSettings.ide_programs.custom_programs[newName] = path
   customProgramNames.value[newName] = newName
+  if (icon) {
+    programIcons.value[newName] = icon
+  }
+}
+
+const extractIcon = (programName: string, executablePath: string) => {
+  if (!executablePath) return
+  
+  // Try to extract icon using file:// protocol for local files
+  // This is a simplified approach - in a real application you might want to use
+  // a more sophisticated icon extraction method
+  try {
+    // For now, we'll use a simple file:// URL approach
+    // Note: This might not work in all browsers due to security restrictions
+    const iconUrl = `file://${executablePath}`
+    programIcons.value[programName] = iconUrl
+  } catch (error) {
+    console.warn('Failed to extract icon for', programName, error)
+    // Fallback to default icon
+    delete programIcons.value[programName]
+  }
+}
+
+const handleIconError = (programName: string) => {
+  // Remove the failed icon URL so fallback icon is shown
+  delete programIcons.value[programName]
 }
 
 onMounted(() => {
@@ -400,83 +314,9 @@ onMounted(() => {
   margin-bottom: var(--spacing-lg);
 }
 
-.ide-settings {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
-}
-
-.ide-setting {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.setting-label {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-primary);
-}
-
-.label-icon {
-  font-size: var(--font-size-md);
-}
-
-.setting-input-group {
-  display: flex;
-  gap: var(--spacing-sm);
-}
-
-.setting-input {
-  flex: 1;
-  padding: var(--spacing-sm);
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-sm);
-  color: var(--text-primary);
-  background-color: var(--background-color);
-  transition: border-color var(--transition-fast);
-}
-
-.setting-input:focus {
-  outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px var(--accent-color-alpha);
-}
-
-.browse-button {
-  padding: var(--spacing-sm);
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  background-color: var(--surface-color);
-  cursor: pointer;
-  font-size: var(--font-size-md);
-  transition: all var(--transition-fast);
-  min-width: 2.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.browse-button:hover {
-  background-color: var(--hover-color);
-  border-color: var(--accent-color);
-}
-
 .custom-programs {
   border-top: var(--border-width) solid var(--border-color);
   padding-top: var(--spacing-lg);
-}
-
-.subsection-title {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-primary);
-  margin: 0 0 var(--spacing-md) 0;
 }
 
 .custom-program-list {
@@ -490,6 +330,28 @@ onMounted(() => {
   display: flex;
   gap: var(--spacing-sm);
   align-items: center;
+  padding: var(--spacing-sm);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--surface-color);
+}
+
+.program-icon {
+  flex: 0 0 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-image {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+}
+
+.fallback-icon {
+  font-size: var(--font-size-lg);
 }
 
 .custom-name-input {
@@ -512,6 +374,7 @@ onMounted(() => {
   background-color: var(--background-color);
 }
 
+.browse-button,
 .remove-button {
   padding: var(--spacing-sm);
   border: var(--border-width) solid var(--border-color);
@@ -524,6 +387,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.browse-button:hover {
+  background-color: var(--hover-color);
+  border-color: var(--accent-color);
 }
 
 .remove-button:hover {
