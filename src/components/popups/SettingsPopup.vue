@@ -11,6 +11,7 @@
     </div>
 
     <div class="popup-content">
+      <!-- IDE Programs Section -->
       <div class="settings-section">
         <h3 class="section-title">IDE Programs</h3>
         <div class="section-description">
@@ -71,6 +72,146 @@
           </button>
         </div>
       </div>
+
+      <!-- Cleaning Defaults Section -->
+      <div class="settings-section">
+        <h3 class="section-title">Cleaning Default Selection</h3>
+        <div class="section-description">
+          Set the default selection for the clean project popup.
+        </div>
+
+        <div class="cleaning-defaults">
+          <div class="defaults-subsection">
+            <h4 class="subsection-title">Project Scanning</h4>
+            <div class="checkbox-group">
+              <div class="checkbox-item">
+                <input
+                  id="default-ide-files"
+                  v-model="localSettings.cleaning_defaults.ide_files"
+                  type="checkbox"
+                  class="checkbox-input"
+                />
+                <label for="default-ide-files" class="checkbox-label">
+                  IDE files (.vs and .idea)
+                </label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  id="default-binaries"
+                  v-model="localSettings.cleaning_defaults.binaries"
+                  type="checkbox"
+                  class="checkbox-input"
+                />
+                <label for="default-binaries" class="checkbox-label">
+                  Binaries
+                </label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  id="default-build"
+                  v-model="localSettings.cleaning_defaults.build"
+                  type="checkbox"
+                  class="checkbox-input"
+                />
+                <label for="default-build" class="checkbox-label">
+                  Build
+                </label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  id="default-intermediate"
+                  v-model="localSettings.cleaning_defaults.intermediate"
+                  type="checkbox"
+                  class="checkbox-input"
+                />
+                <label for="default-intermediate" class="checkbox-label">
+                  Intermediate
+                </label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  id="default-derived-data-cache"
+                  v-model="localSettings.cleaning_defaults.derived_data_cache"
+                  type="checkbox"
+                  class="checkbox-input"
+                />
+                <label for="default-derived-data-cache" class="checkbox-label">
+                  DerivedDataCache
+                </label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  id="default-saved"
+                  v-model="localSettings.cleaning_defaults.saved"
+                  type="checkbox"
+                  class="checkbox-input"
+                />
+                <label for="default-saved" class="checkbox-label">
+                  Saved
+                </label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  id="default-analyze-plugins"
+                  v-model="localSettings.cleaning_defaults.analyze_plugins"
+                  type="checkbox"
+                  class="checkbox-input"
+                />
+                <label for="default-analyze-plugins" class="checkbox-label">
+                  Analyze plugins
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="localSettings.cleaning_defaults.analyze_plugins" class="defaults-subsection">
+            <h4 class="subsection-title">Plugins Scanning</h4>
+            <div class="checkbox-group">
+              <div class="checkbox-item">
+                <input
+                  id="default-plugin-binaries"
+                  v-model="localSettings.cleaning_defaults.plugin_binaries"
+                  type="checkbox"
+                  class="checkbox-input"
+                />
+                <label for="default-plugin-binaries" class="checkbox-label">
+                  Binaries
+                </label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  id="default-plugin-intermediate"
+                  v-model="localSettings.cleaning_defaults.plugin_intermediate"
+                  type="checkbox"
+                  class="checkbox-input"
+                />
+                <label for="default-plugin-intermediate" class="checkbox-label">
+                  Intermediate
+                </label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  id="default-plugin-node-size-cache"
+                  v-model="localSettings.cleaning_defaults.plugin_node_size_cache"
+                  type="checkbox"
+                  class="checkbox-input"
+                />
+                <label for="default-plugin-node-size-cache" class="checkbox-label">
+                  NodeSizeCache
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="popup-actions">
@@ -95,6 +236,18 @@ interface AppSettings {
   ide_programs: {
     custom_programs: Record<string, string>
   }
+  cleaning_defaults: {
+    ide_files: boolean
+    binaries: boolean
+    build: boolean
+    intermediate: boolean
+    derived_data_cache: boolean
+    saved: boolean
+    analyze_plugins: boolean
+    plugin_binaries: boolean
+    plugin_intermediate: boolean
+    plugin_node_size_cache: boolean
+  }
 }
 
 const emit = defineEmits<{
@@ -110,6 +263,18 @@ const programIcons = ref<Record<string, string>>({})
 const localSettings = reactive<AppSettings>({
   ide_programs: {
     custom_programs: {}
+  },
+  cleaning_defaults: {
+    ide_files: true,
+    binaries: true,
+    build: true,
+    intermediate: true,
+    derived_data_cache: false,
+    saved: false,
+    analyze_plugins: false,
+    plugin_binaries: false,
+    plugin_intermediate: false,
+    plugin_node_size_cache: false
   }
 })
 
@@ -119,6 +284,7 @@ const loadSettings = async () => {
     
     // Update local settings
     localSettings.ide_programs.custom_programs = { ...settings.ide_programs.custom_programs }
+    localSettings.cleaning_defaults = { ...settings.cleaning_defaults }
     
     // Initialize custom program names
     Object.keys(localSettings.ide_programs.custom_programs).forEach(name => {
@@ -140,7 +306,8 @@ const saveSettings = async () => {
     const settingsToSave: AppSettings = {
       ide_programs: {
         custom_programs: { ...localSettings.ide_programs.custom_programs }
-      }
+      },
+      cleaning_defaults: { ...localSettings.cleaning_defaults }
     }
     
     await invoke('save_settings', { settings: settingsToSave })
@@ -298,7 +465,11 @@ onMounted(() => {
 }
 
 .settings-section {
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.settings-section:last-child {
+  margin-bottom: 0;
 }
 
 .section-title {
@@ -416,6 +587,54 @@ onMounted(() => {
 .add-custom-button:hover {
   background-color: var(--hover-color);
   border-color: var(--accent-color);
+}
+
+.cleaning-defaults {
+  border-top: var(--border-width) solid var(--border-color);
+  padding-top: var(--spacing-lg);
+}
+
+.defaults-subsection {
+  margin-bottom: var(--spacing-lg);
+}
+
+.defaults-subsection:last-child {
+  margin-bottom: 0;
+}
+
+.subsection-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-md) 0;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+}
+
+.checkbox-input {
+  margin-top: 2px;
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent-color);
+  flex-shrink: 0;
+}
+
+.checkbox-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  line-height: var(--line-height-normal);
+  flex-grow: 1;
 }
 
 .popup-actions {

@@ -37,6 +37,13 @@
                 @close="hidePopup(popup.id)"
               />
               
+              <!-- Project Clean Popup -->
+              <ProjectCleanPopup
+                v-if="popup.component === 'ProjectClean'"
+                v-bind="popup.props"
+                @close="hidePopup(popup.id)"
+              />
+              
               <!-- Settings Popup -->
               <SettingsPopup
                 v-if="popup.component === 'Settings'"
@@ -60,6 +67,7 @@ import { useLogStore } from '../stores/logStore'
 import ProjectDiscoveryPopup from './popups/ProjectDiscoveryPopup.vue'
 import ProjectManagerPopup from './popups/ProjectManagerPopup.vue'
 import ProjectLaunchChoicePopup from './popups/ProjectLaunchChoicePopup.vue'
+import ProjectCleanPopup from './popups/ProjectCleanPopup.vue'
 import SettingsPopup from './popups/SettingsPopup.vue'
 
 const { popupState, hidePopup, initPopupListener } = usePopup()

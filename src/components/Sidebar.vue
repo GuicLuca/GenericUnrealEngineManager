@@ -25,12 +25,11 @@ export interface SidebarItem {
   requiresProject?: boolean
 }
 
-const props = defineProps<Props>()
 interface Props {
   items: SidebarItem[]
 }
 
-
+const props = defineProps<Props>()
 
 const { selectedProject, hasSelectedProject, removeProjects } = useProjectStore()
 const { addLog } = useLogStore()
@@ -53,6 +52,9 @@ const handleItemClick = async (item: SidebarItem) => {
       break
     case 'open':
       handleOpen()
+      break
+    case 'clean':
+      handleClean()
       break
     // Add more action handlers as needed
     default:
@@ -96,6 +98,19 @@ const handleOpen = async () => {
     console.error('Failed to open project:', error)
     addLog('Failed to open project. Check console for details.', 'error')
   }
+}
+
+const handleClean = () => {
+  if (!selectedProject.value) return
+
+  showPopup({
+    id: 'project-clean',
+    component: 'ProjectClean',
+    props: {
+      projectName: selectedProject.value.name,
+      projectPath: selectedProject.value.path
+    }
+  })
 }
 </script>
 

@@ -108,6 +108,7 @@ pub fn run() {
         projects::actions::project_launcher::launch_project_with_engine,
         projects::actions::project_launcher::launch_project_with_ide,
         projects::actions::project_launcher::project_has_cpp,
+        projects::actions::project_cleaner::clean_project,
         settings::actions::settings_manager::get_settings,
         settings::actions::settings_manager::save_settings,
     ]);
