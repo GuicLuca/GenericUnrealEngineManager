@@ -192,8 +192,8 @@ fn application_setup(app: &mut App) -> errors::Result<()> {
             Ok(fetched_store) => {
                 store = fetched_store;
 
-                if store.get(env::STORE_PROJECTS).is_none() {
-                    store.set(env::STORE_PROJECTS, json!([]));
+                if store.get(env::STORE_PROJECTS_KEY).is_none() {
+                    store.set(env::STORE_PROJECTS_KEY, json!([]));
                 }
                 info!("Store has been initialized.");
             }

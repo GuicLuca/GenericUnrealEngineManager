@@ -115,7 +115,7 @@ impl Project {
         };
         
         let projects_json = serde_json::to_value(projects)?;
-        store.set(env::STORE_PROJECTS, projects_json);
+        store.set(env::STORE_PROJECTS_KEY, projects_json);
         store.save()?;
         
         
@@ -134,7 +134,7 @@ impl Project {
         };
 
         let projects_list: Vec<Project> = serde_json::from_value::<Vec<Project>>(
-            store.get(env::STORE_PROJECTS).unwrap_or(json!([])),
+            store.get(env::STORE_PROJECTS_KEY).unwrap_or(json!([])),
         )
         .unwrap_or_else(|e| {
             error!("Error parsing projects from store: {}", e);
@@ -159,7 +159,7 @@ impl Project {
         };
 
         let projects_json = serde_json::to_value(projects)?;
-        store.set(env::STORE_PROJECTS, projects_json);
+        store.set(env::STORE_PROJECTS_KEY, projects_json);
         store.save()?;
 
         Self::emit_project_updated(app_handle)?;

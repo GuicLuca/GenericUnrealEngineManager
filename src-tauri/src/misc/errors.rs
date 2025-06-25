@@ -29,8 +29,14 @@ pub enum Verror {
     TauriError(#[from] tauri::Error),
 
     #[error(transparent)]
+    TauriPluginStoreError(#[from] tauri_plugin_store::Error),
+
+    #[error(transparent)]
+    SerdeJsonError(#[from] serde_json::Error),
+
+    #[error(transparent)]
     Error(#[from] Box<dyn std::error::Error>),
-    
+
     #[error("{0}")]
     MessageError(String),
 

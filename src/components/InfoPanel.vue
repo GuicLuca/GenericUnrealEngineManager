@@ -67,13 +67,11 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted, onUnmounted, nextTick} from 'vue'
+import {ref, computed, onMounted, onUnmounted} from 'vue'
 import InfoItem from './InfoItem.vue'
 import FileExplorerButton from './FileExplorerButton.vue'
 import { useProjectStore, type EngineAssociation } from '../stores/projectStore'
 import {formatSize, timeSince} from '../utils.ts'
-import {useLogStore} from "../stores/logStore.ts";
-const { addLog } = useLogStore()
 
 interface Props {
   width: number

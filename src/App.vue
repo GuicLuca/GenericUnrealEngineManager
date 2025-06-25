@@ -10,7 +10,6 @@ import PopupManager from './components/PopupManager.vue'
 const sidebarItems = ref<SidebarItem[]>([
   { name: 'Rescan', icon: '🔄', action: 'rescan', requiresProject: true },
   { name: 'Open', icon: '↰', action: 'open', requiresProject: true },
-  { name: 'Build', icon: '🔨', action: 'build', requiresProject: true },
   { name: 'Package', icon: '📦', action: 'package', requiresProject: true },
   { name: 'Clean', icon: '🧹', action: 'clean', requiresProject: true },
   { name: 'Compress', icon: '🗜️', action: 'compress', requiresProject: true },

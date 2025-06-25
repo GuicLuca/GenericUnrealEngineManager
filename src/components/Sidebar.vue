@@ -72,7 +72,7 @@ const handleOpen = async () => {
   if (!selectedProject.value) return
 
   try {
-    // Check if project has C++ code
+    // Check if the selected project has C++ code
     const hasCpp = selectedProject.value.has_cpp
     
     if (!hasCpp) {
@@ -82,7 +82,7 @@ const handleOpen = async () => {
         projectPath: selectedProject.value.path
       })
     } else {
-      // C++ project - show popup to choose launch method
+      // C++ project - show popup to choose the launch method
       showPopup({
         id: 'project-launch-choice',
         component: 'ProjectLaunchChoice',

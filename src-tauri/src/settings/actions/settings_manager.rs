@@ -2,13 +2,11 @@ use crate::env;
 use crate::misc::errors;
 use crate::settings::models::settings::AppSettings;
 use log::{error, info};
-use serde_json::json;
 use std::sync::Arc;
-use tauri::{command, AppHandle};
-use tauri_plugin_store::{Store, StoreExt, Wry};
+use tauri::{command, AppHandle, Wry};
+use tauri_plugin_store::{Store, StoreExt};
 
-/// The key used to store settings in the store
-const STORE_SETTINGS_KEY: &str = "app_settings";
+
 
 /// Get the current application settings
 #[command]
@@ -41,7 +39,7 @@ pub fn save_settings(app_handle: AppHandle, settings: AppSettings) -> Result<(),
 pub fn load_settings(app_handle: &AppHandle) -> errors::Result<AppSettings> {
     let store: Arc<Store<Wry>> = app_handle.store(env::STORE_FILE_NAME)?;
     
-    let settings = if let Some(settings_value) = store.get(STORE_SETTINGS_KEY) {
+    let settings = if let Some(settings_value) = store.get(env::STORE_SETTINGS_KEY) {
         serde_json::from_value::<AppSettings>(settings_value.clone())
             .unwrap_or_else(|e| {
                 error!("Failed to parse settings from store: {}, using defaults", e);
@@ -60,7 +58,7 @@ pub fn store_settings(app_handle: &AppHandle, settings: &AppSettings) -> errors:
     let store: Arc<Store<Wry>> = app_handle.store(env::STORE_FILE_NAME)?;
     
     let settings_json = serde_json::to_value(settings)?;
-    store.set(STORE_SETTINGS_KEY, settings_json);
+    store.set(env::STORE_SETTINGS_KEY, settings_json);
     store.save()?;
     
     Ok(())
@@ -70,10 +68,10 @@ pub fn store_settings(app_handle: &AppHandle, settings: &AppSettings) -> errors:
 pub fn initialize_settings(app_handle: &AppHandle) -> errors::Result<()> {
     let store: Arc<Store<Wry>> = app_handle.store(env::STORE_FILE_NAME)?;
     
-    if store.get(STORE_SETTINGS_KEY).is_none() {
+    if store.get(env::STORE_SETTINGS_KEY).is_none() {
         let default_settings = AppSettings::default();
         let settings_json = serde_json::to_value(default_settings)?;
-        store.set(STORE_SETTINGS_KEY, settings_json);
+        store.set(env::STORE_SETTINGS_KEY, settings_json);
         store.save()?;
         info!("Initialized default settings");
     }

@@ -20,7 +20,10 @@ use lazy_static::lazy_static;
 pub(crate) const STORE_FILE_NAME: &str = "project_manager_store.json";
 
 /// The key used to store the list of tracked project
-pub(crate) const STORE_PROJECTS: &str = "projects";
+pub(crate) const STORE_PROJECTS_KEY: &str = "projects";
+
+/// The key used to store settings in the store
+pub(crate) const STORE_SETTINGS_KEY: &str = "app_settings";
 
 ///# ====================================
 ///# == Logging configuration
@@ -84,7 +87,6 @@ lazy_static! {
 pub(crate) const LOG_TIMEZONE: tauri_plugin_log::TimezoneStrategy =
     tauri_plugin_log::TimezoneStrategy::UseLocal;
 
-
 ///# ====================================
 ///# == Event configuration
 ///# ====================================
@@ -96,4 +98,3 @@ pub(crate) const EVENT_INIT: &str = "app_initialized";
 pub(crate) const EVENT_ADD_LOG: &str = "add_log";
 
 pub(crate) const EVENT_PROJECTS_UPDATED: &str = "projects_updated";
-
