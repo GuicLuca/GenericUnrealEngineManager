@@ -1,5 +1,6 @@
 use crate::misc::errors::{ErrorLevel, Result};
 use crate::misc::prelude::{format_size, log};
+use crate::misc::progress::TaskProgress;
 use crate::projects::actions::project_cleaner::{CleaningSelection, clean_project};
 use log::{error};
 use serde::{Deserialize, Serialize};
@@ -56,11 +57,19 @@ pub async fn compress_project(
         .and_then(|s| s.to_str())
         .unwrap_or("Unknown");
     
+    let task_id = format!("compress_project_{}", chrono::Utc::now().timestamp_millis());
+    let progress = TaskProgress::new(
+        app_handle.clone(),
+        task_id,
+        format!("Compressing project: {}", project_name)
+    );
+    
     log(&app_handle, ErrorLevel::Info, &format!("Starting compression process for project: {}", project_name));
     
     // Clean the project if requested
     if request.clean_before_compress {
         if let Some(cleaning_selection) = request.cleaning_selection {
+            progress.update(0.1, Some("Cleaning project before compression...".to_string()));
             log(&app_handle, ErrorLevel::Info, "Cleaning project before compression...");
             
             match clean_project(app_handle.clone(), request.project_path.clone(), cleaning_selection).await {
@@ -70,11 +79,14 @@ pub async fn compress_project(
                 Err(e) => {
                     let error_msg = format!("Failed to clean project before compression: {}", e);
                     log(&app_handle, ErrorLevel::Error, &error_msg);
+                    progress.fail(Some(error_msg.clone()));
                     return Err(e);
                 }
             }
         }
     }
+    
+    progress.update(0.3, Some("Calculating project size...".to_string()));
     
     // Get the original size
     let original_size = fs_extra::dir::get_size(project_dir).unwrap_or(0);
@@ -88,9 +100,13 @@ pub async fn compress_project(
     
     log(&app_handle, ErrorLevel::Info, &format!("Compressing to: {}", output_path.display()));
     
+    progress.update(0.4, Some(format!("Creating {} archive...", get_algorithm_name(&request.compression_algorithm))));
+    
     // Perform compression based on the selected algorithm
-    match compress_directory(project_dir, &output_path, &request.compression_algorithm) {
+    match compress_directory(project_dir, &output_path, &request.compression_algorithm, &progress) {
         Ok(_) => {
+            progress.update(0.9, Some("Finalizing compression...".to_string()));
+            
             let compressed_size = fs::metadata(&output_path)
                 .map(|m| m.len())
                 .unwrap_or(0);
@@ -120,12 +136,14 @@ pub async fn compress_project(
             );
             
             log(&app_handle, ErrorLevel::Info, &completion_msg);
+            progress.complete(Some(format!("Compressed to {} ({:.1}% of original)", format_size(compressed_size), compression_ratio)));
             
             Ok(result)
         }
         Err(e) => {
             let error_msg = format!("Failed to compress project: {}", e);
             log(&app_handle, ErrorLevel::Error, &error_msg);
+            progress.fail(Some(error_msg.clone()));
             Err(MessageError(error_msg))
         }
     }
@@ -135,12 +153,25 @@ fn compress_directory(
     source_dir: &Path,
     output_path: &Path,
     algorithm: &CompressionAlgorithm,
+    progress: &TaskProgress,
 ) -> std::result::Result<(), Box<dyn std::error::Error>> {
     match algorithm {
-        CompressionAlgorithm::Zip => compress_with_zip(source_dir, output_path),
-        CompressionAlgorithm::SevenZip => compress_with_7zip(source_dir, output_path),
-        CompressionAlgorithm::Tar => compress_with_tar(source_dir, output_path, false),
-        CompressionAlgorithm::TarGz => compress_with_tar(source_dir, output_path, true),
+        CompressionAlgorithm::Zip => {
+            progress.update(0.5, Some("Creating ZIP archive...".to_string()));
+            compress_with_zip(source_dir, output_path)
+        },
+        CompressionAlgorithm::SevenZip => {
+            progress.update(0.5, Some("Creating 7-Zip archive...".to_string()));
+            compress_with_7zip(source_dir, output_path)
+        },
+        CompressionAlgorithm::Tar => {
+            progress.update(0.5, Some("Creating TAR archive...".to_string()));
+            compress_with_tar(source_dir, output_path, false)
+        },
+        CompressionAlgorithm::TarGz => {
+            progress.update(0.5, Some("Creating TAR.GZ archive...".to_string()));
+            compress_with_tar(source_dir, output_path, true)
+        },
     }
 }
 
@@ -247,6 +278,15 @@ fn get_extension_for_algorithm(algorithm: &CompressionAlgorithm) -> &'static str
         CompressionAlgorithm::SevenZip => "7z",
         CompressionAlgorithm::Tar => "tar",
         CompressionAlgorithm::TarGz => "tar.gz",
+    }
+}
+
+fn get_algorithm_name(algorithm: &CompressionAlgorithm) -> &'static str {
+    match algorithm {
+        CompressionAlgorithm::Zip => "ZIP",
+        CompressionAlgorithm::SevenZip => "7-Zip",
+        CompressionAlgorithm::Tar => "TAR",
+        CompressionAlgorithm::TarGz => "TAR.GZ",
     }
 }
 

@@ -98,3 +98,6 @@ pub(crate) const EVENT_INIT: &str = "app_initialized";
 pub(crate) const EVENT_ADD_LOG: &str = "add_log";
 
 pub(crate) const EVENT_PROJECTS_UPDATED: &str = "projects_updated";
+
+/// Background task progress events
+pub(crate) const EVENT_TASK_PROGRESS: &str = "task_progress";

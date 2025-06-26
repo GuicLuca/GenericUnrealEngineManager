@@ -1,6 +1,7 @@
 use crate::misc::errors::Verror::MessageError;
 use crate::misc::errors::{ErrorLevel, Result};
 use crate::misc::prelude::{format_size, log};
+use crate::misc::progress::TaskProgress;
 use crate::projects::models::project::Project;
 use crate::settings::actions::settings_manager;
 use log::{error, info};
@@ -54,6 +55,13 @@ pub async fn clean_project(
         .and_then(|s| s.to_str())
         .unwrap_or("Unknown");
 
+    let task_id = format!("clean_project_{}", chrono::Utc::now().timestamp_millis());
+    let progress = TaskProgress::new(
+        app_handle.clone(),
+        task_id,
+        format!("Cleaning project: {}", project_name)
+    );
+
     info!("Starting cleaning process for project: {}", project_name);
     log(
         &app_handle,
@@ -61,10 +69,14 @@ pub async fn clean_project(
         &format!("Starting cleaning process for project: {}", project_name),
     );
 
+    progress.update(0.1, Some("Calculating original size...".to_string()));
+
     // Get the original size
     let original_size = fs_extra::dir::get_size(project_dir).unwrap_or(0);
 
     let mut cleaned_items = Vec::new();
+
+    progress.update(0.2, Some("Cleaning project directories...".to_string()));
 
     // Clean project-level directories
     if selection.ide_files {
@@ -92,6 +104,8 @@ pub async fn clean_project(
         clean_directory(project_dir, "Saved", &mut cleaned_items);
     }
 
+    progress.update(0.6, Some("Cleaning plugin directories...".to_string()));
+
     // Clean plugin directories if requested
     if selection.analyze_plugins {
         let plugins_dir = project_dir.join("Plugins");
@@ -118,6 +132,8 @@ pub async fn clean_project(
         }
     }
 
+    progress.update(0.8, Some("Saving settings...".to_string()));
+
     // Save as default if requested
     if selection.save_as_default {
         if let Err(e) = save_cleaning_defaults(&app_handle, &selection) {
@@ -129,6 +145,8 @@ pub async fn clean_project(
             );
         }
     }
+
+    progress.update(0.9, Some("Calculating final size...".to_string()));
 
     // Get the new size
     let new_size = fs_extra::dir::get_size(project_dir).unwrap_or(0);
@@ -156,6 +174,8 @@ pub async fn clean_project(
     if let Err(e) = update_project_size(&app_handle, &project_path, new_size) {
         error!("Failed to update project size: {}", e);
     }
+
+    progress.complete(Some(format!("Cleaned {} items, saved {}", cleaned_items.len(), saved_size_str)));
 
     Ok(result)
 }

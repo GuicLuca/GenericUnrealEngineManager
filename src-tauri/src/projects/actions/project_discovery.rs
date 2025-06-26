@@ -1,4 +1,5 @@
 use crate::misc::prelude::{log};
+use crate::misc::progress::TaskProgress;
 use crate::projects::models::project::Project;
 use crate::misc::payloads::{ProjectDiscoveryRequest, ProjectDiscoveryResult};
 use std::path::{Path, PathBuf};
@@ -17,6 +18,12 @@ pub async fn discover_projects(
     request: ProjectDiscoveryRequest,
 ) -> Result<ProjectDiscoveryResult, String> {
     let start_time = std::time::Instant::now();
+    let task_id = format!("discover_projects_{}", chrono::Utc::now().timestamp_millis());
+    let progress = TaskProgress::new(
+        app_handle.clone(),
+        task_id,
+        format!("Discovering projects in {}", request.base_folder)
+    );
 
     match scan_folder_for_projects(
         &app_handle,
@@ -24,11 +31,14 @@ pub async fn discover_projects(
         request.ignore_templates,
         request.ignore_engine,
         request.ignore_samples,
+        &progress,
     )
     .await
     {
         Ok(projects) => {
             let duration = start_time.elapsed();
+
+            progress.update(0.9, Some("Adding projects to store...".to_string()));
 
             Project::add_projects(&app_handle, &projects).unwrap_or_else(|e| {
                 eprintln!("Error adding projects to store: {}", e);
@@ -39,13 +49,18 @@ pub async fn discover_projects(
                 );
             });
 
+            progress.complete(Some(format!("Found {} projects", projects.len())));
+
             Ok(ProjectDiscoveryResult {
                 total_found: projects.len(),
                 projects,
                 scan_duration_ms: duration.as_millis(),
             })
         }
-        Err(e) => Err(format!("Failed to discover projects: {}", e)),
+        Err(e) => {
+            progress.fail(Some(format!("Discovery failed: {}", e)));
+            Err(format!("Failed to discover projects: {}", e))
+        }
     }
 }
 
@@ -55,12 +70,24 @@ pub async fn scan_folder_for_projects(
     ignore_template: bool,
     ignore_engine: bool,
     ignore_samples: bool,
+    progress: &TaskProgress,
 ) -> Result<Vec<Project>, Box<dyn std::error::Error>> {
     let mut detected_projects = Vec::new();
 
+    progress.update(0.1, Some("Scanning for .uproject files...".to_string()));
+
     // Use glob to find all .uproject files in the specified folder
     let pattern = format!("{}/**/*.uproject", folder_path);
-    'entries: for entry in glob::glob(&pattern)? {
+    let glob_entries: Vec<_> = glob::glob(&pattern)?.collect();
+    let total_files = glob_entries.len();
+
+    progress.update(0.2, Some(format!("Found {} .uproject files", total_files)));
+
+    'entries: for (index, entry) in glob_entries.into_iter().enumerate() {
+        // Update progress for file scanning
+        let scan_progress = 0.2 + (index as f32 / total_files as f32) * 0.5;
+        progress.update(scan_progress, Some(format!("Scanning file {} of {}", index + 1, total_files)));
+
         match entry {
             Ok(path) => {
                 if let Some(project_path) = path.to_str() {
@@ -82,6 +109,8 @@ pub async fn scan_folder_for_projects(
         }
     }
 
+    progress.update(0.7, Some("Processing discovered projects...".to_string()));
+
     // for each project found, create a Project object and if
     // it's not already in the list, add it
     let projects_list = Project::get_projects(app_handle).unwrap_or_else(|e| {
@@ -100,8 +129,13 @@ pub async fn scan_folder_for_projects(
         .collect::<Vec<PathBuf>>();
 
     let mut new_projects = Vec::new();
+    let total_new = detected_projects.len();
 
-    for path in detected_projects {
+    for (index, path) in detected_projects.into_iter().enumerate() {
+        // Update progress for project processing
+        let process_progress = 0.7 + (index as f32 / total_new as f32) * 0.2;
+        progress.update(process_progress, Some(format!("Processing project {} of {}", index + 1, total_new)));
+
         if !known_path.contains(&path) {
             // Create a new Project object
             let new_project = match Project::try_from_path(&path) {
@@ -126,11 +160,20 @@ pub async fn scan_folder_for_projects(
 
 #[command]
 pub fn remove_projects(app_handle: AppHandle, project_paths: Vec<String>) -> Result<(), String> {
+    let task_id = format!("remove_projects_{}", chrono::Utc::now().timestamp_millis());
+    let progress = TaskProgress::new(
+        app_handle.clone(),
+        task_id,
+        format!("Removing {} project(s)", project_paths.len())
+    );
+
     // Convert the project paths from strings to PathBuf
     let paths_to_remove = project_paths
         .into_iter()
         .map(PathBuf::from)
         .collect::<Vec<PathBuf>>();
+
+    progress.update(0.5, Some("Updating project store...".to_string()));
 
     // Remove the project from the store
     match Project::remove_projects(&app_handle, &paths_to_remove) {
@@ -149,6 +192,7 @@ pub fn remove_projects(app_handle: AppHandle, project_paths: Vec<String>) -> Res
                     path_removed_log_string
                 ),
             );
+            progress.complete(Some("Projects removed successfully".to_string()));
             Ok(())
         }
         Err(e) => {
@@ -158,6 +202,7 @@ pub fn remove_projects(app_handle: AppHandle, project_paths: Vec<String>) -> Res
                 ErrorLevel::Error,
                 &format!("Error removing project(s): {}", e),
             );
+            progress.fail(Some(format!("Failed to remove projects: {}", e)));
             Err(format!("Failed to remove project(s): {}", e))
         }
     }
@@ -192,11 +237,20 @@ pub fn get_projects(app_handle: AppHandle) -> Result<Vec<Project>, String> {
 
 #[command]
 pub fn rescan_projects(app_handle: AppHandle, project_paths: Vec<String>) -> Result<(), String> {
+    let task_id = format!("rescan_projects_{}", chrono::Utc::now().timestamp_millis());
+    let progress = TaskProgress::new(
+        app_handle.clone(),
+        task_id,
+        format!("Rescanning {} project(s)", project_paths.len())
+    );
+
     // Convert the project paths from strings to PathBuf
     let paths_to_refresh = project_paths
         .into_iter()
         .map(PathBuf::from)
         .collect::<Vec<PathBuf>>();
+    
+    progress.update(0.5, Some("Scanning project metadata...".to_string()));
     
     // Refresh the projects in the store
     match Project::scan_projects(&app_handle, &paths_to_refresh) {
@@ -213,6 +267,7 @@ pub fn rescan_projects(app_handle: AppHandle, project_paths: Vec<String>) -> Res
                         .join("\n\t-> ")
                 ),
             );
+            progress.complete(Some("Projects rescanned successfully".to_string()));
             Ok(())
         }
         Err(e) => {
@@ -222,6 +277,7 @@ pub fn rescan_projects(app_handle: AppHandle, project_paths: Vec<String>) -> Res
                 ErrorLevel::Error,
                 &format!("Error refreshing project(s): {}", e),
             );
+            progress.fail(Some(format!("Failed to rescan projects: {}", e)));
             Err(format!("Failed to refresh project(s): {}", e))
         }
     }

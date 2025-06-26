@@ -6,6 +6,7 @@ import MainArea from './components/MainArea.vue'
 import InfoPanel from './components/InfoPanel.vue'
 import BottomPanel, { type BottomTab } from './components/BottomPanel.vue'
 import PopupManager from './components/PopupManager.vue'
+import TaskProgressBar from './components/TaskProgressBar.vue'
 
 const sidebarItems = ref<SidebarItem[]>([
   { name: 'Rescan', icon: '🔄', action: 'rescan', requiresProject: true },
@@ -70,6 +71,9 @@ const handleTabChange = (tabId: string): void => {
       @resize="handleLogsResize"
       @tab-change="handleTabChange"
     />
+
+    <!-- Task Progress Bar -->
+    <TaskProgressBar />
 
     <!-- Popup Manager -->
     <PopupManager />
