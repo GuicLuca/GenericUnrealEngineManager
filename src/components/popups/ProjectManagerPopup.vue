@@ -256,7 +256,7 @@ const calculateProjectScore = (searchTerm: string, projectName: string): number 
       const index = name.indexOf(word, startIndex)
       if (index === -1) break
       
-      score += 2 * word.length
+      score += 4 * word.length
       startIndex = index + 1
     }
   }
@@ -291,7 +291,7 @@ const tieBreakingCompare = (a: Project, b: Project, direction: 'asc' | 'desc'): 
   const bIsCustom = typeof b.engine_association === 'string' && b.engine_association === 'Custom'
   
   if (aIsCustom && !bIsCustom) {
-    comparison = 1 // Custom is higher version
+    comparison = 1 // Custom is the higher version
   } else if (!aIsCustom && bIsCustom) {
     comparison = -1
   } else {
@@ -343,8 +343,8 @@ const filteredAndSortedProjects = computed(() => {
     // Sort by score (highest first)
     validProjects.sort((a, b) => b.score - a.score)
     
-    // Take top 25% of results (minimum 1, maximum all results)
-    const top25PercentCount = Math.max(1, Math.ceil(validProjects.length * 0.25))
+    // Take the top 25% of results (minimum 4, maximum all results)
+    const top25PercentCount = Math.max(4, Math.ceil(validProjects.length * 0.25))
     const topResults = validProjects.slice(0, top25PercentCount)
     
     filtered = topResults.map(item => item.project)
@@ -373,12 +373,12 @@ const filteredAndSortedProjects = computed(() => {
         comparison = a.last_scan_date - b.last_scan_date
         break
       case 'version':
-        // Custom engines are highest version (last in ascending, first in descending)
+        // Custom engines are the highest version (last in ascending, first in descending)
         const aIsCustom = typeof a.engine_association === 'string' && a.engine_association === 'Custom'
         const bIsCustom = typeof b.engine_association === 'string' && b.engine_association === 'Custom'
         
         if (aIsCustom && !bIsCustom) {
-          comparison = 1 // Custom is higher version
+          comparison = 1 // Custom is the higher version
         } else if (!aIsCustom && bIsCustom) {
           comparison = -1
         } else {
@@ -390,7 +390,7 @@ const filteredAndSortedProjects = computed(() => {
         break
     }
     
-    // If primary comparison is equal, use tie-breaking
+    // If the primary comparison is equal, use the tie-breaking
     if (comparison === 0) {
       return tieBreakingCompare(a, b, sortOrder.value)
     }
