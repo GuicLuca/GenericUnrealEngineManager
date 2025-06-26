@@ -440,9 +440,8 @@ onMounted(() => {
   background-color: var(--background-color);
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-lg);
-  width: 100%;
-  max-width: 48rem;
-  max-height: 80vh;
+  width: 48rem;
+  height: 36rem;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -455,6 +454,7 @@ onMounted(() => {
   padding: var(--spacing-lg);
   background-color: var(--surface-color);
   border-bottom: var(--border-width) solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .popup-title {
@@ -503,18 +503,19 @@ onMounted(() => {
   display: flex;
   background-color: var(--surface-color);
   border-bottom: var(--border-width) solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .tab-button {
-  padding: var(--spacing-md) var(--spacing-lg);
+  padding: var(--spacing-sm) var(--spacing-md);
   border: none;
   background-color: transparent;
   border-right: var(--border-width) solid var(--border-color);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  font-size: var(--font-size-sm);
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-xs);
   color: var(--text-secondary);
   transition: all var(--transition-fast);
   font-weight: var(--font-weight-medium);
@@ -533,7 +534,7 @@ onMounted(() => {
 }
 
 .tab-icon {
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-sm);
 }
 
 .tab-content {
@@ -727,6 +728,7 @@ onMounted(() => {
   padding: var(--spacing-lg);
   border-top: var(--border-width) solid var(--border-color);
   background-color: var(--surface-color);
+  flex-shrink: 0;
 }
 
 .cancel-button,
