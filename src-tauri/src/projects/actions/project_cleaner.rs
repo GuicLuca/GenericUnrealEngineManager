@@ -151,13 +151,7 @@ pub async fn clean_project(
     // Get the new size
     let new_size = fs_extra::dir::get_size(project_dir).unwrap_or(0);
     let saved_size = original_size.saturating_sub(new_size);
-
-    let result = CleaningResult {
-        original_size,
-        new_size,
-        saved_size,
-        cleaned_items,
-    };
+    
 
     // Log completion
     let saved_size_str = format_size(saved_size);
@@ -166,6 +160,8 @@ pub async fn clean_project(
         "Cleaning process complete for {}, new size on disk: {}, saved {}.",
         project_name, new_size_str, saved_size_str
     );
+
+    progress.complete(Some(format!("Cleaned {} items, saved {}", cleaned_items.len(), saved_size_str)));
 
     info!("{}", completion_msg);
     log(&app_handle, ErrorLevel::Info, &completion_msg);
@@ -176,6 +172,13 @@ pub async fn clean_project(
     }
 
     progress.complete(Some(format!("Cleaned {} items, saved {}", cleaned_items.len(), saved_size_str)));
+
+    let result = CleaningResult {
+        original_size,
+        new_size,
+        saved_size,
+        cleaned_items,
+    };
 
     Ok(result)
 }
