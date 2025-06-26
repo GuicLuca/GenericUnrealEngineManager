@@ -45,7 +45,7 @@
 
       <!-- No Tasks Display -->
       <div v-else class="no-tasks">
-        <span class="status-text">Ready</span>
+        <span class="status-text">No task running</span>
       </div>
     </div>
 
@@ -140,7 +140,7 @@ const handleTaskProgress = (event: any) => {
       }
     }, 1000)
   } else {
-    // Update or add task
+    // Update or add a task
     tasks.value.set(taskData.task_id, taskData)
   }
 }
@@ -169,7 +169,7 @@ onUnmounted(() => {
   border-top: var(--border-width) solid var(--border-color);
   position: relative;
   z-index: 100;
-  min-height: 2rem;
+  min-height: 1rem;
   display: flex;
   flex-direction: column;
 }
@@ -178,7 +178,7 @@ onUnmounted(() => {
   padding: var(--spacing-xs) var(--spacing-md);
   display: flex;
   align-items: center;
-  min-height: 2rem;
+  min-height: 1rem;
 }
 
 .single-task,
