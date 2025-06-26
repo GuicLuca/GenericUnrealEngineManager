@@ -1,15 +1,15 @@
 use crate::env;
-use crate::misc::prelude::{log};
-use crate::projects::models::plugins::ProjectPlugin;
+use crate::misc::errors::ErrorLevel;
+use crate::misc::payloads::ProjectsUpdatedPayload;
+use crate::misc::prelude::log;
+use crate::projects::models::plugins::{ProjectPlugin, UprojectPluginEntry};
 use log::error;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::path::PathBuf;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use tauri::Emitter;
 use tauri_plugin_store::StoreExt;
-use crate::misc::errors::ErrorLevel;
-use crate::misc::payloads::ProjectsUpdatedPayload;
 
 /// Represents the association of a project with a specific Unreal Engine version.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,18 +28,8 @@ pub struct Project {
     pub path: PathBuf,       // Path to the project (.uproject file)
     pub has_cpp: bool,       // Indicates if the project has C++ code
     pub plugins: Vec<ProjectPlugin>, // List of plugins associated with the project
-    pub size_on_disk: u64, // Size on disk in bytes
+    pub size_on_disk: u64,   // Size on disk in bytes
     pub last_scan_date: u64, // Last scan date of the project
-}
-
-#[derive(Debug, Deserialize)]
-struct UprojectPluginEntry {
-    #[serde(rename = "Name")]
-    name: String,
-    #[serde(rename = "Enabled")]
-    enabled: Option<bool>,
-    #[serde(rename = "MarketplaceURL")]
-    marketplace_url: Option<String>,
 }
 
 impl Project {
@@ -80,10 +70,9 @@ impl Project {
             .parent()
             .map(|p| p.join("Source").exists())
             .unwrap_or(false);
-        
+
         // Calculate the size on the disk
-        let size_on_disk = fs_extra::dir::get_size(&path.parent().unwrap())
-            .unwrap_or(0); // Default to 0 if size cannot be determined
+        let size_on_disk = fs_extra::dir::get_size(&path.parent().unwrap()).unwrap_or(0); // Default to 0 if size cannot be determined
 
         // Discover plugins
         let plugins = Self::discover_plugins(path, &uproject_content)?;
@@ -113,21 +102,22 @@ impl Project {
         let plugins_dir = project_dir.join("Plugins");
 
         // Parse plugins from .uproject file
-        let uproject_plugins: HashMap<String, UprojectPluginEntry> = if let Some(plugins_array) = uproject_content.get("Plugins") {
-            if let Some(array) = plugins_array.as_array() {
-                array
-                    .iter()
-                    .filter_map(|plugin_value| {
-                        serde_json::from_value::<UprojectPluginEntry>(plugin_value.clone()).ok()
-                    })
-                    .map(|plugin| (plugin.name.clone(), plugin))
-                    .collect()
+        let uproject_plugins: HashMap<String, UprojectPluginEntry> =
+            if let Some(plugins_array) = uproject_content.get("Plugins") {
+                if let Some(array) = plugins_array.as_array() {
+                    array
+                        .iter()
+                        .filter_map(|plugin_value| {
+                            serde_json::from_value::<UprojectPluginEntry>(plugin_value.clone()).ok()
+                        })
+                        .map(|plugin| (plugin.name.clone(), plugin))
+                        .collect()
+                } else {
+                    HashMap::new()
+                }
             } else {
                 HashMap::new()
-            }
-        } else {
-            HashMap::new()
-        };
+            };
 
         // Step 1: Scan the project's Plugins folder for .uplugin files
         if plugins_dir.exists() {
@@ -135,12 +125,14 @@ impl Project {
                 for entry in entries.flatten() {
                     if entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
                         let plugin_dir = entry.path();
-                        
+
                         // Look for .uplugin files in this directory
                         if let Ok(plugin_files) = std::fs::read_dir(&plugin_dir) {
                             for plugin_file in plugin_files.flatten() {
                                 let plugin_path = plugin_file.path();
-                                if plugin_path.extension().and_then(|s| s.to_str()) == Some("uplugin") {
+                                if plugin_path.extension().and_then(|s| s.to_str())
+                                    == Some("uplugin")
+                                {
                                     // Extract plugin name from file name for lookup
                                     let plugin_file_name = plugin_path
                                         .file_stem()
@@ -148,15 +140,23 @@ impl Project {
                                         .unwrap_or_default();
 
                                     // Get corresponding .uproject plugin data if it exists
-                                    let uproject_plugin_data = uproject_plugins.get(plugin_file_name);
+                                    let uproject_plugin_data =
+                                        uproject_plugins.get(plugin_file_name);
 
                                     // Create ProjectPlugin from the .uplugin file
-                                    match ProjectPlugin::try_from_path(&plugin_path, uproject_plugin_data) {
+                                    match ProjectPlugin::try_from_path(
+                                        &plugin_path,
+                                        uproject_plugin_data,
+                                    ) {
                                         Ok(plugin) => {
                                             plugins.push(plugin);
                                         }
                                         Err(e) => {
-                                            error!("Failed to parse plugin file {}: {}", plugin_path.display(), e);
+                                            error!(
+                                                "Failed to parse plugin file {}: {}",
+                                                plugin_path.display(),
+                                                e
+                                            );
                                         }
                                     }
                                 }
@@ -180,15 +180,15 @@ impl Project {
         for (plugin_name, uproject_plugin_data) in &uproject_plugins {
             // Check if this plugin was already found in the project's Plugins folder
             // We need to be careful here because the plugin name in .uproject might be different
-            // from the friendly name in .uplugin file
+            // from the friendly name in the .uplugin file
             let already_found = plugins.iter().any(|existing_plugin| {
                 // Try to match by plugin name from .uproject
-                existing_plugin.name == plugin_name || 
-                existing_plugin.name == uproject_plugin_data.name
+                existing_plugin.name == *plugin_name
+                    || existing_plugin.name == uproject_plugin_data.name
             });
 
             if !already_found {
-                // This plugin is referenced in .uproject but not found in project folder
+                // This plugin is referenced in .uproject but not found in the project folder
                 // It's likely an engine plugin or external plugin
                 plugins.push(ProjectPlugin::from_uproject_data(uproject_plugin_data));
             }
@@ -196,16 +196,16 @@ impl Project {
 
         Ok(plugins)
     }
-    
+
     pub fn scan_projects(
         app_handle: &tauri::AppHandle,
         project_paths: &[PathBuf],
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut projects = Project::get_projects(app_handle)?;
-        
+
         for project_path in project_paths {
             let project = Project::try_from_path(project_path)?;
-            
+
             // Check if the project already exists
             if let Some(existing_project) = projects.iter_mut().find(|p| p.path == project.path) {
                 *existing_project = project.clone(); // Update the existing project
@@ -213,21 +213,20 @@ impl Project {
                 projects.push(project.clone()); // Else, add the project
             }
         }
-        
+
         // Save the updated projects list to the store
         let store = match app_handle.store(env::STORE_FILE_NAME) {
             Ok(store) => store,
             Err(e) => return Err(Box::new(e)),
         };
-        
+
         let projects_json = serde_json::to_value(projects)?;
         store.set(env::STORE_PROJECTS_KEY, projects_json);
         store.save()?;
-        
-        
+
         // Emit the updated projects event
         Project::emit_project_updated(app_handle)?;
-        
+
         Ok(())
     }
 
@@ -237,13 +236,13 @@ impl Project {
         project_paths: &[PathBuf],
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut projects = Project::get_projects(app_handle)?;
-        
+
         for project_path in project_paths {
             if let Some(existing_project) = projects.iter_mut().find(|p| p.path == *project_path) {
                 // Re-discover plugins for this project
                 let contents = std::fs::read_to_string(project_path)?;
                 let uproject_content: serde_json::Value = serde_json::from_str(&contents)?;
-                
+
                 existing_project.plugins = Self::discover_plugins(project_path, &uproject_content)?;
                 existing_project.last_scan_date = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
@@ -251,10 +250,10 @@ impl Project {
                     .as_secs();
             }
         }
-        
+
         // Save the updated projects list to the store
         Project::save_projects(app_handle, &projects)?;
-        
+
         Ok(())
     }
 
@@ -264,9 +263,9 @@ impl Project {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let projects = Project::get_projects(app_handle)?;
         let project_paths: Vec<PathBuf> = projects.iter().map(|p| p.path.clone()).collect();
-        
+
         Self::scan_project_plugins(app_handle, &project_paths)?;
-        
+
         Ok(())
     }
 
@@ -293,7 +292,7 @@ impl Project {
 
         Ok(projects_list)
     }
-    
+
     pub fn save_projects(
         app_handle: &tauri::AppHandle,
         projects: &[Project],
@@ -311,13 +310,13 @@ impl Project {
 
         Ok(())
     }
-    
+
     pub fn add_projects(
         app_handle: &tauri::AppHandle,
         projects: &[Project],
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut known_projects = Project::get_projects(app_handle)?;
-        
+
         // Check if the project already exists
         for project in projects {
             if !known_projects.iter().any(|p| p.path == project.path) {
@@ -326,31 +325,33 @@ impl Project {
         }
 
         Project::save_projects(app_handle, &known_projects)?;
-        
+
         Ok(())
     }
-    
+
     pub fn remove_projects(
         app_handle: &tauri::AppHandle,
         project_paths: &[PathBuf],
-    ) -> Result<(), Box<dyn std::error::Error>>
-    {
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut known_projects = Project::get_projects(app_handle)?;
-        
+
         // Filter out the projects that are in the project_paths
         known_projects.retain(|p| !project_paths.contains(&p.path));
-        
+
         Project::save_projects(app_handle, &known_projects)?;
-        
+
         Ok(())
     }
-    
+
     pub fn emit_project_updated(
         app_handle: &tauri::AppHandle,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        app_handle.emit(env::EVENT_PROJECTS_UPDATED, ProjectsUpdatedPayload{
-            projects: Project::get_projects(app_handle)?
-        })?;
+        app_handle.emit(
+            env::EVENT_PROJECTS_UPDATED,
+            ProjectsUpdatedPayload {
+                projects: Project::get_projects(app_handle)?,
+            },
+        )?;
         Ok(())
     }
 }

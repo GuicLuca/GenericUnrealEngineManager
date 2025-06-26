@@ -174,7 +174,6 @@ const handleSubmit = async () => {
   
   try {
     isDiscovering.value = true
-    addLog('Starting project discovery...')
     
     const request = {
       base_folder: formData.baseFolder,

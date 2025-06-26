@@ -16,21 +16,21 @@ pub struct ProjectPlugin {
 }
 
 #[derive(Debug, Deserialize)]
-struct UpluginFile {
+pub struct UpluginFile {
     #[serde(rename = "FriendlyName")]
-    friendly_name: Option<String>,
+    pub friendly_name: Option<String>,
     #[serde(rename = "MarketplaceURL")]
-    marketplace_url: Option<String>,
+    pub marketplace_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
-struct UprojectPluginEntry {
+pub struct UprojectPluginEntry {
     #[serde(rename = "Name")]
-    name: String,
+    pub name: String,
     #[serde(rename = "Enabled")]
-    enabled: Option<bool>,
+    pub enabled: Option<bool>,
     #[serde(rename = "MarketplaceURL")]
-    marketplace_url: Option<String>,
+    pub marketplace_url: Option<String>,
 }
 
 impl ProjectPlugin {

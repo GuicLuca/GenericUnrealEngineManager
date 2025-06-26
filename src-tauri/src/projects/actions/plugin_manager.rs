@@ -1,7 +1,7 @@
 use crate::misc::errors::{ErrorLevel, Result};
 use crate::misc::prelude::log;
 use crate::projects::models::project::Project;
-use log::{error, info};
+use log::{error};
 use std::path::PathBuf;
 use tauri::{command, AppHandle};
 
