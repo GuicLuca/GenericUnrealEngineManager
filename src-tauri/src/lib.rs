@@ -112,6 +112,8 @@ pub fn run() {
         projects::actions::project_cleaner::clean_project,
         projects::actions::project_compressor::compress_project,
         projects::actions::project_compressor::get_available_compression_algorithms,
+        projects::actions::plugin_manager::scan_plugins,
+        projects::actions::plugin_manager::refresh_all_plugins,
         settings::actions::settings_manager::get_settings,
         settings::actions::settings_manager::save_settings,
     ]);

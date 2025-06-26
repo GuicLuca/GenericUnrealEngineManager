@@ -15,7 +15,7 @@
 
     <div class="popup-content">
       <!-- Clean Before Compress Section -->
-      <div class="compress-section">
+      <div class="compress-section" :class="{ 'section-collapsed': !cleanBeforeCompress }">
         <div class="section-header">
           <input
             id="clean-before-compress"
@@ -447,7 +447,7 @@ onMounted(() => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
   background-color: var(--surface-color);
   border-bottom: var(--border-width) solid var(--border-color);
   flex-shrink: 0;
@@ -514,6 +514,10 @@ onMounted(() => {
 
 .compress-section:last-of-type {
   margin-bottom: 0;
+}
+
+.compress-section.section-collapsed {
+  padding-bottom: var(--spacing-md);
 }
 
 .section-header {
@@ -723,7 +727,7 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: var(--spacing-sm);
-  padding: var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
   border-top: var(--border-width) solid var(--border-color);
   background-color: var(--surface-color);
   flex-shrink: 0;

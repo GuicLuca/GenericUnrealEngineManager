@@ -5,6 +5,7 @@ use log::error;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::path::PathBuf;
+use std::collections::HashMap;
 use tauri::Emitter;
 use tauri_plugin_store::StoreExt;
 use crate::misc::errors::ErrorLevel;
@@ -29,6 +30,16 @@ pub struct Project {
     pub plugins: Vec<ProjectPlugin>, // List of plugins associated with the project
     pub size_on_disk: u64, // Size on disk in bytes
     pub last_scan_date: u64, // Last scan date of the project
+}
+
+#[derive(Debug, Deserialize)]
+struct UprojectPluginEntry {
+    #[serde(rename = "Name")]
+    name: String,
+    #[serde(rename = "Enabled")]
+    enabled: Option<bool>,
+    #[serde(rename = "MarketplaceURL")]
+    marketplace_url: Option<String>,
 }
 
 impl Project {
@@ -57,8 +68,6 @@ impl Project {
             }
         };
 
-        // todo: implement plugin discovery
-
         // Fetch the project name from the file name
         let name = path
             .file_stem()
@@ -76,19 +85,116 @@ impl Project {
         let size_on_disk = fs_extra::dir::get_size(&path.parent().unwrap())
             .unwrap_or(0); // Default to 0 if size cannot be determined
 
+        // Discover plugins
+        let plugins = Self::discover_plugins(path, &uproject_content)?;
+
         Ok(Project {
             name,
             description,
             engine_association,
             path: path.clone(),
             has_cpp,
-            plugins: Vec::new(), // Initialize with an empty vector for plugins
+            plugins,
             size_on_disk,
             last_scan_date: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_secs(),
         })
+    }
+
+    /// Discovers plugins from both the project's Plugins folder and the .uproject file
+    fn discover_plugins(
+        project_path: &PathBuf,
+        uproject_content: &serde_json::Value,
+    ) -> Result<Vec<ProjectPlugin>, Box<dyn std::error::Error>> {
+        let mut plugins = Vec::new();
+        let project_dir = project_path.parent().unwrap();
+        let plugins_dir = project_dir.join("Plugins");
+
+        // Parse plugins from .uproject file
+        let uproject_plugins: HashMap<String, UprojectPluginEntry> = if let Some(plugins_array) = uproject_content.get("Plugins") {
+            if let Some(array) = plugins_array.as_array() {
+                array
+                    .iter()
+                    .filter_map(|plugin_value| {
+                        serde_json::from_value::<UprojectPluginEntry>(plugin_value.clone()).ok()
+                    })
+                    .map(|plugin| (plugin.name.clone(), plugin))
+                    .collect()
+            } else {
+                HashMap::new()
+            }
+        } else {
+            HashMap::new()
+        };
+
+        // Step 1: Scan the project's Plugins folder for .uplugin files
+        if plugins_dir.exists() {
+            if let Ok(entries) = std::fs::read_dir(&plugins_dir) {
+                for entry in entries.flatten() {
+                    if entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
+                        let plugin_dir = entry.path();
+                        
+                        // Look for .uplugin files in this directory
+                        if let Ok(plugin_files) = std::fs::read_dir(&plugin_dir) {
+                            for plugin_file in plugin_files.flatten() {
+                                let plugin_path = plugin_file.path();
+                                if plugin_path.extension().and_then(|s| s.to_str()) == Some("uplugin") {
+                                    // Extract plugin name from file name for lookup
+                                    let plugin_file_name = plugin_path
+                                        .file_stem()
+                                        .and_then(|s| s.to_str())
+                                        .unwrap_or_default();
+
+                                    // Get corresponding .uproject plugin data if it exists
+                                    let uproject_plugin_data = uproject_plugins.get(plugin_file_name);
+
+                                    // Create ProjectPlugin from the .uplugin file
+                                    match ProjectPlugin::try_from_path(&plugin_path, uproject_plugin_data) {
+                                        Ok(plugin) => {
+                                            plugins.push(plugin);
+                                        }
+                                        Err(e) => {
+                                            error!("Failed to parse plugin file {}: {}", plugin_path.display(), e);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Step 2: Add plugins from .uproject that are not in the project's Plugins folder
+        let found_plugin_names: std::collections::HashSet<String> = plugins
+            .iter()
+            .map(|p| {
+                // We need to match by the original file name, not the friendly name
+                // So we'll extract the plugin name from the path or use a different approach
+                p.name.clone()
+            })
+            .collect();
+
+        for (plugin_name, uproject_plugin_data) in &uproject_plugins {
+            // Check if this plugin was already found in the project's Plugins folder
+            // We need to be careful here because the plugin name in .uproject might be different
+            // from the friendly name in .uplugin file
+            let already_found = plugins.iter().any(|existing_plugin| {
+                // Try to match by plugin name from .uproject
+                existing_plugin.name == plugin_name || 
+                existing_plugin.name == uproject_plugin_data.name
+            });
+
+            if !already_found {
+                // This plugin is referenced in .uproject but not found in project folder
+                // It's likely an engine plugin or external plugin
+                plugins.push(ProjectPlugin::from_uproject_data(uproject_plugin_data));
+            }
+        }
+
+        Ok(plugins)
     }
     
     pub fn scan_projects(
@@ -121,6 +227,45 @@ impl Project {
         
         // Emit the updated projects event
         Project::emit_project_updated(app_handle)?;
+        
+        Ok(())
+    }
+
+    /// Scan plugins for specific projects
+    pub fn scan_project_plugins(
+        app_handle: &tauri::AppHandle,
+        project_paths: &[PathBuf],
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut projects = Project::get_projects(app_handle)?;
+        
+        for project_path in project_paths {
+            if let Some(existing_project) = projects.iter_mut().find(|p| p.path == *project_path) {
+                // Re-discover plugins for this project
+                let contents = std::fs::read_to_string(project_path)?;
+                let uproject_content: serde_json::Value = serde_json::from_str(&contents)?;
+                
+                existing_project.plugins = Self::discover_plugins(project_path, &uproject_content)?;
+                existing_project.last_scan_date = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs();
+            }
+        }
+        
+        // Save the updated projects list to the store
+        Project::save_projects(app_handle, &projects)?;
+        
+        Ok(())
+    }
+
+    /// Refresh plugins for all tracked projects
+    pub fn refresh_all_plugins(
+        app_handle: &tauri::AppHandle,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let projects = Project::get_projects(app_handle)?;
+        let project_paths: Vec<PathBuf> = projects.iter().map(|p| p.path.clone()).collect();
+        
+        Self::scan_project_plugins(app_handle, &project_paths)?;
         
         Ok(())
     }

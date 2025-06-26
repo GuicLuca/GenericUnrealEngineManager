@@ -1,10 +1,12 @@
 <template>
   <div class="settings-popup">
     <div class="popup-header">
-      <h2 class="popup-title">
-        <span class="title-icon">⚙️</span>
-        Settings
-      </h2>
+      <div class="header-content">
+        <h2 class="popup-title">
+          <span class="title-icon">⚙️</span>
+          Settings
+        </h2>
+      </div>
       <button class="close-button" @click="$emit('close')" title="Close">
         ✕
       </button>
@@ -449,12 +451,16 @@ onMounted(() => {
 
 .popup-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
   background-color: var(--surface-color);
   border-bottom: var(--border-width) solid var(--border-color);
   flex-shrink: 0;
+}
+
+.header-content {
+  flex-grow: 1;
 }
 
 .popup-title {
@@ -485,6 +491,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .close-button:hover {
@@ -519,6 +526,9 @@ onMounted(() => {
   color: var(--text-secondary);
   transition: all var(--transition-fast);
   font-weight: var(--font-weight-medium);
+  position: relative;
+  /* Reserve space for the bottom border */
+  border-bottom: 2px solid transparent;
 }
 
 .tab-button:hover {
@@ -529,7 +539,7 @@ onMounted(() => {
 .tab-button.active {
   background-color: var(--background-color);
   color: var(--text-primary);
-  border-bottom: 2px solid var(--accent-color);
+  border-bottom-color: var(--accent-color);
 }
 
 .tab-icon {
@@ -729,7 +739,7 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: var(--spacing-sm);
-  padding: var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
   border-top: var(--border-width) solid var(--border-color);
   background-color: var(--surface-color);
   flex-shrink: 0;
