@@ -1,20 +1,19 @@
 <template>
   <div class="project-compress-popup">
     <div class="popup-header">
-      <h2 class="popup-title">
-        <span class="title-icon">🗜️</span>
-        Compress {{ projectName }}
-      </h2>
+      <div class="header-content">
+        <h2 class="popup-title">
+          <span class="title-icon">🗜️</span>
+          Compress {{ projectName }}
+        </h2>
+        <div class="project-note">Create a compressed archive of your project</div>
+      </div>
       <button class="close-button" @click="$emit('close')" title="Close">
         ✕
       </button>
     </div>
 
     <div class="popup-content">
-      <div class="project-info">
-        <div class="project-note">Create a compressed archive of your project:</div>
-      </div>
-
       <!-- Clean Before Compress Section -->
       <div class="compress-section">
         <div class="section-header">
@@ -400,7 +399,18 @@ const startCompression = async () => {
       destination_path: destinationPath.value,
       compression_algorithm: selectedAlgorithm.value,
       clean_before_compress: cleanBeforeCompress.value,
-      cleaning_selection: cleanBeforeCompress.value ? cleaningSelection : null
+      cleaning_selection: cleanBeforeCompress.value ? {
+        ide_files: cleaningSelection.ide_files,
+        binaries: cleaningSelection.binaries,
+        build: cleaningSelection.build,
+        intermediate: cleaningSelection.intermediate,
+        derived_data_cache: cleaningSelection.derived_data_cache,
+        saved: cleaningSelection.saved,
+        analyze_plugins: cleaningSelection.analyze_plugins,
+        plugin_binaries: cleaningSelection.plugin_binaries,
+        plugin_intermediate: cleaningSelection.plugin_intermediate,
+        plugin_node_size_cache: cleaningSelection.plugin_node_size_cache
+      } : null
     }
     
     await invoke('compress_project', { request })
@@ -426,6 +436,7 @@ onMounted(() => {
   border-radius: var(--border-radius-lg);
   width: 100%;
   max-width: 42rem;
+  min-width: 42rem;
   max-height: 85vh;
   overflow: hidden;
   display: flex;
@@ -434,7 +445,7 @@ onMounted(() => {
 
 .popup-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   padding: var(--spacing-lg);
   background-color: var(--surface-color);
@@ -442,11 +453,15 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
+.header-content {
+  flex-grow: 1;
+}
+
 .popup-title {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
-  margin: 0;
+  margin: 0 0 var(--spacing-xs) 0;
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
@@ -454,6 +469,12 @@ onMounted(() => {
 
 .title-icon {
   font-size: var(--icon-size-lg);
+}
+
+.project-note {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 .close-button {
@@ -470,6 +491,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .close-button:hover {
@@ -481,16 +503,6 @@ onMounted(() => {
   flex-grow: 1;
   overflow-y: auto;
   padding: var(--spacing-lg);
-}
-
-.project-info {
-  margin-bottom: var(--spacing-sm);
-  text-align: center;
-}
-
-.project-note {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
 }
 
 .compress-section {

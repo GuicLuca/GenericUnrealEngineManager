@@ -1,10 +1,13 @@
 <template>
   <div class="project-discovery-popup">
     <div class="popup-header">
-      <h2 class="popup-title">
-        <span class="title-icon">🔍</span>
-        Discover Unreal Engine Projects
-      </h2>
+      <div class="header-content">
+        <h2 class="popup-title">
+          <span class="title-icon">🔍</span>
+          Discover Unreal Engine Projects
+        </h2>
+        <div class="project-note">Find and add Unreal Engine projects to your workspace</div>
+      </div>
       <button class="close-button" @click="$emit('close')" title="Close">
         ✕
       </button>
@@ -206,18 +209,22 @@ const handleSubmit = async () => {
 
 .popup-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   padding: var(--spacing-lg);
   background-color: var(--surface-color);
   border-bottom: var(--border-width) solid var(--border-color);
 }
 
+.header-content {
+  flex-grow: 1;
+}
+
 .popup-title {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
-  margin: 0;
+  margin: 0 0 var(--spacing-xs) 0;
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
@@ -225,6 +232,12 @@ const handleSubmit = async () => {
 
 .title-icon {
   font-size: var(--icon-size-lg);
+}
+
+.project-note {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 .close-button {
@@ -241,6 +254,7 @@ const handleSubmit = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .close-button:hover {

@@ -25,10 +25,10 @@
         </button>
       </div>
 
-      <!-- Tab Content -->
-      <div class="tab-content">
+      <!-- Tab Content Container with Fixed Height -->
+      <div class="tab-content-container">
         <!-- IDE Programs Tab -->
-        <div v-if="activeTab === 'ide'" class="tab-panel">
+        <div v-show="activeTab === 'ide'" class="tab-panel">
           <div class="settings-section">
             <h3 class="section-title">IDE Programs</h3>
             <div class="section-description">
@@ -91,7 +91,7 @@
         </div>
 
         <!-- Cleaning Defaults Tab -->
-        <div v-if="activeTab === 'cleaning'" class="tab-panel">
+        <div v-show="activeTab === 'cleaning'" class="tab-panel">
           <div class="settings-section">
             <h3 class="section-title">Cleaning Default Selection</h3>
             <div class="section-description">
@@ -536,13 +536,18 @@ onMounted(() => {
   font-size: var(--font-size-sm);
 }
 
-.tab-content {
+.tab-content-container {
   flex-grow: 1;
   overflow: hidden;
+  position: relative;
 }
 
 .tab-panel {
-  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   padding: var(--spacing-lg);
   overflow-y: auto;
 }

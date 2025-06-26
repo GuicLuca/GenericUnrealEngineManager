@@ -1,20 +1,19 @@
 <template>
   <div class="project-launch-popup">
     <div class="popup-header">
-      <h2 class="popup-title">
-        <span class="title-icon">🚀</span>
-        Launch {{ projectName }}
-      </h2>
+      <div class="header-content">
+        <h2 class="popup-title">
+          <span class="title-icon">🚀</span>
+          Launch {{ projectName }}
+        </h2>
+        <div class="project-note">This is a C++ project. Choose how you want to open it</div>
+      </div>
       <button class="close-button" @click="$emit('close')" title="Close">
         ✕
       </button>
     </div>
 
     <div class="popup-content">
-      <div class="project-info">
-        <div class="project-note">This is a C++ project. Choose how you want to open it:</div>
-      </div>
-
       <div class="launch-options">
         <button
             class="launch-option engine-option"
@@ -279,18 +278,22 @@ onMounted(() => {
 
 .popup-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   padding: var(--spacing-lg);
   background-color: var(--surface-color);
   border-bottom: var(--border-width) solid var(--border-color);
 }
 
+.header-content {
+  flex-grow: 1;
+}
+
 .popup-title {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
-  margin: 0;
+  margin: 0 0 var(--spacing-xs) 0;
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
@@ -298,6 +301,12 @@ onMounted(() => {
 
 .title-icon {
   font-size: var(--icon-size-lg);
+}
+
+.project-note {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 .close-button {
@@ -314,6 +323,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .close-button:hover {
@@ -324,16 +334,6 @@ onMounted(() => {
 .popup-content {
   padding: var(--spacing-lg);
   overflow: hidden;
-}
-
-.project-info {
-  margin-bottom: var(--spacing-md);
-  text-align: center;
-}
-
-.project-note {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
 }
 
 .launch-options {
