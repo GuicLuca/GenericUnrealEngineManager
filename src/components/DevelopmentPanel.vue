@@ -27,6 +27,20 @@
           </button>
         </div>
       </div>
+
+      <div class="tool-section">
+        <h5 class="section-title">Task Progress Testing</h5>
+        <div class="button-group">
+          <button 
+            class="dev-button"
+            @click="addFakeTask"
+            :disabled="isCreatingFakeTask"
+          >
+            <span class="button-icon">{{ isCreatingFakeTask ? '⏳' : '🔄' }}</span>
+            {{ isCreatingFakeTask ? 'Creating Task...' : 'Add Random Fake Task' }}
+          </button>
+        </div>
+      </div>
       
       <div class="tool-section">
         <h5 class="section-title">System Information</h5>
@@ -59,6 +73,7 @@ const { addLog } = useLogStore()
 const platformInfo = ref('Unknown')
 const appVersion = ref('0.1.0')
 const isAddingMockProjects = ref(false)
+const isCreatingFakeTask = ref(false)
 
 const openProjectDiscoveryPopup = () => {
   showPopup({
@@ -95,6 +110,82 @@ const addMockProjects = async () => {
   } finally {
     isAddingMockProjects.value = false
   }
+}
+
+const addFakeTask = async () => {
+  if (isCreatingFakeTask.value) return
+  
+  try {
+    isCreatingFakeTask.value = true
+    
+    // Generate random task parameters
+    const taskNames = [
+      'Processing large dataset',
+      'Compiling shaders',
+      'Building lighting',
+      'Optimizing textures',
+      'Generating navigation mesh',
+      'Baking audio',
+      'Analyzing code complexity',
+      'Synchronizing assets',
+      'Validating project structure',
+      'Cleaning temporary files'
+    ]
+    
+    const taskName = taskNames[Math.floor(Math.random() * taskNames.length)]
+    const duration = Math.floor(Math.random() * 20000) + 10000 // 10-30 seconds
+    const taskId = `fake_task_${Date.now()}`
+    
+    addLog(`Starting fake task: ${taskName} (${duration}ms)`)
+    
+    // Simulate task progress
+    await simulateTaskProgress(taskId, taskName, duration)
+    
+  } catch (error) {
+    console.error('Failed to create fake task:', error)
+    addLog('Failed to create fake task', 'error')
+  } finally {
+    isCreatingFakeTask.value = false
+  }
+}
+
+const simulateTaskProgress = async (taskId: string, taskName: string, duration: number) => {
+  const steps = [
+    'Initializing...',
+    'Loading resources...',
+    'Processing data...',
+    'Applying transformations...',
+    'Optimizing results...',
+    'Finalizing...'
+  ]
+  
+  // Emit task started event
+  window.__TAURI__.event.emit('task_progress', {
+    task_id: taskId,
+    task_name: taskName,
+    progress: 0.0,
+    status: 'Started',
+    message: steps[0]
+  })
+  
+  const stepDuration = duration / steps.length
+  
+  for (let i = 0; i < steps.length; i++) {
+    await new Promise(resolve => setTimeout(resolve, stepDuration))
+    
+    const progress = (i + 1) / steps.length
+    const message = i < steps.length - 1 ? steps[i + 1] : 'Completed'
+    
+    window.__TAURI__.event.emit('task_progress', {
+      task_id: taskId,
+      task_name: taskName,
+      progress: progress,
+      status: progress >= 1.0 ? 'Completed' : 'InProgress',
+      message: message
+    })
+  }
+  
+  addLog(`Fake task completed: ${taskName}`)
 }
 
 onMounted(async () => {
