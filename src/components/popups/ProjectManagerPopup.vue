@@ -45,104 +45,56 @@
             <span class="dropdown-arrow" :class="{ 'open': showSortDropdown }">▼</span>
           </button>
           
+          <button
+            class="direction-button"
+            @click="toggleSortDirection"
+            :disabled="isLoading"
+            :title="`Sort ${sortOrder === 'asc' ? 'ascending' : 'descending'} - click to reverse`"
+          >
+            <span class="direction-icon">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          
           <div v-if="showSortDropdown" class="sort-dropdown" ref="sortDropdownRef" @click.stop>
             <div class="sort-group">
-              <div class="sort-group-title">Name</div>
               <button
                 class="sort-option"
-                :class="{ active: sortBy === 'name' && sortOrder === 'asc' }"
-                @click="setSorting('name', 'asc')"
+                :class="{ active: sortBy === 'name' }"
+                @click="setSortBy('name')"
               >
                 <span class="sort-option-icon">📝</span>
-                Name (A-Z)
+                Name
               </button>
               <button
                 class="sort-option"
-                :class="{ active: sortBy === 'name' && sortOrder === 'desc' }"
-                @click="setSorting('name', 'desc')"
-              >
-                <span class="sort-option-icon">📝</span>
-                Name (Z-A)
-              </button>
-            </div>
-            
-            <div class="sort-group">
-              <div class="sort-group-title">Type</div>
-              <button
-                class="sort-option"
-                :class="{ active: sortBy === 'type' && sortOrder === 'asc' }"
-                @click="setSorting('type', 'asc')"
+                :class="{ active: sortBy === 'type' }"
+                @click="setSortBy('type')"
               >
                 <span class="sort-option-icon">💻</span>
-                Type (C++ first)
+                Type
               </button>
               <button
                 class="sort-option"
-                :class="{ active: sortBy === 'type' && sortOrder === 'desc' }"
-                @click="setSorting('type', 'desc')"
-              >
-                <span class="sort-option-icon">🎨</span>
-                Type (Blueprint first)
-              </button>
-            </div>
-            
-            <div class="sort-group">
-              <div class="sort-group-title">Size</div>
-              <button
-                class="sort-option"
-                :class="{ active: sortBy === 'size' && sortOrder === 'asc' }"
-                @click="setSorting('size', 'asc')"
+                :class="{ active: sortBy === 'size' }"
+                @click="setSortBy('size')"
               >
                 <span class="sort-option-icon">📦</span>
-                Size (Smallest first)
+                Size
               </button>
               <button
                 class="sort-option"
-                :class="{ active: sortBy === 'size' && sortOrder === 'desc' }"
-                @click="setSorting('size', 'desc')"
-              >
-                <span class="sort-option-icon">📦</span>
-                Size (Largest first)
-              </button>
-            </div>
-            
-            <div class="sort-group">
-              <div class="sort-group-title">Last Scan</div>
-              <button
-                class="sort-option"
-                :class="{ active: sortBy === 'lastScan' && sortOrder === 'asc' }"
-                @click="setSorting('lastScan', 'asc')"
+                :class="{ active: sortBy === 'lastScan' }"
+                @click="setSortBy('lastScan')"
               >
                 <span class="sort-option-icon">🕒</span>
-                Last Scan (Oldest first)
+                Last Scan
               </button>
               <button
                 class="sort-option"
-                :class="{ active: sortBy === 'lastScan' && sortOrder === 'desc' }"
-                @click="setSorting('lastScan', 'desc')"
-              >
-                <span class="sort-option-icon">🕒</span>
-                Last Scan (Newest first)
-              </button>
-            </div>
-            
-            <div class="sort-group">
-              <div class="sort-group-title">Engine Version</div>
-              <button
-                class="sort-option"
-                :class="{ active: sortBy === 'version' && sortOrder === 'asc' }"
-                @click="setSorting('version', 'asc')"
+                :class="{ active: sortBy === 'version' }"
+                @click="setSortBy('version')"
               >
                 <span class="sort-option-icon">⚙️</span>
-                Version (Custom first)
-              </button>
-              <button
-                class="sort-option"
-                :class="{ active: sortBy === 'version' && sortOrder === 'desc' }"
-                @click="setSorting('version', 'desc')"
-              >
-                <span class="sort-option-icon">⚙️</span>
-                Version (Newest first)
+                Version
               </button>
             </div>
           </div>
@@ -315,6 +267,51 @@ const fuzzyMatch = (searchTerm: string, target: string): number => {
   return similarity > 0.6 ? similarity : 0
 }
 
+// Helper function for tie-breaking comparison
+const tieBreakingCompare = (a: Project, b: Project, direction: 'asc' | 'desc'): number => {
+  // Tie-breaking order: Name > Version > Type > Size > Last Scan
+  
+  // 1. Name
+  let comparison = a.name.localeCompare(b.name)
+  if (comparison !== 0) {
+    return direction === 'asc' ? comparison : -comparison
+  }
+  
+  // 2. Version
+  const aIsCustom = typeof a.engine_association === 'string' && a.engine_association === 'Custom'
+  const bIsCustom = typeof b.engine_association === 'string' && b.engine_association === 'Custom'
+  
+  if (aIsCustom && !bIsCustom) {
+    comparison = 1 // Custom is higher version
+  } else if (!aIsCustom && bIsCustom) {
+    comparison = -1
+  } else {
+    const aVersion = getEngineVersionString(a.engine_association)
+    const bVersion = getEngineVersionString(b.engine_association)
+    comparison = aVersion.localeCompare(bVersion, undefined, { numeric: true })
+  }
+  
+  if (comparison !== 0) {
+    return direction === 'asc' ? comparison : -comparison
+  }
+  
+  // 3. Type (C++ vs Blueprint)
+  if (a.has_cpp !== b.has_cpp) {
+    comparison = a.has_cpp ? -1 : 1 // C++ first
+    return direction === 'asc' ? comparison : -comparison
+  }
+  
+  // 4. Size
+  comparison = a.size_on_disk - b.size_on_disk
+  if (comparison !== 0) {
+    return direction === 'asc' ? comparison : -comparison
+  }
+  
+  // 5. Last Scan
+  comparison = a.last_scan_date - b.last_scan_date
+  return direction === 'asc' ? comparison : -comparison
+}
+
 // Filtered and sorted projects
 const filteredAndSortedProjects = computed(() => {
   let filtered = projects.value
@@ -344,7 +341,7 @@ const filteredAndSortedProjects = computed(() => {
       case 'type':
         // C++ projects first when ascending, Blueprint first when descending
         if (a.has_cpp === b.has_cpp) {
-          comparison = a.name.localeCompare(b.name)
+          return tieBreakingCompare(a, b, sortOrder.value)
         } else {
           comparison = a.has_cpp ? -1 : 1
         }
@@ -356,18 +353,26 @@ const filteredAndSortedProjects = computed(() => {
         comparison = a.last_scan_date - b.last_scan_date
         break
       case 'version':
-        // Custom engines always on top when ascending
+        // Custom engines are highest version (last in ascending, first in descending)
         const aIsCustom = typeof a.engine_association === 'string' && a.engine_association === 'Custom'
         const bIsCustom = typeof b.engine_association === 'string' && b.engine_association === 'Custom'
         
-        if (aIsCustom && !bIsCustom) return -1
-        if (!aIsCustom && bIsCustom) return 1
-        
-        // Both custom or both standard - compare versions
-        const aVersion = getEngineVersionString(a.engine_association)
-        const bVersion = getEngineVersionString(b.engine_association)
-        comparison = aVersion.localeCompare(bVersion, undefined, { numeric: true })
+        if (aIsCustom && !bIsCustom) {
+          comparison = 1 // Custom is higher version
+        } else if (!aIsCustom && bIsCustom) {
+          comparison = -1
+        } else {
+          // Both custom or both standard - compare versions
+          const aVersion = getEngineVersionString(a.engine_association)
+          const bVersion = getEngineVersionString(b.engine_association)
+          comparison = aVersion.localeCompare(bVersion, undefined, { numeric: true })
+        }
         break
+    }
+    
+    // If primary comparison is equal, use tie-breaking
+    if (comparison === 0) {
+      return tieBreakingCompare(a, b, sortOrder.value)
     }
     
     return sortOrder.value === 'asc' ? comparison : -comparison
@@ -407,16 +412,19 @@ const toggleSortDropdown = () => {
   showSortDropdown.value = !showSortDropdown.value
 }
 
-const setSorting = (newSortBy: typeof sortBy.value, newSortOrder: typeof sortOrder.value) => {
+const setSortBy = (newSortBy: typeof sortBy.value) => {
   sortBy.value = newSortBy
-  sortOrder.value = newSortOrder
   showSortDropdown.value = false
+}
+
+const toggleSortDirection = () => {
+  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
 }
 
 const getSortIcon = () => {
   switch (sortBy.value) {
     case 'name': return '📝'
-    case 'type': return sortOrder.value === 'asc' ? '💻' : '🎨'
+    case 'type': return '💻'
     case 'size': return '📦'
     case 'lastScan': return '🕒'
     case 'version': return '⚙️'
@@ -426,12 +434,12 @@ const getSortIcon = () => {
 
 const getSortText = () => {
   switch (sortBy.value) {
-    case 'name': return `Name (${sortOrder.value === 'asc' ? 'A-Z' : 'Z-A'})`
-    case 'type': return `Type (${sortOrder.value === 'asc' ? 'C++ first' : 'Blueprint first'})`
-    case 'size': return `Size (${sortOrder.value === 'asc' ? 'Smallest' : 'Largest'})`
-    case 'lastScan': return `Last Scan (${sortOrder.value === 'asc' ? 'Oldest' : 'Newest'})`
-    case 'version': return `Version (${sortOrder.value === 'asc' ? 'Custom first' : 'Newest first'})`
-    default: return 'Name (A-Z)'
+    case 'name': return 'Name'
+    case 'type': return 'Type'
+    case 'size': return 'Size'
+    case 'lastScan': return 'Last Scan'
+    case 'version': return 'Version'
+    default: return 'Name'
   }
 }
 
@@ -585,9 +593,12 @@ onUnmounted(() => {
 
 .sort-container {
   position: relative;
+  display: flex;
+  gap: var(--spacing-xs);
 }
 
-.sort-button {
+.sort-button,
+.direction-button {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
@@ -602,17 +613,26 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
-.sort-button:hover:not(:disabled) {
+.sort-button:hover:not(:disabled),
+.direction-button:hover:not(:disabled) {
   background-color: var(--hover-color);
   border-color: var(--accent-color);
 }
 
-.sort-button:disabled {
+.sort-button:disabled,
+.direction-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.sort-icon {
+.direction-button {
+  padding: var(--spacing-sm);
+  min-width: 2.5rem;
+  justify-content: center;
+}
+
+.sort-icon,
+.direction-icon {
   font-size: var(--font-size-md);
 }
 
@@ -635,27 +655,15 @@ onUnmounted(() => {
   border-radius: var(--border-radius-md);
   box-shadow: var(--shadow-md);
   padding: var(--spacing-sm);
-  min-width: 16rem;
+  min-width: 12rem;
   max-height: 20rem;
   overflow-y: auto;
 }
 
 .sort-group {
-  margin-bottom: var(--spacing-sm);
-}
-
-.sort-group:last-child {
-  margin-bottom: 0;
-}
-
-.sort-group-title {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: var(--spacing-xs);
-  padding: 0 var(--spacing-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
 }
 
 .sort-option {
