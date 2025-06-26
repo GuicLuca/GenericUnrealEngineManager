@@ -143,6 +143,7 @@ const stopResize = () => {
   color: var(--text-secondary);
   transition: all var(--transition-fast);
   font-weight: var(--font-weight-medium);
+  border-bottom: 2px solid transparent;
 }
 
 .tab-button:hover {
