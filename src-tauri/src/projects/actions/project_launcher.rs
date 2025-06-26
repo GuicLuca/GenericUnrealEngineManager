@@ -1,6 +1,6 @@
 use crate::misc::errors::ErrorLevel;
 use crate::misc::prelude::log;
-use log::{error, info};
+use log::{info};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tauri::{command, AppHandle};

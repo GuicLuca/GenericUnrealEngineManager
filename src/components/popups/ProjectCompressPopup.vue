@@ -3,7 +3,7 @@
     <div class="popup-header">
       <h2 class="popup-title">
         <span class="title-icon">🗜️</span>
-        Compress Project
+        Compress {{ projectName }}
       </h2>
       <button class="close-button" @click="$emit('close')" title="Close">
         ✕
@@ -12,7 +12,6 @@
 
     <div class="popup-content">
       <div class="project-info">
-        <div class="project-name">{{ projectName }}</div>
         <div class="project-note">Create a compressed archive of your project:</div>
       </div>
 
@@ -29,7 +28,7 @@
           <label for="clean-before-compress" class="section-title-label">
             Clean project before compressing
             <InfoTooltip 
-              content="Remove temporary and generated files before creating the archive to reduce file size and exclude unnecessary files."
+              content="Remove temporary and generated files before creating the archive to reduce the final file size."
             />
           </label>
         </div>
@@ -381,7 +380,7 @@ const selectDestination = async () => {
       title: 'Select destination folder for compressed archive'
     })
     
-    if (selected && typeof selected === 'string') {
+    if (selected) {
       destinationPath.value = selected
     }
   } catch (error) {
@@ -485,15 +484,8 @@ onMounted(() => {
 }
 
 .project-info {
-  margin-bottom: var(--spacing-lg);
-  text-align: center;
-}
-
-.project-name {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
   margin-bottom: var(--spacing-sm);
+  text-align: center;
 }
 
 .project-note {

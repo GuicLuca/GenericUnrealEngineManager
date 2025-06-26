@@ -3,7 +3,7 @@
     <div class="popup-header">
       <h2 class="popup-title">
         <span class="title-icon">🧹</span>
-        Clean Project
+        Clean {{ projectName }}
       </h2>
       <button class="close-button" @click="$emit('close')" title="Close">
         ✕
@@ -12,7 +12,6 @@
 
     <div class="popup-content">
       <div class="project-info">
-        <div class="project-name">{{ projectName }}</div>
         <div class="project-note">Select temporary and generated files to remove:</div>
       </div>
 
@@ -200,7 +199,7 @@
             :disabled="isCleaning"
           />
           <label for="save-as-default" class="checkbox-label">
-            Set selection as default selection
+            Set selection as default
           </label>
         </div>
       </div>
@@ -422,15 +421,8 @@ onMounted(() => {
 }
 
 .project-info {
-  margin-bottom: var(--spacing-lg);
-  text-align: center;
-}
-
-.project-name {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
   margin-bottom: var(--spacing-sm);
+  text-align: center;
 }
 
 .project-note {
@@ -503,6 +495,7 @@ onMounted(() => {
 .left-actions {
   display: flex;
   align-items: center;
+  padding-right: var(--spacing-lg);
 }
 
 .right-actions {

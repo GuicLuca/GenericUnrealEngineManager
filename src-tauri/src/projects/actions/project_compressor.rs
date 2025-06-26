@@ -1,7 +1,7 @@
 use crate::misc::errors::{ErrorLevel, Result};
-use crate::misc::prelude::log;
+use crate::misc::prelude::{format_size, log};
 use crate::projects::actions::project_cleaner::{CleaningSelection, clean_project};
-use log::{error, info};
+use log::{error};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -56,10 +56,9 @@ pub async fn compress_project(
         .and_then(|s| s.to_str())
         .unwrap_or("Unknown");
     
-    info!("Starting compression process for project: {}", project_name);
     log(&app_handle, ErrorLevel::Info, &format!("Starting compression process for project: {}", project_name));
     
-    // Clean project if requested
+    // Clean the project if requested
     if request.clean_before_compress {
         if let Some(cleaning_selection) = request.cleaning_selection {
             log(&app_handle, ErrorLevel::Info, "Cleaning project before compression...");
@@ -70,7 +69,6 @@ pub async fn compress_project(
                 }
                 Err(e) => {
                     let error_msg = format!("Failed to clean project before compression: {}", e);
-                    error!("{}", error_msg);
                     log(&app_handle, ErrorLevel::Error, &error_msg);
                     return Err(e);
                 }
@@ -78,7 +76,7 @@ pub async fn compress_project(
         }
     }
     
-    // Get original size
+    // Get the original size
     let original_size = fs_extra::dir::get_size(project_dir).unwrap_or(0);
     
     // Generate output filename with timestamp
@@ -90,7 +88,7 @@ pub async fn compress_project(
     
     log(&app_handle, ErrorLevel::Info, &format!("Compressing to: {}", output_path.display()));
     
-    // Perform compression based on algorithm
+    // Perform compression based on the selected algorithm
     match compress_directory(project_dir, &output_path, &request.compression_algorithm) {
         Ok(_) => {
             let compressed_size = fs::metadata(&output_path)
@@ -121,14 +119,12 @@ pub async fn compress_project(
                 compression_ratio
             );
             
-            info!("{}", completion_msg);
             log(&app_handle, ErrorLevel::Info, &completion_msg);
             
             Ok(result)
         }
         Err(e) => {
             let error_msg = format!("Failed to compress project: {}", e);
-            error!("{}", error_msg);
             log(&app_handle, ErrorLevel::Error, &error_msg);
             Err(MessageError(error_msg))
         }
@@ -152,7 +148,7 @@ fn compress_with_zip(
     source_dir: &Path,
     output_path: &Path,
 ) -> std::result::Result<(), Box<dyn std::error::Error>> {
-    // Use system zip command if available
+    // Use the system zip command if available
     if cfg!(target_os = "windows") {
         // On Windows, try PowerShell Compress-Archive
         let result = Command::new("powershell")
@@ -173,7 +169,7 @@ fn compress_with_zip(
             ).into());
         }
     } else {
-        // On Unix systems, use zip command
+        // On Unix systems, use the zip command
         let result = Command::new("zip")
             .args([
                 "-r",
@@ -198,14 +194,7 @@ fn compress_with_7zip(
     source_dir: &Path,
     output_path: &Path,
 ) -> std::result::Result<(), Box<dyn std::error::Error>> {
-    // Try to find 7zip executable
-    let seven_zip_cmd = if cfg!(target_os = "windows") {
-        "7z"
-    } else {
-        "7z"
-    };
-    
-    let result = Command::new(seven_zip_cmd)
+    let result = Command::new("7z")
         .args([
             "a",
             "-t7z",
@@ -261,18 +250,6 @@ fn get_extension_for_algorithm(algorithm: &CompressionAlgorithm) -> &'static str
     }
 }
 
-fn format_size(size: u64) -> String {
-    if size < 1024 {
-        format!("{} B", size)
-    } else if size < 1024 * 1024 {
-        format!("{:.2} KB", size as f64 / 1024.0)
-    } else if size < 1024 * 1024 * 1024 {
-        format!("{:.2} MB", size as f64 / (1024.0 * 1024.0))
-    } else {
-        format!("{:.2} GB", size as f64 / (1024.0 * 1024.0 * 1024.0))
-    }
-}
-
 /// Get available compression algorithms based on system capabilities
 #[command]
 pub fn get_available_compression_algorithms() -> Vec<CompressionAlgorithm> {
@@ -283,7 +260,7 @@ pub fn get_available_compression_algorithms() -> Vec<CompressionAlgorithm> {
         // PowerShell Compress-Archive is available on Windows 10+
         algorithms.push(CompressionAlgorithm::Zip);
     } else {
-        // Check if zip command is available
+        // Check if the zip command is available
         if Command::new("zip").arg("--help").output().is_ok() {
             algorithms.push(CompressionAlgorithm::Zip);
         }

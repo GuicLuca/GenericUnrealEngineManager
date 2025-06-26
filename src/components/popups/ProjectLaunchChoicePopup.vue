@@ -3,7 +3,7 @@
     <div class="popup-header">
       <h2 class="popup-title">
         <span class="title-icon">🚀</span>
-        Launch Project
+        Launch {{ projectName }}
       </h2>
       <button class="close-button" @click="$emit('close')" title="Close">
         ✕
@@ -12,15 +12,14 @@
 
     <div class="popup-content">
       <div class="project-info">
-        <div class="project-name">{{ projectName }}</div>
         <div class="project-note">This is a C++ project. Choose how you want to open it:</div>
       </div>
 
       <div class="launch-options">
-        <button 
-          class="launch-option engine-option"
-          @click="launchWithEngine"
-          :disabled="isLaunching"
+        <button
+            class="launch-option engine-option"
+            @click="launchWithEngine"
+            :disabled="isLaunching"
         >
           <div class="option-icon">🎮</div>
           <div class="option-content">
@@ -29,10 +28,10 @@
           </div>
         </button>
 
-        <button 
-          class="launch-option ide-option"
-          @click="showProjectIdeSelection"
-          :disabled="isLaunching"
+        <button
+            class="launch-option ide-option"
+            @click="showProjectIdeSelection"
+            :disabled="isLaunching"
         >
           <div class="option-icon">💻</div>
           <div class="option-content">
@@ -42,11 +41,11 @@
         </button>
 
         <!-- Custom Engine Option (only for custom engine projects) -->
-        <button 
-          v-if="isCustomEngine"
-          class="launch-option custom-engine-option"
-          @click="showCustomEngineIdeSelection"
-          :disabled="isLaunching"
+        <button
+            v-if="isCustomEngine"
+            class="launch-option custom-engine-option"
+            @click="showCustomEngineIdeSelection"
+            :disabled="isLaunching"
         >
           <div class="option-icon">🔧</div>
           <div class="option-content">
@@ -60,12 +59,12 @@
       <div v-if="activeIdeSelection === 'project'" class="ide-selection">
         <h3 class="ide-title">Select IDE for {{ projectName }}</h3>
         <div class="ide-list">
-          <button 
-            v-for="ide in availableIdes"
-            :key="ide.name"
-            class="ide-item"
-            @click="launchProjectWithIde(ide.path)"
-            :disabled="isLaunching"
+          <button
+              v-for="ide in availableIdes"
+              :key="ide.name"
+              class="ide-item"
+              @click="launchProjectWithIde(ide.path)"
+              :disabled="isLaunching"
           >
             <div class="ide-icon">{{ ide.icon }}</div>
             <div class="ide-info">
@@ -73,7 +72,7 @@
               <div class="ide-path">{{ ide.path }}</div>
             </div>
           </button>
-          
+
           <div v-if="availableIdes.length === 0" class="no-ides">
             <div class="no-ides-icon">⚠️</div>
             <div class="no-ides-text">No IDEs configured</div>
@@ -89,12 +88,12 @@
       <div v-if="activeIdeSelection === 'custom-engine'" class="ide-selection">
         <h3 class="ide-title">Select IDE for Custom Engine</h3>
         <div class="ide-list">
-          <button 
-            v-for="ide in availableIdes"
-            :key="ide.name"
-            class="ide-item"
-            @click="launchCustomEngineWithIde(ide.path)"
-            :disabled="isLaunching"
+          <button
+              v-for="ide in availableIdes"
+              :key="ide.name"
+              class="ide-item"
+              @click="launchCustomEngineWithIde(ide.path)"
+              :disabled="isLaunching"
           >
             <div class="ide-icon">{{ ide.icon }}</div>
             <div class="ide-info">
@@ -102,7 +101,7 @@
               <div class="ide-path">{{ ide.path }}</div>
             </div>
           </button>
-          
+
           <div v-if="availableIdes.length === 0" class="no-ides">
             <div class="no-ides-icon">⚠️</div>
             <div class="no-ides-text">No IDEs configured</div>
@@ -118,11 +117,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import { useLogStore } from '../../stores/logStore'
-import { usePopup } from '../../composables/usePopup'
-import { useProjectStore, type EngineAssociation } from '../../stores/projectStore'
+import {ref, onMounted, computed} from 'vue'
+import {invoke} from '@tauri-apps/api/core'
+import {useLogStore} from '../../stores/logStore'
+import {usePopup} from '../../composables/usePopup'
+import {useProjectStore, type EngineAssociation} from '../../stores/projectStore'
 
 interface Props {
   projectName: string
@@ -147,9 +146,9 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
-const { addLog } = useLogStore()
-const { showPopup } = usePopup()
-const { selectedProject } = useProjectStore()
+const {addLog} = useLogStore()
+const {showPopup} = usePopup()
+const {selectedProject} = useProjectStore()
 
 const isLaunching = ref(false)
 const activeIdeSelection = ref<'project' | 'custom-engine' | null>(null)
@@ -163,9 +162,9 @@ const isCustomEngine = computed(() => {
 
 const availableIdes = computed(() => {
   if (!settings.value) return []
-  
+
   const ides: IdeInfo[] = []
-  
+
   // Add custom programs
   Object.entries(settings.value.ide_programs.custom_programs).forEach(([name, path]) => {
     if (path.trim()) { // Only include programs with valid paths
@@ -176,7 +175,7 @@ const availableIdes = computed(() => {
       })
     }
   })
-  
+
   return ides
 })
 
@@ -208,12 +207,12 @@ const launchWithEngine = async () => {
 const launchProjectWithIde = async (idePath: string) => {
   try {
     isLaunching.value = true
-    
+
     await invoke('launch_project_with_ide', {
       projectPath: props.projectPath,
       idePath
     })
-    
+
     emit('close')
   } catch (error) {
     // Do nothing, the backend will handle the error
@@ -225,19 +224,19 @@ const launchProjectWithIde = async (idePath: string) => {
 const launchCustomEngineWithIde = async (idePath: string) => {
   try {
     isLaunching.value = true
-    
+
     // Get the custom engine directory (parent of the project directory)
     const projectDir = props.projectPath.replace(/[^/\\]*\.uproject$/, '')
     const pathParts = projectDir.replace(/[/\\]+$/, '').split(/[/\\]/)
     pathParts.pop() // Remove the project directory name
     const customEngineDir = pathParts.join('/')
-    
+
     // Look for the .sln file in the custom engine directory
     await invoke('launch_custom_engine_with_ide', {
       customEngineDir,
       idePath
     })
-    
+
     emit('close')
   } catch (error) {
     // Do nothing, the backend will handle the error
@@ -328,15 +327,8 @@ onMounted(() => {
 }
 
 .project-info {
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
   text-align: center;
-}
-
-.project-name {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-  margin-bottom: var(--spacing-sm);
 }
 
 .project-note {

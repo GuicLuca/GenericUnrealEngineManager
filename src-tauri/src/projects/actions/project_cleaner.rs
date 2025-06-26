@@ -1,5 +1,6 @@
+use crate::misc::errors::Verror::MessageError;
 use crate::misc::errors::{ErrorLevel, Result};
-use crate::misc::prelude::log;
+use crate::misc::prelude::{format_size, log};
 use crate::projects::models::project::Project;
 use crate::settings::actions::settings_manager;
 use log::{error, info};
@@ -7,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::{command, AppHandle};
-use crate::misc::errors::Verror::MessageError;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CleaningSelection {
@@ -40,53 +40,58 @@ pub async fn clean_project(
     selection: CleaningSelection,
 ) -> Result<CleaningResult> {
     let project_path = PathBuf::from(project_path);
-    
+
     if !project_path.exists() {
         let error_msg = format!("Project file does not exist: {}", project_path.display());
         error!("{}", error_msg);
         log(&app_handle, ErrorLevel::Error, &error_msg);
         return Err(MessageError(error_msg));
     }
-    
+
     let project_dir = project_path.parent().unwrap();
-    let project_name = project_path.file_stem()
+    let project_name = project_path
+        .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("Unknown");
-    
+
     info!("Starting cleaning process for project: {}", project_name);
-    log(&app_handle, ErrorLevel::Info, &format!("Starting cleaning process for project: {}", project_name));
-    
+    log(
+        &app_handle,
+        ErrorLevel::Info,
+        &format!("Starting cleaning process for project: {}", project_name),
+    );
+
     // Get the original size
     let original_size = fs_extra::dir::get_size(project_dir).unwrap_or(0);
-    
+
     let mut cleaned_items = Vec::new();
-    
+
     // Clean project-level directories
     if selection.ide_files {
         clean_directory(project_dir, ".vs", &mut cleaned_items);
         clean_directory(project_dir, ".idea", &mut cleaned_items);
     }
-    
+
     if selection.binaries {
         clean_directory(project_dir, "Binaries", &mut cleaned_items);
     }
-    
+
     if selection.build {
         clean_directory(project_dir, "Build", &mut cleaned_items);
     }
-    
+
     if selection.intermediate {
         clean_directory(project_dir, "Intermediate", &mut cleaned_items);
     }
-    
+
     if selection.derived_data_cache {
         clean_directory(project_dir, "DerivedDataCache", &mut cleaned_items);
     }
-    
+
     if selection.saved {
         clean_directory(project_dir, "Saved", &mut cleaned_items);
     }
-    
+
     // Clean plugin directories if requested
     if selection.analyze_plugins {
         let plugins_dir = project_dir.join("Plugins");
@@ -95,15 +100,15 @@ pub async fn clean_project(
                 for entry in entries.flatten() {
                     if entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
                         let plugin_dir = entry.path();
-                        
+
                         if selection.plugin_binaries {
                             clean_directory(&plugin_dir, "Binaries", &mut cleaned_items);
                         }
-                        
+
                         if selection.plugin_intermediate {
                             clean_directory(&plugin_dir, "Intermediate", &mut cleaned_items);
                         }
-                        
+
                         if selection.plugin_node_size_cache {
                             clean_directory(&plugin_dir, "NodeSizeCache", &mut cleaned_items);
                         }
@@ -112,26 +117,30 @@ pub async fn clean_project(
             }
         }
     }
-    
+
     // Save as default if requested
     if selection.save_as_default {
         if let Err(e) = save_cleaning_defaults(&app_handle, &selection) {
             error!("Failed to save cleaning defaults: {}", e);
-            log(&app_handle, ErrorLevel::Error, &format!("Failed to save cleaning defaults: {}", e));
+            log(
+                &app_handle,
+                ErrorLevel::Error,
+                &format!("Failed to save cleaning defaults: {}", e),
+            );
         }
     }
-    
+
     // Get the new size
     let new_size = fs_extra::dir::get_size(project_dir).unwrap_or(0);
     let saved_size = original_size.saturating_sub(new_size);
-    
+
     let result = CleaningResult {
         original_size,
         new_size,
         saved_size,
         cleaned_items,
     };
-    
+
     // Log completion
     let saved_size_str = format_size(saved_size);
     let new_size_str = format_size(new_size);
@@ -139,15 +148,15 @@ pub async fn clean_project(
         "Cleaning process complete for {}, new size on disk: {}, saved {}.",
         project_name, new_size_str, saved_size_str
     );
-    
+
     info!("{}", completion_msg);
     log(&app_handle, ErrorLevel::Info, &completion_msg);
-    
+
     // Update project size in store
     if let Err(e) = update_project_size(&app_handle, &project_path, new_size) {
         error!("Failed to update project size: {}", e);
     }
-    
+
     Ok(result)
 }
 
@@ -166,21 +175,9 @@ fn clean_directory(base_dir: &Path, dir_name: &str, cleaned_items: &mut Vec<Stri
     }
 }
 
-fn format_size(size: u64) -> String {
-    if size < 1024 {
-        format!("{} B", size)
-    } else if size < 1024 * 1024 {
-        format!("{:.2} KB", size as f64 / 1024.0)
-    } else if size < 1024 * 1024 * 1024 {
-        format!("{:.2} MB", size as f64 / (1024.0 * 1024.0))
-    } else {
-        format!("{:.2} GB", size as f64 / (1024.0 * 1024.0 * 1024.0))
-    }
-}
-
 fn save_cleaning_defaults(app_handle: &AppHandle, selection: &CleaningSelection) -> Result<()> {
     let mut settings = settings_manager::load_settings(app_handle)?;
-    
+
     settings.cleaning_defaults.ide_files = selection.ide_files;
     settings.cleaning_defaults.binaries = selection.binaries;
     settings.cleaning_defaults.build = selection.build;
@@ -191,15 +188,15 @@ fn save_cleaning_defaults(app_handle: &AppHandle, selection: &CleaningSelection)
     settings.cleaning_defaults.plugin_binaries = selection.plugin_binaries;
     settings.cleaning_defaults.plugin_intermediate = selection.plugin_intermediate;
     settings.cleaning_defaults.plugin_node_size_cache = selection.plugin_node_size_cache;
-    
+
     settings_manager::store_settings(app_handle, &settings)?;
-    
+
     Ok(())
 }
 
 fn update_project_size(app_handle: &AppHandle, project_path: &Path, new_size: u64) -> Result<()> {
     let mut projects = Project::get_projects(app_handle)?;
-    
+
     if let Some(project) = projects.iter_mut().find(|p| p.path == project_path) {
         project.size_on_disk = new_size;
         project.last_scan_date = std::time::SystemTime::now()
@@ -207,8 +204,8 @@ fn update_project_size(app_handle: &AppHandle, project_path: &Path, new_size: u6
             .unwrap_or_default()
             .as_secs();
     }
-    
+
     Project::save_projects(app_handle, &projects)?;
-    
+
     Ok(())
 }
