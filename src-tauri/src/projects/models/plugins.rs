@@ -44,7 +44,7 @@ impl ProjectPlugin {
         uplugin_path: &Path,
         uproject_plugin_data: Option<&UprojectPluginEntry>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        // Extract plugin name from the file name
+        // Extract the plugin name from the file name
         let plugin_name = uplugin_path
             .file_stem()
             .and_then(|s| s.to_str())

@@ -19,11 +19,11 @@ pub enum EngineAssociation {
 }
 
 /// A project represents an Unreal Engine project with its associated metadata.
-/// It's build from the .uproject file and allows to access various properties.
+/// It is built from the .uproject file and allows accessing various properties.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Project {
     pub name: String,        // Name of the project (from .uproject file)
-    pub description: String, // Description of the project (from .uproject file)
+    pub description: String, // Description of the project (from the .uproject file)
     pub engine_association: EngineAssociation, // Engine version or "Custom" for Unreal Source
     pub path: PathBuf,       // Path to the project (.uproject file)
     pub has_cpp: bool,       // Indicates if the project has C++ code
@@ -120,7 +120,7 @@ impl Project {
 
         // Step 1: Use glob to find all .uplugin files in the project's Plugins directory
         let plugins_pattern = format!("{}/Plugins/*/*.uplugin", project_dir.display());
-        
+
         for entry in glob::glob(&plugins_pattern)? {
             match entry {
                 Ok(uplugin_path) => {
@@ -139,7 +139,11 @@ impl Project {
                             plugins.push(plugin);
                         }
                         Err(e) => {
-                            error!("Failed to parse plugin file {}: {}", uplugin_path.display(), e);
+                            error!(
+                                "Failed to parse plugin file {}: {}",
+                                uplugin_path.display(),
+                                e
+                            );
                         }
                     }
                 }
@@ -150,20 +154,15 @@ impl Project {
         }
 
         // Step 2: Add plugins from .uproject that are not in the project's Plugins folder
-        let found_plugin_names: std::collections::HashSet<String> = plugins
-            .iter()
-            .map(|p| p.name.clone())
-            .collect();
+        let found_plugin_names: std::collections::HashSet<String> =
+            plugins.iter().map(|p| p.name.clone()).collect();
 
         for (plugin_name, uproject_plugin_data) in &uproject_plugins {
             // Check if this plugin was already found in the project's Plugins folder
             // We need to be careful here because the plugin name in .uproject might be different
             // from the friendly name in the .uplugin file
-            let already_found = plugins.iter().any(|existing_plugin| {
-                // Try to match by plugin name from .uproject
-                existing_plugin.name == *plugin_name
-                    || existing_plugin.name == uproject_plugin_data.name
-            });
+            let already_found = found_plugin_names.contains(plugin_name) ||
+                found_plugin_names.contains(&uproject_plugin_data.name);
 
             if !already_found {
                 // This plugin is referenced in .uproject but not found in the project folder

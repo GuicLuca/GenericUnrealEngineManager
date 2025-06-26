@@ -1,7 +1,7 @@
 use crate::misc::errors::{ErrorLevel, Result};
 use crate::misc::prelude::log;
 use crate::projects::models::project::Project;
-use log::{error};
+use log::error;
 use std::path::PathBuf;
 use tauri::{command, AppHandle};
 
@@ -13,7 +13,7 @@ pub fn scan_plugins(app_handle: AppHandle, project_paths: Vec<String>) -> Result
         .into_iter()
         .map(PathBuf::from)
         .collect::<Vec<PathBuf>>();
-    
+
     // Refresh the plugins for the specified projects
     match Project::scan_project_plugins(&app_handle, &paths_to_scan) {
         Ok(_) => {
