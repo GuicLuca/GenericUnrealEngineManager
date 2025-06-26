@@ -19,13 +19,12 @@ export type EngineAssociation =
     | { Standard: string }
     | "Custom"
 
-// Match the backend ProjectPlugin structure
+// Match the backend ProjectPlugin structure (updated without target_allow_list)
 export interface ProjectPlugin {
     name: string
     is_enabled: boolean
     is_in_project: boolean
     marketplace_url: string | null
-    target_allow_list: string[]
 }
 
 // Global project state
