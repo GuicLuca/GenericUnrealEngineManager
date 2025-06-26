@@ -147,14 +147,14 @@ watch(showTooltip, async (isVisible) => {
   border-top-color: var(--text-primary);
 }
 
+/* Only fade in/out animation */
 .tooltip-enter-active,
 .tooltip-leave-active {
-  transition: all var(--transition-fast);
+  transition: opacity var(--transition-fast);
 }
 
 .tooltip-enter-from,
 .tooltip-leave-to {
   opacity: 0;
-  transform: translateY(-100%) scale(0.95);
 }
 </style>
