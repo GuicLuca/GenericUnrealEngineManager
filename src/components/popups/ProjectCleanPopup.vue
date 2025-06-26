@@ -326,9 +326,8 @@ const startCleaning = async () => {
   
   try {
     isCleaning.value = true
-    addLog(`Starting cleaning process for ${props.projectName}...`)
     
-    const result = await invoke('clean_project', {
+    await invoke('clean_project', {
       projectPath: props.projectPath,
       selection: {
         ide_files: selection.ide_files,
@@ -345,12 +344,10 @@ const startCleaning = async () => {
       }
     })
     
-    addLog(`Cleaning completed successfully for ${props.projectName}`)
     emit('close')
     
   } catch (error) {
-    console.error('Failed to clean project:', error)
-    addLog('Failed to clean project. Check console for details.', 'error')
+    // Do nothing, the backend will handle the error
   } finally {
     isCleaning.value = false
   }

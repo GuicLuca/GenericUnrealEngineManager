@@ -38,7 +38,7 @@
             <div class="custom-programs">
               <div class="custom-program-list">
                 <div 
-                  v-for="(path, name) in localSettings.ide_programs.custom_programs"
+                  v-for="(_path, name) in localSettings.ide_programs.custom_programs"
                   :key="name"
                   class="custom-program-item"
                 >
@@ -426,7 +426,7 @@ const extractIcon = (programName: string, executablePath: string) => {
 }
 
 const handleIconError = (programName: string) => {
-  // Remove the failed icon URL so fallback icon is shown
+  // Remove the failed icon URL so the fallback icon is shown
   delete programIcons.value[programName]
 }
 
@@ -530,7 +530,6 @@ onMounted(() => {
   background-color: var(--background-color);
   color: var(--text-primary);
   border-bottom: 2px solid var(--accent-color);
-  font-weight: var(--font-weight-semibold);
 }
 
 .tab-icon {

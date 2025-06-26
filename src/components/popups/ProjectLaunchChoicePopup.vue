@@ -180,23 +180,6 @@ const availableIdes = computed(() => {
   return ides
 })
 
-const launchWithEngine = async () => {
-  try {
-    isLaunching.value = true
-    addLog(`Launching ${props.projectName} with Unreal Engine`)
-    
-    await invoke('launch_project_with_engine', {
-      projectPath: props.projectPath
-    })
-    
-    emit('close')
-  } catch (error) {
-    console.error('Failed to launch with engine:', error)
-    addLog('Failed to launch project with Unreal Engine', 'error')
-  } finally {
-    isLaunching.value = false
-  }
-}
 
 const showProjectIdeSelection = () => {
   activeIdeSelection.value = 'project'
@@ -206,10 +189,25 @@ const showCustomEngineIdeSelection = () => {
   activeIdeSelection.value = 'custom-engine'
 }
 
+const launchWithEngine = async () => {
+  try {
+    isLaunching.value = true
+
+    await invoke('launch_project_with_engine', {
+      projectPath: props.projectPath
+    })
+
+    emit('close')
+  } catch (error) {
+    // Do nothing, the backend will handle the error
+  } finally {
+    isLaunching.value = false
+  }
+}
+
 const launchProjectWithIde = async (idePath: string) => {
   try {
     isLaunching.value = true
-    addLog(`Launching ${props.projectName} with IDE`)
     
     await invoke('launch_project_with_ide', {
       projectPath: props.projectPath,
@@ -218,8 +216,7 @@ const launchProjectWithIde = async (idePath: string) => {
     
     emit('close')
   } catch (error) {
-    console.error('Failed to launch project with IDE:', error)
-    addLog('Failed to launch project with IDE', 'error')
+    // Do nothing, the backend will handle the error
   } finally {
     isLaunching.value = false
   }
@@ -228,25 +225,22 @@ const launchProjectWithIde = async (idePath: string) => {
 const launchCustomEngineWithIde = async (idePath: string) => {
   try {
     isLaunching.value = true
-    addLog(`Opening custom engine with IDE`)
     
-    // Get the custom engine directory (parent of project directory)
+    // Get the custom engine directory (parent of the project directory)
     const projectDir = props.projectPath.replace(/[^/\\]*\.uproject$/, '')
     const pathParts = projectDir.replace(/[/\\]+$/, '').split(/[/\\]/)
     pathParts.pop() // Remove the project directory name
     const customEngineDir = pathParts.join('/')
     
-    // Look for .sln file in the custom engine directory
-    const result = await invoke('launch_custom_engine_with_ide', {
+    // Look for the .sln file in the custom engine directory
+    await invoke('launch_custom_engine_with_ide', {
       customEngineDir,
       idePath
     })
     
-    addLog('Custom engine opened with IDE successfully')
     emit('close')
   } catch (error) {
-    console.error('Failed to launch custom engine with IDE:', error)
-    addLog('Failed to open custom engine with IDE. No .sln file found in the custom engine directory.', 'error')
+    // Do nothing, the backend will handle the error
   } finally {
     isLaunching.value = false
   }

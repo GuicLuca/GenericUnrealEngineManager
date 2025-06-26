@@ -15,15 +15,10 @@ pub async fn launch_project_with_engine(
 
     if !project_path.exists() {
         let error_msg = format!("Project file does not exist: {}", project_path.display());
-        error!("{}", error_msg);
         log(&app_handle, ErrorLevel::Error, &error_msg);
         return Err(error_msg);
     }
 
-    info!(
-        "Launching project with Unreal Engine: {}",
-        project_path.display()
-    );
     log(
         &app_handle,
         ErrorLevel::Info,
@@ -54,7 +49,6 @@ pub async fn launch_project_with_engine(
         }
         Err(e) => {
             let error_msg = format!("Failed to launch project: {}", e);
-            error!("{}", error_msg);
             log(&app_handle, ErrorLevel::Error, &error_msg);
             Err(error_msg)
         }
@@ -73,19 +67,17 @@ pub async fn launch_project_with_ide(
 
     if !project_path.exists() {
         let error_msg = format!("Project file does not exist: {}", project_path.display());
-        error!("{}", error_msg);
         log(&app_handle, ErrorLevel::Error, &error_msg);
         return Err(error_msg);
     }
 
     if !ide_path.exists() {
         let error_msg = format!("IDE executable does not exist: {}", ide_path.display());
-        error!("{}", error_msg);
         log(&app_handle, ErrorLevel::Error, &error_msg);
         return Err(error_msg);
     }
 
-    // Try to find .sln file first
+    // Try to find the .sln file first
     let project_dir = project_path.parent().unwrap();
     let sln_file = find_sln_file(project_dir);
 
@@ -97,11 +89,6 @@ pub async fn launch_project_with_ide(
         project_path.clone()
     };
 
-    info!(
-        "Launching project with IDE: {} -> {}",
-        ide_path.display(),
-        file_to_open.display()
-    );
     log(
         &app_handle,
         ErrorLevel::Info,
@@ -121,7 +108,6 @@ pub async fn launch_project_with_ide(
         }
         Err(e) => {
             let error_msg = format!("Failed to launch project with IDE: {}", e);
-            error!("{}", error_msg);
             log(&app_handle, ErrorLevel::Error, &error_msg);
             Err(error_msg)
         }
@@ -139,41 +125,42 @@ pub async fn launch_custom_engine_with_ide(
     let ide_path = PathBuf::from(ide_path);
 
     if !custom_engine_dir.exists() {
-        let error_msg = format!("Custom engine directory does not exist: {}", custom_engine_dir.display());
-        error!("{}", error_msg);
+        let error_msg = format!(
+            "Custom engine directory does not exist: {}",
+            custom_engine_dir.display()
+        );
         log(&app_handle, ErrorLevel::Error, &error_msg);
         return Err(error_msg);
     }
 
     if !ide_path.exists() {
         let error_msg = format!("IDE executable does not exist: {}", ide_path.display());
-        error!("{}", error_msg);
         log(&app_handle, ErrorLevel::Error, &error_msg);
         return Err(error_msg);
     }
 
-    // Look for .sln file in the custom engine directory
+    // Look for the .sln file in the custom engine directory
     let sln_file = find_sln_file(&custom_engine_dir);
 
     let file_to_open = if let Some(sln_path) = sln_file {
         info!("Found custom engine .sln file: {}", sln_path.display());
         sln_path
     } else {
-        let error_msg = format!("No .sln file found in custom engine directory: {}", custom_engine_dir.display());
-        error!("{}", error_msg);
+        let error_msg = format!(
+            "No .sln file found in custom engine directory: {}",
+            custom_engine_dir.display()
+        );
         log(&app_handle, ErrorLevel::Error, &error_msg);
         return Err(error_msg);
     };
 
-    info!(
-        "Launching custom engine with IDE: {} -> {}",
-        ide_path.display(),
-        file_to_open.display()
-    );
     log(
         &app_handle,
         ErrorLevel::Info,
-        &format!("Launching custom engine with IDE: {}", file_to_open.display()),
+        &format!(
+            "Launching custom engine with IDE: {}",
+            file_to_open.display()
+        ),
     );
 
     let result = Command::new(&ide_path).arg(&file_to_open).spawn();
@@ -189,7 +176,6 @@ pub async fn launch_custom_engine_with_ide(
         }
         Err(e) => {
             let error_msg = format!("Failed to launch custom engine with IDE: {}", e);
-            error!("{}", error_msg);
             log(&app_handle, ErrorLevel::Error, &error_msg);
             Err(error_msg)
         }
@@ -209,7 +195,7 @@ fn find_sln_file(project_dir: &Path) -> Option<PathBuf> {
     None
 }
 
-/// Check if a project has C++ code by looking for Source directory
+/// Check if a project has C++ code by looking for the Source directory
 #[command]
 pub fn project_has_cpp(project_path: String) -> Result<bool, String> {
     let project_path = PathBuf::from(project_path);
