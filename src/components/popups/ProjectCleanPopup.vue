@@ -31,7 +31,7 @@
             <label for="ide-files" class="checkbox-label">
               IDE files (.vs and .idea)
               <InfoTooltip 
-                content="Visual Studio and JetBrains IDE cache and configuration files. Safe to delete as they will be regenerated when opening the project."
+                content="Visual Studio and JetBrains IDE cache and configuration files. Generated when opening the project."
               />
             </label>
           </div>
@@ -47,7 +47,7 @@
             <label for="binaries" class="checkbox-label">
               Binaries
               <InfoTooltip 
-                content="Compiled executable files and libraries. These are generated during the build process and can be safely deleted to save space."
+                content="Contains executable files or other files created during compiling."
               />
             </label>
           </div>
@@ -63,7 +63,7 @@
             <label for="build" class="checkbox-label">
               Build
               <InfoTooltip 
-                content="Build configuration files and temporary build data. These are generated during compilation and can be recreated."
+                content="Holds files needed for building the engine or game, including files necessary for creating platform-specific builds."
               />
             </label>
           </div>
@@ -79,7 +79,7 @@
             <label for="intermediate" class="checkbox-label">
               Intermediate
               <InfoTooltip 
-                content="Temporary files created during the build process, including object files and other compilation artifacts. Safe to delete."
+                content="Contains temporary files generated during building the engine or game. In game directories, Shaders are stored in the Intermediate directory."
               />
             </label>
           </div>
@@ -95,7 +95,7 @@
             <label for="derived-data-cache" class="checkbox-label">
               DerivedDataCache
               <InfoTooltip 
-                content="Cached data derived from assets and blueprints. This cache improves loading times but can be regenerated if needed."
+                content="Contains derived data files generated on-load for referenced content. Not having cache files present for referenced content can increase load times dramatically."
               />
             </label>
           </div>
@@ -111,7 +111,7 @@
             <label for="saved" class="checkbox-label">
               Saved
               <InfoTooltip 
-                content="Contains logs, crash dumps, and other saved data. Be careful as this may include important debugging information."
+                content="Contains autosaves, configuration (.ini) files, and log files. Additionally, the Engine>Saved directory contains crash logs, hardware information, and Swarm options and data."
               />
             </label>
           </div>
@@ -149,7 +149,7 @@
             <label for="plugin-binaries" class="checkbox-label">
               Binaries
               <InfoTooltip 
-                content="Compiled plugin binaries and libraries. These are generated when plugins are built and can be safely removed."
+                content="Contains executable files or other files created during compiling."
               />
             </label>
           </div>
@@ -165,7 +165,7 @@
             <label for="plugin-intermediate" class="checkbox-label">
               Intermediate
               <InfoTooltip 
-                content="Temporary plugin compilation files and build artifacts. Safe to delete as they will be regenerated during plugin builds."
+                content="Contains temporary files generated during building the engine or game. In game directories, Shaders are stored in the Intermediate directory."
               />
             </label>
           </div>
@@ -181,7 +181,7 @@
             <label for="plugin-node-size-cache" class="checkbox-label">
               NodeSizeCache
               <InfoTooltip 
-                content="Cache files that store node size information for Blueprint graphs in plugins. Can be regenerated when needed."
+                content="Cache files that store Blueprint node information for Blueprint graphs in plugins."
               />
             </label>
           </div>

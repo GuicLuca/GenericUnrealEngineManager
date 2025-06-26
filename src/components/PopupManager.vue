@@ -108,7 +108,6 @@ onMounted(() => {
 .popup-container {
   max-width: 90vw;
   max-height: 90vh;
-  overflow: auto;
   border-radius: var(--border-radius-lg);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }

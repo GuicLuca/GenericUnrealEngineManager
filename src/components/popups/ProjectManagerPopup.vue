@@ -83,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, onMounted, onUnmounted, nextTick} from 'vue'
+import {ref, onMounted, onUnmounted} from 'vue'
 import {useProjectStore, type Project} from '../../stores/projectStore'
 import { useLogStore } from '../../stores/logStore'
 import { usePopup } from '../../composables/usePopup'

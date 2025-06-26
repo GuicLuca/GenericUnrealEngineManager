@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::{command, AppHandle};
+use crate::misc::errors::Verror::MessageError;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CleaningSelection {
@@ -37,14 +38,14 @@ pub async fn clean_project(
     app_handle: AppHandle,
     project_path: String,
     selection: CleaningSelection,
-) -> Result<CleaningResult, String> {
+) -> Result<CleaningResult> {
     let project_path = PathBuf::from(project_path);
     
     if !project_path.exists() {
         let error_msg = format!("Project file does not exist: {}", project_path.display());
         error!("{}", error_msg);
         log(&app_handle, ErrorLevel::Error, &error_msg);
-        return Err(error_msg);
+        return Err(MessageError(error_msg));
     }
     
     let project_dir = project_path.parent().unwrap();
@@ -55,8 +56,8 @@ pub async fn clean_project(
     info!("Starting cleaning process for project: {}", project_name);
     log(&app_handle, ErrorLevel::Info, &format!("Starting cleaning process for project: {}", project_name));
     
-    // Get original size
-    let original_size = get_directory_size(project_dir).unwrap_or(0);
+    // Get the original size
+    let original_size = fs_extra::dir::get_size(project_dir).unwrap_or(0);
     
     let mut cleaned_items = Vec::new();
     
@@ -120,8 +121,8 @@ pub async fn clean_project(
         }
     }
     
-    // Get new size
-    let new_size = get_directory_size(project_dir).unwrap_or(0);
+    // Get the new size
+    let new_size = fs_extra::dir::get_size(project_dir).unwrap_or(0);
     let saved_size = original_size.saturating_sub(new_size);
     
     let result = CleaningResult {
@@ -163,10 +164,6 @@ fn clean_directory(base_dir: &Path, dir_name: &str, cleaned_items: &mut Vec<Stri
             }
         }
     }
-}
-
-fn get_directory_size(dir: &Path) -> Result<u64, Box<dyn std::error::Error>> {
-    fs_extra::dir::get_size(dir).map_err(|e| e.into())
 }
 
 fn format_size(size: u64) -> String {

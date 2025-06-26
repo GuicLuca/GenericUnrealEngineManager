@@ -65,9 +65,9 @@ const showTooltip = ref(false)
   padding: var(--spacing-sm);
   border-radius: var(--border-radius-sm);
   font-size: var(--font-size-xs);
-  white-space: nowrap;
-  max-width: 20rem;
   white-space: normal;
+  min-width: 20rem;
+  max-width: 40rem;
   z-index: 1001;
   margin-bottom: var(--spacing-xs);
   box-shadow: var(--shadow-md);
