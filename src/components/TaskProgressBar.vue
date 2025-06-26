@@ -373,14 +373,23 @@ onUnmounted(() => {
   border-bottom: none;
 }
 
+/* Keep task items in single line even in expanded view */
 .task-item .task-info {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--spacing-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex: 1;
+  min-width: 0;
 }
 
 .task-item .task-name {
   max-width: 10rem;
+  flex-shrink: 0;
+}
+
+.task-item .task-message {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Transitions */
@@ -412,10 +421,12 @@ onUnmounted(() => {
     min-width: 8rem;
   }
   
-  .task-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-xs);
+  .task-item .task-name {
+    max-width: 6rem;
+  }
+  
+  .task-message {
+    display: none; /* Hide messages on mobile to save space */
   }
 }
 </style>
