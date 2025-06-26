@@ -126,10 +126,6 @@
                 <span class="meta-label">Size:</span>
                 <span class="meta-value">{{ plugin.size_on_disk !== null ? formatSize(plugin.size_on_disk) : 'N/A' }}</span>
               </div>
-              <div class="meta-item">
-                <span class="meta-label">Last scan:</span>
-                <span class="meta-value">{{ timeSince(plugin.last_scan_date) }}</span>
-              </div>
             </div>
           </div>
         </div>
@@ -469,7 +465,7 @@ const openDocsUrl = (url: string) => {
 
 .plugin-meta {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--spacing-sm);
 }
 

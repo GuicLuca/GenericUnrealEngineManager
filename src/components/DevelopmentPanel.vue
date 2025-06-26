@@ -38,20 +38,6 @@
             <span class="button-icon">🔄</span>
             Add Single Random Task
           </button>
-          <button 
-            class="dev-button"
-            @click="addMultipleFakeTasks"
-          >
-            <span class="button-icon">⚡</span>
-            Add 3-5 Random Tasks
-          </button>
-          <button 
-            class="dev-button"
-            @click="addStressTestTasks"
-          >
-            <span class="button-icon">🚀</span>
-            Stress Test (10 Tasks)
-          </button>
         </div>
       </div>
       
@@ -82,6 +68,7 @@ import { usePopup } from '../composables/usePopup'
 import { useProjectStore } from '../stores/projectStore'
 import { useLogStore } from '../stores/logStore'
 import { mockProjects } from '../utils/mockProjects'
+import { emit } from "@tauri-apps/api/event"
 
 const { showPopup } = usePopup()
 const { projects } = useProjectStore()
@@ -136,30 +123,6 @@ const addSingleFakeTask = () => {
   createFakeTask()
 }
 
-const addMultipleFakeTasks = () => {
-  const taskCount = Math.floor(Math.random() * 3) + 3 // 3-5 tasks
-  addLog(`Creating ${taskCount} concurrent tasks...`)
-  
-  for (let i = 0; i < taskCount; i++) {
-    // Add small delay between task starts to make it more realistic
-    setTimeout(() => {
-      createFakeTask()
-    }, i * 200)
-  }
-}
-
-const addStressTestTasks = () => {
-  const taskCount = 10
-  addLog(`Starting stress test with ${taskCount} concurrent tasks...`)
-  
-  for (let i = 0; i < taskCount; i++) {
-    // Stagger task starts over 2 seconds
-    setTimeout(() => {
-      createFakeTask()
-    }, i * 200)
-  }
-}
-
 const createFakeTask = () => {
   // Generate random task parameters
   const taskNames = [
@@ -211,7 +174,7 @@ const simulateTaskProgress = async (taskId: string, taskName: string, duration: 
   
   try {
     // Emit task started event
-    window.__TAURI__.event.emit('task_progress', {
+    await emit('task_progress', {
       task_id: taskId,
       task_name: taskName,
       progress: 0.0,
@@ -224,7 +187,7 @@ const simulateTaskProgress = async (taskId: string, taskName: string, duration: 
     for (let i = 0; i < steps.length; i++) {
       await new Promise(resolve => setTimeout(resolve, stepDuration))
       
-      // Check if task was cancelled (for cleanup)
+      // Check if the task was canceled (for cleanup)
       if (!runningTasks.has(taskId)) {
         return
       }
@@ -235,7 +198,7 @@ const simulateTaskProgress = async (taskId: string, taskName: string, duration: 
       // Add some randomness to make it more realistic
       const actualProgress = Math.min(progress + (Math.random() - 0.5) * 0.1, 1.0)
       
-      window.__TAURI__.event.emit('task_progress', {
+      await emit('task_progress', {
         task_id: taskId,
         task_name: taskName,
         progress: Math.max(0, actualProgress),
@@ -250,7 +213,7 @@ const simulateTaskProgress = async (taskId: string, taskName: string, duration: 
     console.error('Task simulation error:', error)
     
     // Emit failure event
-    window.__TAURI__.event.emit('task_progress', {
+    await emit('task_progress', {
       task_id: taskId,
       task_name: taskName,
       progress: 0.0,
