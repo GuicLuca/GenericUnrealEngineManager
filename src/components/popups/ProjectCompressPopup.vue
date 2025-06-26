@@ -447,7 +447,7 @@ onMounted(() => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
   background-color: var(--surface-color);
   border-bottom: var(--border-width) solid var(--border-color);
   flex-shrink: 0;
@@ -723,7 +723,7 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: var(--spacing-sm);
-  padding: var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
   border-top: var(--border-width) solid var(--border-color);
   background-color: var(--surface-color);
   flex-shrink: 0;
