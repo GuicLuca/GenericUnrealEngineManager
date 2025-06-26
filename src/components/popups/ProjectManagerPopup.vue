@@ -256,7 +256,7 @@ const calculateProjectScore = (searchTerm: string, projectName: string): number 
       const index = name.indexOf(word, startIndex)
       if (index === -1) break
       
-      score += 4 * word.length
+      score += 2 * word.length
       startIndex = index + 1
     }
   }
@@ -276,15 +276,54 @@ const calculateProjectScore = (searchTerm: string, projectName: string): number 
   return score
 }
 
-// Helper function for tie-breaking comparison
-const tieBreakingCompare = (a: Project, b: Project, direction: 'asc' | 'desc'): number => {
-  // Tie-breaking order: Name > Version > Type > Size > Last Scan
+// Helper function for standard sorting comparison
+const standardSortCompare = (a: Project, b: Project): number => {
+  let comparison = 0
   
+  switch (sortBy.value) {
+    case 'name':
+      comparison = a.name.localeCompare(b.name)
+      break
+    case 'type':
+      // C++ projects first when ascending, Blueprint first when descending
+      if (a.has_cpp === b.has_cpp) {
+        comparison = a.name.localeCompare(b.name) // Fallback to name
+      } else {
+        comparison = a.has_cpp ? -1 : 1
+      }
+      break
+    case 'size':
+      comparison = a.size_on_disk - b.size_on_disk
+      break
+    case 'lastScan':
+      comparison = a.last_scan_date - b.last_scan_date
+      break
+    case 'version':
+      // Custom engines are the highest version (last in ascending, first in descending)
+      const aIsCustom = typeof a.engine_association === 'string' && a.engine_association === 'Custom'
+      const bIsCustom = typeof b.engine_association === 'string' && b.engine_association === 'Custom'
+      
+      if (aIsCustom && !bIsCustom) {
+        comparison = 1 // Custom is the higher version
+      } else if (!aIsCustom && bIsCustom) {
+        comparison = -1
+      } else {
+        // Both custom or both standard - compare versions
+        const aVersion = getEngineVersionString(a.engine_association)
+        const bVersion = getEngineVersionString(b.engine_association)
+        comparison = aVersion.localeCompare(bVersion, undefined, { numeric: true })
+      }
+      break
+  }
+  
+  return sortOrder.value === 'asc' ? comparison : -comparison
+}
+
+// Helper function for tie-breaking comparison (Name > Version > Type > Size > Last Scan)
+const tieBreakingCompare = (a: Project, b: Project): number => {
   // 1. Name
   let comparison = a.name.localeCompare(b.name)
-  if (comparison !== 0) {
-    return direction === 'asc' ? comparison : -comparison
-  }
+  if (comparison !== 0) return comparison
   
   // 2. Version
   const aIsCustom = typeof a.engine_association === 'string' && a.engine_association === 'Custom'
@@ -299,34 +338,28 @@ const tieBreakingCompare = (a: Project, b: Project, direction: 'asc' | 'desc'): 
     const bVersion = getEngineVersionString(b.engine_association)
     comparison = aVersion.localeCompare(bVersion, undefined, { numeric: true })
   }
-  
-  if (comparison !== 0) {
-    return direction === 'asc' ? comparison : -comparison
-  }
+  if (comparison !== 0) return comparison
   
   // 3. Type (C++ vs Blueprint)
   if (a.has_cpp !== b.has_cpp) {
-    comparison = a.has_cpp ? -1 : 1 // C++ first
-    return direction === 'asc' ? comparison : -comparison
+    return a.has_cpp ? -1 : 1 // C++ first
   }
   
   // 4. Size
   comparison = a.size_on_disk - b.size_on_disk
-  if (comparison !== 0) {
-    return direction === 'asc' ? comparison : -comparison
-  }
+  if (comparison !== 0) return comparison
   
   // 5. Last Scan
-  comparison = a.last_scan_date - b.last_scan_date
-  return direction === 'asc' ? comparison : -comparison
+  return a.last_scan_date - b.last_scan_date
 }
 
-// Filtered and sorted projects with optimized search
+// Filtered and sorted projects with optimized search and sorting
 const filteredAndSortedProjects = computed(() => {
-  let filtered = projects.value
+  const hasSearchQuery = searchQuery.value.trim().length > 0
   
-  // Apply search filter with scoring
-  if (searchQuery.value.trim()) {
+  if (hasSearchQuery) {
+    // When searching: prioritize by score, then use tie-breaking
+    
     // Calculate scores for all projects
     const scoredProjects = projects.value.map(project => ({
       project,
@@ -340,63 +373,38 @@ const filteredAndSortedProjects = computed(() => {
       return []
     }
     
-    // Sort by score (highest first)
-    validProjects.sort((a, b) => b.score - a.score)
+    // Take the top 25% of results (minimum 1, maximum all results)
+    const top25PercentCount = Math.max(1, Math.ceil(validProjects.length * 0.25))
     
-    // Take the top 25% of results (minimum 4, maximum all results)
-    const top25PercentCount = Math.max(4, Math.ceil(validProjects.length * 0.25))
+    // Sort by score first (highest first), then by tie-breaking for equal scores
+    validProjects.sort((a, b) => {
+      // Primary sort: by score (descending)
+      if (a.score !== b.score) {
+        return b.score - a.score
+      }
+      
+      // Secondary sort: tie-breaking for equal scores
+      return tieBreakingCompare(a.project, b.project)
+    })
+    
     const topResults = validProjects.slice(0, top25PercentCount)
+    return topResults.map(item => item.project)
     
-    filtered = topResults.map(item => item.project)
+  } else {
+    // When not searching: use standard sorting with tie-breaking
+    
+    return [...projects.value].sort((a, b) => {
+      // Primary sort: by selected criteria
+      const primaryComparison = standardSortCompare(a, b)
+      
+      // If primary comparison is equal, use tie-breaking
+      if (primaryComparison === 0) {
+        return tieBreakingCompare(a, b)
+      }
+      
+      return primaryComparison
+    })
   }
-  
-  // Apply sorting to filtered results
-  return filtered.sort((a, b) => {
-    let comparison = 0
-    
-    switch (sortBy.value) {
-      case 'name':
-        comparison = a.name.localeCompare(b.name)
-        break
-      case 'type':
-        // C++ projects first when ascending, Blueprint first when descending
-        if (a.has_cpp === b.has_cpp) {
-          return tieBreakingCompare(a, b, sortOrder.value)
-        } else {
-          comparison = a.has_cpp ? -1 : 1
-        }
-        break
-      case 'size':
-        comparison = a.size_on_disk - b.size_on_disk
-        break
-      case 'lastScan':
-        comparison = a.last_scan_date - b.last_scan_date
-        break
-      case 'version':
-        // Custom engines are the highest version (last in ascending, first in descending)
-        const aIsCustom = typeof a.engine_association === 'string' && a.engine_association === 'Custom'
-        const bIsCustom = typeof b.engine_association === 'string' && b.engine_association === 'Custom'
-        
-        if (aIsCustom && !bIsCustom) {
-          comparison = 1 // Custom is the higher version
-        } else if (!aIsCustom && bIsCustom) {
-          comparison = -1
-        } else {
-          // Both custom or both standard - compare versions
-          const aVersion = getEngineVersionString(a.engine_association)
-          const bVersion = getEngineVersionString(b.engine_association)
-          comparison = aVersion.localeCompare(bVersion, undefined, { numeric: true })
-        }
-        break
-    }
-    
-    // If the primary comparison is equal, use the tie-breaking
-    if (comparison === 0) {
-      return tieBreakingCompare(a, b, sortOrder.value)
-    }
-    
-    return sortOrder.value === 'asc' ? comparison : -comparison
-  })
 })
 
 const selectProject = (project: Project) => {
