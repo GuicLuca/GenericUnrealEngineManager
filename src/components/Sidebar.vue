@@ -56,6 +56,9 @@ const handleItemClick = async (item: SidebarItem) => {
     case 'clean':
       handleClean()
       break
+    case 'compress':
+      handleCompress()
+      break
     // Add more action handlers as needed
     default:
       console.log(`Action ${item.action} not implemented yet`)
@@ -107,6 +110,19 @@ const handleClean = () => {
   showPopup({
     id: 'project-clean',
     component: 'ProjectClean',
+    props: {
+      projectName: selectedProject.value.name,
+      projectPath: selectedProject.value.path
+    }
+  })
+}
+
+const handleCompress = () => {
+  if (!selectedProject.value) return
+
+  showPopup({
+    id: 'project-compress',
+    component: 'ProjectCompress',
     props: {
       projectName: selectedProject.value.name,
       projectPath: selectedProject.value.path

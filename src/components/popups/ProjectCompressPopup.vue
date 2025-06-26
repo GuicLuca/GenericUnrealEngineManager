@@ -1,0 +1,783 @@
+<template>
+  <div class="project-compress-popup">
+    <div class="popup-header">
+      <h2 class="popup-title">
+        <span class="title-icon">🗜️</span>
+        Compress Project
+      </h2>
+      <button class="close-button" @click="$emit('close')" title="Close">
+        ✕
+      </button>
+    </div>
+
+    <div class="popup-content">
+      <div class="project-info">
+        <div class="project-name">{{ projectName }}</div>
+        <div class="project-note">Create a compressed archive of your project:</div>
+      </div>
+
+      <!-- Clean Before Compress Section -->
+      <div class="compress-section">
+        <div class="section-header">
+          <input
+            id="clean-before-compress"
+            v-model="cleanBeforeCompress"
+            type="checkbox"
+            class="checkbox-input"
+            :disabled="isCompressing"
+          />
+          <label for="clean-before-compress" class="section-title-label">
+            Clean project before compressing
+            <InfoTooltip 
+              content="Remove temporary and generated files before creating the archive to reduce file size and exclude unnecessary files."
+            />
+          </label>
+        </div>
+
+        <!-- Cleaning Options (shown when clean is enabled) -->
+        <div v-if="cleanBeforeCompress" class="cleaning-options">
+          <!-- Project Scanning Section -->
+          <div class="cleaning-subsection">
+            <h4 class="subsection-title">Project Scanning</h4>
+            <div class="checkbox-group">
+              <div class="checkbox-item">
+                <input
+                  id="compress-ide-files"
+                  v-model="cleaningSelection.ide_files"
+                  type="checkbox"
+                  class="checkbox-input"
+                  :disabled="isCompressing"
+                />
+                <label for="compress-ide-files" class="checkbox-label">
+                  IDE files (.vs and .idea)
+                </label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  id="compress-binaries"
+                  v-model="cleaningSelection.binaries"
+                  type="checkbox"
+                  class="checkbox-input"
+                  :disabled="isCompressing"
+                />
+                <label for="compress-binaries" class="checkbox-label">
+                  Binaries
+                </label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  id="compress-build"
+                  v-model="cleaningSelection.build"
+                  type="checkbox"
+                  class="checkbox-input"
+                  :disabled="isCompressing"
+                />
+                <label for="compress-build" class="checkbox-label">
+                  Build
+                </label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  id="compress-intermediate"
+                  v-model="cleaningSelection.intermediate"
+                  type="checkbox"
+                  class="checkbox-input"
+                  :disabled="isCompressing"
+                />
+                <label for="compress-intermediate" class="checkbox-label">
+                  Intermediate
+                </label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  id="compress-derived-data-cache"
+                  v-model="cleaningSelection.derived_data_cache"
+                  type="checkbox"
+                  class="checkbox-input"
+                  :disabled="isCompressing"
+                />
+                <label for="compress-derived-data-cache" class="checkbox-label">
+                  DerivedDataCache
+                </label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  id="compress-saved"
+                  v-model="cleaningSelection.saved"
+                  type="checkbox"
+                  class="checkbox-input"
+                  :disabled="isCompressing"
+                />
+                <label for="compress-saved" class="checkbox-label">
+                  Saved
+                </label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  id="compress-analyze-plugins"
+                  v-model="cleaningSelection.analyze_plugins"
+                  type="checkbox"
+                  class="checkbox-input"
+                  :disabled="isCompressing"
+                />
+                <label for="compress-analyze-plugins" class="checkbox-label">
+                  Analyze plugins
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Plugins Scanning Section -->
+          <div v-if="cleaningSelection.analyze_plugins" class="cleaning-subsection">
+            <h4 class="subsection-title">Plugins Scanning</h4>
+            <div class="checkbox-group">
+              <div class="checkbox-item">
+                <input
+                  id="compress-plugin-binaries"
+                  v-model="cleaningSelection.plugin_binaries"
+                  type="checkbox"
+                  class="checkbox-input"
+                  :disabled="isCompressing"
+                />
+                <label for="compress-plugin-binaries" class="checkbox-label">
+                  Binaries
+                </label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  id="compress-plugin-intermediate"
+                  v-model="cleaningSelection.plugin_intermediate"
+                  type="checkbox"
+                  class="checkbox-input"
+                  :disabled="isCompressing"
+                />
+                <label for="compress-plugin-intermediate" class="checkbox-label">
+                  Intermediate
+                </label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  id="compress-plugin-node-size-cache"
+                  v-model="cleaningSelection.plugin_node_size_cache"
+                  type="checkbox"
+                  class="checkbox-input"
+                  :disabled="isCompressing"
+                />
+                <label for="compress-plugin-node-size-cache" class="checkbox-label">
+                  NodeSizeCache
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compression Algorithm Section -->
+      <div class="compress-section">
+        <h3 class="section-title">Compression Algorithm</h3>
+        <div class="algorithm-selection">
+          <div 
+            v-for="algorithm in availableAlgorithms"
+            :key="algorithm"
+            class="algorithm-item"
+          >
+            <input
+              :id="`algorithm-${algorithm}`"
+              v-model="selectedAlgorithm"
+              :value="algorithm"
+              type="radio"
+              class="radio-input"
+              :disabled="isCompressing"
+            />
+            <label :for="`algorithm-${algorithm}`" class="algorithm-label">
+              <span class="algorithm-name">{{ getAlgorithmDisplayName(algorithm) }}</span>
+              <span class="algorithm-description">{{ getAlgorithmDescription(algorithm) }}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Destination Section -->
+      <div class="compress-section">
+        <h3 class="section-title">Destination</h3>
+        <div class="destination-input-group">
+          <input
+            v-model="destinationPath"
+            type="text"
+            class="destination-input"
+            placeholder="Select destination folder..."
+            readonly
+            :disabled="isCompressing"
+          />
+          <button
+            type="button"
+            class="browse-button"
+            @click="selectDestination"
+            title="Browse for destination folder"
+            :disabled="isCompressing"
+          >
+            📂
+          </button>
+        </div>
+        <div v-if="outputFilename" class="output-preview">
+          <span class="preview-label">Output file:</span>
+          <span class="preview-filename">{{ outputFilename }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-actions">
+      <button class="cancel-button" @click="$emit('close')" :disabled="isCompressing">
+        Cancel
+      </button>
+      <button 
+        class="compress-button" 
+        @click="startCompression" 
+        :disabled="isCompressing || !canCompress"
+      >
+        <span class="button-icon">{{ isCompressing ? '⏳' : '🗜️' }}</span>
+        {{ isCompressing ? 'Compressing...' : 'Start Compression' }}
+      </button>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, computed, onMounted } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
+import InfoTooltip from '../InfoTooltip.vue'
+import { useLogStore } from '../../stores/logStore'
+
+interface Props {
+  projectName: string
+  projectPath: string
+}
+
+interface CleaningSelection {
+  ide_files: boolean
+  binaries: boolean
+  build: boolean
+  intermediate: boolean
+  derived_data_cache: boolean
+  saved: boolean
+  analyze_plugins: boolean
+  plugin_binaries: boolean
+  plugin_intermediate: boolean
+  plugin_node_size_cache: boolean
+}
+
+type CompressionAlgorithm = 'Zip' | 'SevenZip' | 'Tar' | 'TarGz'
+
+const props = defineProps<Props>()
+const emit = defineEmits<{
+  (e: 'close'): void
+}>()
+
+const { addLog } = useLogStore()
+
+const isCompressing = ref(false)
+const cleanBeforeCompress = ref(false)
+const selectedAlgorithm = ref<CompressionAlgorithm>('Zip')
+const destinationPath = ref('')
+const availableAlgorithms = ref<CompressionAlgorithm[]>([])
+
+const cleaningSelection = reactive<CleaningSelection>({
+  ide_files: true,
+  binaries: true,
+  build: true,
+  intermediate: true,
+  derived_data_cache: false,
+  saved: false,
+  analyze_plugins: false,
+  plugin_binaries: false,
+  plugin_intermediate: false,
+  plugin_node_size_cache: false
+})
+
+const canCompress = computed(() => {
+  return destinationPath.value.trim() !== '' && selectedAlgorithm.value !== null
+})
+
+const outputFilename = computed(() => {
+  if (!destinationPath.value) return ''
+  
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  const hour = String(now.getHours()).padStart(2, '0')
+  const minute = String(now.getMinutes()).padStart(2, '0')
+  
+  const timestamp = `${year}-${month}-${day}_${hour}-${minute}`
+  const extension = getExtensionForAlgorithm(selectedAlgorithm.value)
+  
+  return `${props.projectName}_${timestamp}.${extension}`
+})
+
+const getAlgorithmDisplayName = (algorithm: CompressionAlgorithm): string => {
+  switch (algorithm) {
+    case 'Zip': return 'ZIP'
+    case 'SevenZip': return '7-Zip'
+    case 'Tar': return 'TAR'
+    case 'TarGz': return 'TAR.GZ'
+    default: return algorithm
+  }
+}
+
+const getAlgorithmDescription = (algorithm: CompressionAlgorithm): string => {
+  switch (algorithm) {
+    case 'Zip': return 'Standard ZIP compression, widely supported'
+    case 'SevenZip': return 'High compression ratio, requires 7-Zip'
+    case 'Tar': return 'Archive format, no compression'
+    case 'TarGz': return 'TAR with GZIP compression'
+    default: return ''
+  }
+}
+
+const getExtensionForAlgorithm = (algorithm: CompressionAlgorithm): string => {
+  switch (algorithm) {
+    case 'Zip': return 'zip'
+    case 'SevenZip': return '7z'
+    case 'Tar': return 'tar'
+    case 'TarGz': return 'tar.gz'
+    default: return 'zip'
+  }
+}
+
+const loadAvailableAlgorithms = async () => {
+  try {
+    const algorithms = await invoke('get_available_compression_algorithms') as CompressionAlgorithm[]
+    availableAlgorithms.value = algorithms
+    
+    // Set default algorithm to the first available one
+    if (algorithms.length > 0) {
+      selectedAlgorithm.value = algorithms[0]
+    }
+  } catch (error) {
+    console.error('Failed to load available compression algorithms:', error)
+    addLog('Failed to load compression algorithms', 'error')
+    // Fallback to ZIP
+    availableAlgorithms.value = ['Zip']
+    selectedAlgorithm.value = 'Zip'
+  }
+}
+
+const selectDestination = async () => {
+  if (isCompressing.value) return
+  
+  try {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: 'Select destination folder for compressed archive'
+    })
+    
+    if (selected && typeof selected === 'string') {
+      destinationPath.value = selected
+    }
+  } catch (error) {
+    console.error('Failed to open destination dialog:', error)
+    addLog('Failed to open destination dialog', 'error')
+  }
+}
+
+const startCompression = async () => {
+  if (!canCompress.value || isCompressing.value) return
+  
+  try {
+    isCompressing.value = true
+    
+    const request = {
+      project_path: props.projectPath,
+      destination_path: destinationPath.value,
+      compression_algorithm: selectedAlgorithm.value,
+      clean_before_compress: cleanBeforeCompress.value,
+      cleaning_selection: cleanBeforeCompress.value ? cleaningSelection : null
+    }
+    
+    await invoke('compress_project', { request })
+    
+    emit('close')
+    
+  } catch (error) {
+    // Do nothing, the backend will handle the error
+  } finally {
+    isCompressing.value = false
+  }
+}
+
+onMounted(() => {
+  loadAvailableAlgorithms()
+})
+</script>
+
+<style scoped>
+.project-compress-popup {
+  background-color: var(--background-color);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  width: 100%;
+  max-width: 42rem;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-lg);
+  background-color: var(--surface-color);
+  border-bottom: var(--border-width) solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.popup-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.title-icon {
+  font-size: var(--icon-size-lg);
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-button:hover {
+  background-color: var(--hover-color);
+  color: var(--text-primary);
+}
+
+.popup-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: var(--spacing-lg);
+}
+
+.project-info {
+  margin-bottom: var(--spacing-lg);
+  text-align: center;
+}
+
+.project-name {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.project-note {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.compress-section {
+  margin-bottom: var(--spacing-lg);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-md);
+}
+
+.compress-section:last-of-type {
+  margin-bottom: 0;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.section-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.section-title-label {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.cleaning-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background-color: var(--surface-color);
+  border-radius: var(--border-radius-sm);
+}
+
+.cleaning-subsection {
+  display: flex;
+  flex-direction: column;
+}
+
+.subsection-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-sm) 0;
+  padding-bottom: var(--spacing-xs);
+  border-bottom: var(--border-width) solid var(--border-color);
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+}
+
+.checkbox-input {
+  margin-top: 2px;
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent-color);
+  flex-shrink: 0;
+}
+
+.checkbox-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.checkbox-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  line-height: var(--line-height-normal);
+  flex-grow: 1;
+}
+
+.algorithm-selection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.algorithm-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--surface-color);
+  transition: all var(--transition-fast);
+}
+
+.algorithm-item:has(.radio-input:checked) {
+  border-color: var(--accent-color);
+  background-color: var(--accent-color-alpha);
+}
+
+.radio-input {
+  margin-top: 2px;
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent-color);
+  flex-shrink: 0;
+}
+
+.radio-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.algorithm-label {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  flex-grow: 1;
+}
+
+.algorithm-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.algorithm-description {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.destination-input-group {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.destination-input {
+  flex: 1;
+  padding: var(--spacing-sm);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background-color: var(--surface-color);
+  cursor: pointer;
+}
+
+.destination-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.browse-button {
+  padding: var(--spacing-sm);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--surface-color);
+  cursor: pointer;
+  font-size: var(--font-size-md);
+  transition: all var(--transition-fast);
+  min-width: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.browse-button:hover:not(:disabled) {
+  background-color: var(--hover-color);
+  border-color: var(--accent-color);
+}
+
+.browse-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.output-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background-color: var(--surface-color);
+  border-radius: var(--border-radius-sm);
+  border: var(--border-width) solid var(--border-color);
+}
+
+.preview-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.preview-filename {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  word-break: break-all;
+}
+
+.popup-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg);
+  border-top: var(--border-width) solid var(--border-color);
+  background-color: var(--surface-color);
+  flex-shrink: 0;
+}
+
+.cancel-button,
+.compress-button {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.cancel-button {
+  background-color: transparent;
+  border: var(--border-width) solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.cancel-button:hover:not(:disabled) {
+  background-color: var(--hover-color);
+  color: var(--text-primary);
+}
+
+.cancel-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.compress-button {
+  background-color: var(--accent-color);
+  border: var(--border-width) solid var(--accent-color);
+  color: white;
+}
+
+.compress-button:hover:not(:disabled) {
+  background-color: #2c5aa0;
+  border-color: #2c5aa0;
+}
+
+.compress-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button-icon {
+  font-size: var(--font-size-sm);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .cleaning-options {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

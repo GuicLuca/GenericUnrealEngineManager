@@ -110,6 +110,8 @@ pub fn run() {
         projects::actions::project_launcher::launch_custom_engine_with_ide,
         projects::actions::project_launcher::project_has_cpp,
         projects::actions::project_cleaner::clean_project,
+        projects::actions::project_compressor::compress_project,
+        projects::actions::project_compressor::get_available_compression_algorithms,
         settings::actions::settings_manager::get_settings,
         settings::actions::settings_manager::save_settings,
     ]);

@@ -1,0 +1,309 @@
+use crate::misc::errors::{ErrorLevel, Result};
+use crate::misc::prelude::log;
+use crate::projects::actions::project_cleaner::{CleaningSelection, clean_project};
+use log::{error, info};
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use tauri::{command, AppHandle};
+use crate::misc::errors::Verror::MessageError;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompressionRequest {
+    pub project_path: String,
+    pub destination_path: String,
+    pub compression_algorithm: CompressionAlgorithm,
+    pub clean_before_compress: bool,
+    pub cleaning_selection: Option<CleaningSelection>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CompressionAlgorithm {
+    Zip,
+    SevenZip,
+    Tar,
+    TarGz,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompressionResult {
+    pub output_path: String,
+    pub original_size: u64,
+    pub compressed_size: u64,
+    pub compression_ratio: f64,
+    pub duration_ms: u128,
+}
+
+/// Compress a project with optional cleaning
+#[command]
+pub async fn compress_project(
+    app_handle: AppHandle,
+    request: CompressionRequest,
+) -> Result<CompressionResult> {
+    let start_time = std::time::Instant::now();
+    let project_path = PathBuf::from(&request.project_path);
+    
+    if !project_path.exists() {
+        let error_msg = format!("Project file does not exist: {}", project_path.display());
+        error!("{}", error_msg);
+        log(&app_handle, ErrorLevel::Error, &error_msg);
+        return Err(MessageError(error_msg));
+    }
+    
+    let project_dir = project_path.parent().unwrap();
+    let project_name = project_path.file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("Unknown");
+    
+    info!("Starting compression process for project: {}", project_name);
+    log(&app_handle, ErrorLevel::Info, &format!("Starting compression process for project: {}", project_name));
+    
+    // Clean project if requested
+    if request.clean_before_compress {
+        if let Some(cleaning_selection) = request.cleaning_selection {
+            log(&app_handle, ErrorLevel::Info, "Cleaning project before compression...");
+            
+            match clean_project(app_handle.clone(), request.project_path.clone(), cleaning_selection).await {
+                Ok(_) => {
+                    log(&app_handle, ErrorLevel::Info, "Project cleaned successfully before compression");
+                }
+                Err(e) => {
+                    let error_msg = format!("Failed to clean project before compression: {}", e);
+                    error!("{}", error_msg);
+                    log(&app_handle, ErrorLevel::Error, &error_msg);
+                    return Err(e);
+                }
+            }
+        }
+    }
+    
+    // Get original size
+    let original_size = fs_extra::dir::get_size(project_dir).unwrap_or(0);
+    
+    // Generate output filename with timestamp
+    let now = chrono::Local::now();
+    let timestamp = now.format("%Y-%m-%d_%H-%M").to_string();
+    let extension = get_extension_for_algorithm(&request.compression_algorithm);
+    let output_filename = format!("{}_{}.{}", project_name, timestamp, extension);
+    let output_path = PathBuf::from(&request.destination_path).join(output_filename);
+    
+    log(&app_handle, ErrorLevel::Info, &format!("Compressing to: {}", output_path.display()));
+    
+    // Perform compression based on algorithm
+    match compress_directory(project_dir, &output_path, &request.compression_algorithm) {
+        Ok(_) => {
+            let compressed_size = fs::metadata(&output_path)
+                .map(|m| m.len())
+                .unwrap_or(0);
+            
+            let compression_ratio = if original_size > 0 {
+                (compressed_size as f64 / original_size as f64) * 100.0
+            } else {
+                0.0
+            };
+            
+            let duration = start_time.elapsed();
+            
+            let result = CompressionResult {
+                output_path: output_path.to_string_lossy().to_string(),
+                original_size,
+                compressed_size,
+                compression_ratio,
+                duration_ms: duration.as_millis(),
+            };
+            
+            let completion_msg = format!(
+                "Compression completed for {}. Original: {}, Compressed: {} ({:.1}% of original)",
+                project_name,
+                format_size(original_size),
+                format_size(compressed_size),
+                compression_ratio
+            );
+            
+            info!("{}", completion_msg);
+            log(&app_handle, ErrorLevel::Info, &completion_msg);
+            
+            Ok(result)
+        }
+        Err(e) => {
+            let error_msg = format!("Failed to compress project: {}", e);
+            error!("{}", error_msg);
+            log(&app_handle, ErrorLevel::Error, &error_msg);
+            Err(MessageError(error_msg))
+        }
+    }
+}
+
+fn compress_directory(
+    source_dir: &Path,
+    output_path: &Path,
+    algorithm: &CompressionAlgorithm,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    match algorithm {
+        CompressionAlgorithm::Zip => compress_with_zip(source_dir, output_path),
+        CompressionAlgorithm::SevenZip => compress_with_7zip(source_dir, output_path),
+        CompressionAlgorithm::Tar => compress_with_tar(source_dir, output_path, false),
+        CompressionAlgorithm::TarGz => compress_with_tar(source_dir, output_path, true),
+    }
+}
+
+fn compress_with_zip(
+    source_dir: &Path,
+    output_path: &Path,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Use system zip command if available
+    if cfg!(target_os = "windows") {
+        // On Windows, try PowerShell Compress-Archive
+        let result = Command::new("powershell")
+            .args([
+                "-Command",
+                &format!(
+                    "Compress-Archive -Path '{}\\*' -DestinationPath '{}'",
+                    source_dir.display(),
+                    output_path.display()
+                ),
+            ])
+            .output()?;
+        
+        if !result.status.success() {
+            return Err(format!(
+                "PowerShell compression failed: {}",
+                String::from_utf8_lossy(&result.stderr)
+            ).into());
+        }
+    } else {
+        // On Unix systems, use zip command
+        let result = Command::new("zip")
+            .args([
+                "-r",
+                output_path.to_str().unwrap(),
+                ".",
+            ])
+            .current_dir(source_dir)
+            .output()?;
+        
+        if !result.status.success() {
+            return Err(format!(
+                "Zip compression failed: {}",
+                String::from_utf8_lossy(&result.stderr)
+            ).into());
+        }
+    }
+    
+    Ok(())
+}
+
+fn compress_with_7zip(
+    source_dir: &Path,
+    output_path: &Path,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Try to find 7zip executable
+    let seven_zip_cmd = if cfg!(target_os = "windows") {
+        "7z"
+    } else {
+        "7z"
+    };
+    
+    let result = Command::new(seven_zip_cmd)
+        .args([
+            "a",
+            "-t7z",
+            output_path.to_str().unwrap(),
+            &format!("{}/*", source_dir.display()),
+        ])
+        .output()?;
+    
+    if !result.status.success() {
+        return Err(format!(
+            "7-Zip compression failed: {}",
+            String::from_utf8_lossy(&result.stderr)
+        ).into());
+    }
+    
+    Ok(())
+}
+
+fn compress_with_tar(
+    source_dir: &Path,
+    output_path: &Path,
+    use_gzip: bool,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    let mut args = vec!["czf"];
+    if !use_gzip {
+        args = vec!["cf"];
+    }
+    
+    args.push(output_path.to_str().unwrap());
+    args.push(".");
+    
+    let result = Command::new("tar")
+        .args(args)
+        .current_dir(source_dir)
+        .output()?;
+    
+    if !result.status.success() {
+        return Err(format!(
+            "Tar compression failed: {}",
+            String::from_utf8_lossy(&result.stderr)
+        ).into());
+    }
+    
+    Ok(())
+}
+
+fn get_extension_for_algorithm(algorithm: &CompressionAlgorithm) -> &'static str {
+    match algorithm {
+        CompressionAlgorithm::Zip => "zip",
+        CompressionAlgorithm::SevenZip => "7z",
+        CompressionAlgorithm::Tar => "tar",
+        CompressionAlgorithm::TarGz => "tar.gz",
+    }
+}
+
+fn format_size(size: u64) -> String {
+    if size < 1024 {
+        format!("{} B", size)
+    } else if size < 1024 * 1024 {
+        format!("{:.2} KB", size as f64 / 1024.0)
+    } else if size < 1024 * 1024 * 1024 {
+        format!("{:.2} MB", size as f64 / (1024.0 * 1024.0))
+    } else {
+        format!("{:.2} GB", size as f64 / (1024.0 * 1024.0 * 1024.0))
+    }
+}
+
+/// Get available compression algorithms based on system capabilities
+#[command]
+pub fn get_available_compression_algorithms() -> Vec<CompressionAlgorithm> {
+    let mut algorithms = Vec::new();
+    
+    // Zip is available on most systems
+    if cfg!(target_os = "windows") {
+        // PowerShell Compress-Archive is available on Windows 10+
+        algorithms.push(CompressionAlgorithm::Zip);
+    } else {
+        // Check if zip command is available
+        if Command::new("zip").arg("--help").output().is_ok() {
+            algorithms.push(CompressionAlgorithm::Zip);
+        }
+    }
+    
+    // Check for 7-Zip
+    if Command::new("7z").output().is_ok() {
+        algorithms.push(CompressionAlgorithm::SevenZip);
+    }
+    
+    // Check for tar (usually available on Unix systems)
+    if Command::new("tar").arg("--help").output().is_ok() {
+        algorithms.push(CompressionAlgorithm::Tar);
+        algorithms.push(CompressionAlgorithm::TarGz);
+    }
+    
+    // If no algorithms are available, at least offer zip as fallback
+    if algorithms.is_empty() {
+        algorithms.push(CompressionAlgorithm::Zip);
+    }
+    
+    algorithms
+}

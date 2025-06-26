@@ -44,6 +44,13 @@
                 @close="hidePopup(popup.id)"
               />
               
+              <!-- Project Compress Popup -->
+              <ProjectCompressPopup
+                v-if="popup.component === 'ProjectCompress'"
+                v-bind="popup.props"
+                @close="hidePopup(popup.id)"
+              />
+              
               <!-- Settings Popup -->
               <SettingsPopup
                 v-if="popup.component === 'Settings'"
@@ -68,6 +75,7 @@ import ProjectDiscoveryPopup from './popups/ProjectDiscoveryPopup.vue'
 import ProjectManagerPopup from './popups/ProjectManagerPopup.vue'
 import ProjectLaunchChoicePopup from './popups/ProjectLaunchChoicePopup.vue'
 import ProjectCleanPopup from './popups/ProjectCleanPopup.vue'
+import ProjectCompressPopup from './popups/ProjectCompressPopup.vue'
 import SettingsPopup from './popups/SettingsPopup.vue'
 
 const { popupState, hidePopup, initPopupListener } = usePopup()
