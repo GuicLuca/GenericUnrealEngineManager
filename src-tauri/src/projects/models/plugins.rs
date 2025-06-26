@@ -11,6 +11,7 @@ pub struct ProjectPlugin {
     pub is_enabled: bool, // Indicates if the plugin is enabled
     pub is_in_project: bool, // Indicates if the plugin is part of the project (in ./Plugins directory) or in the engine (in ENGINE/Plugins/... directory)
     pub marketplace_url: Option<String>, // URL to the plugin on the Unreal Marketplace, if available
+    pub docs_url: Option<String>, // URL to the plugin documentation, if available
     pub size_on_disk: Option<u64>, // Size on disk in bytes (None if is_in_project is false)
     pub last_scan_date: u64, // Last scan date of the plugin (seconds since UNIX epoch)
 }
@@ -21,6 +22,8 @@ pub struct UpluginFile {
     pub friendly_name: Option<String>,
     #[serde(rename = "MarketplaceURL")]
     pub marketplace_url: Option<String>,
+    #[serde(rename = "DocsURL")]
+    docs_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -31,6 +34,8 @@ pub struct UprojectPluginEntry {
     pub enabled: Option<bool>,
     #[serde(rename = "MarketplaceURL")]
     pub marketplace_url: Option<String>,
+    #[serde(rename = "DocsURL")]
+    docs_url: Option<String>,
 }
 
 impl ProjectPlugin {
@@ -52,6 +57,7 @@ impl ProjectPlugin {
             .unwrap_or_else(|_| UpluginFile {
                 friendly_name: None,
                 marketplace_url: None,
+                docs_url: None,
             });
 
         // Determine the final plugin name (prefer friendly name from .uplugin, fallback to file name)
@@ -68,6 +74,11 @@ impl ProjectPlugin {
             .and_then(|data| data.marketplace_url.clone())
             .or(uplugin_data.marketplace_url);
 
+        // Determine docs URL (prefer .uproject data, fallback to .uplugin data)
+        let docs_url = uproject_plugin_data
+            .and_then(|data| data.docs_url.clone())
+            .or(uplugin_data.docs_url);
+
         // Calculate size on disk for the plugin directory
         let plugin_dir = uplugin_path.parent().unwrap();
         let size_on_disk = Some(fs_extra::dir::get_size(plugin_dir).unwrap_or(0));
@@ -83,6 +94,7 @@ impl ProjectPlugin {
             is_enabled,
             is_in_project: true, // This plugin was found in the project's Plugins folder
             marketplace_url,
+            docs_url,
             size_on_disk,
             last_scan_date,
         })
@@ -100,6 +112,7 @@ impl ProjectPlugin {
             is_enabled: uproject_plugin_data.enabled.unwrap_or(true),
             is_in_project: false, // This plugin is not in the project's Plugins folder
             marketplace_url: uproject_plugin_data.marketplace_url.clone(),
+            docs_url: uproject_plugin_data.docs_url.clone(),
             size_on_disk: None, // No size since it's not in the project
             last_scan_date,
         }
@@ -112,6 +125,7 @@ impl ProjectPlugin {
             if let Some(uproject_data) = uproject_plugin_data {
                 self.is_enabled = uproject_data.enabled.unwrap_or(true);
                 self.marketplace_url = uproject_data.marketplace_url.clone();
+                self.docs_url = uproject_data.docs_url.clone();
             }
             self.last_scan_date = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -130,6 +144,10 @@ impl ProjectPlugin {
             // Update marketplace URL if available in .uproject
             if uproject_data.marketplace_url.is_some() {
                 self.marketplace_url = uproject_data.marketplace_url.clone();
+            }
+            // Update docs URL if available in .uproject
+            if uproject_data.docs_url.is_some() {
+                self.docs_url = uproject_data.docs_url.clone();
             }
         }
 

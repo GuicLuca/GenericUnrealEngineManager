@@ -92,14 +92,13 @@ impl Project {
         })
     }
 
-    /// Discovers plugins from both the project's Plugins folder and the .uproject file
+    /// Discovers plugins from both the project's Plugins folder and the .uproject file using glob for efficiency
     fn discover_plugins(
         project_path: &PathBuf,
         uproject_content: &serde_json::Value,
     ) -> Result<Vec<ProjectPlugin>, Box<dyn std::error::Error>> {
         let mut plugins = Vec::new();
         let project_dir = project_path.parent().unwrap();
-        let plugins_dir = project_dir.join("Plugins");
 
         // Parse plugins from .uproject file
         let uproject_plugins: HashMap<String, UprojectPluginEntry> =
@@ -119,50 +118,33 @@ impl Project {
                 HashMap::new()
             };
 
-        // Step 1: Scan the project's Plugins folder for .uplugin files
-        if plugins_dir.exists() {
-            if let Ok(entries) = std::fs::read_dir(&plugins_dir) {
-                for entry in entries.flatten() {
-                    if entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
-                        let plugin_dir = entry.path();
+        // Step 1: Use glob to find all .uplugin files in the project's Plugins directory
+        let plugins_pattern = format!("{}/Plugins/*/*.uplugin", project_dir.display());
+        
+        for entry in glob::glob(&plugins_pattern)? {
+            match entry {
+                Ok(uplugin_path) => {
+                    // Extract plugin name from file name for lookup
+                    let plugin_file_name = uplugin_path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or_default();
 
-                        // Look for .uplugin files in this directory
-                        if let Ok(plugin_files) = std::fs::read_dir(&plugin_dir) {
-                            for plugin_file in plugin_files.flatten() {
-                                let plugin_path = plugin_file.path();
-                                if plugin_path.extension().and_then(|s| s.to_str())
-                                    == Some("uplugin")
-                                {
-                                    // Extract plugin name from file name for lookup
-                                    let plugin_file_name = plugin_path
-                                        .file_stem()
-                                        .and_then(|s| s.to_str())
-                                        .unwrap_or_default();
+                    // Get corresponding .uproject plugin data if it exists
+                    let uproject_plugin_data = uproject_plugins.get(plugin_file_name);
 
-                                    // Get corresponding .uproject plugin data if it exists
-                                    let uproject_plugin_data =
-                                        uproject_plugins.get(plugin_file_name);
-
-                                    // Create ProjectPlugin from the .uplugin file
-                                    match ProjectPlugin::try_from_path(
-                                        &plugin_path,
-                                        uproject_plugin_data,
-                                    ) {
-                                        Ok(plugin) => {
-                                            plugins.push(plugin);
-                                        }
-                                        Err(e) => {
-                                            error!(
-                                                "Failed to parse plugin file {}: {}",
-                                                plugin_path.display(),
-                                                e
-                                            );
-                                        }
-                                    }
-                                }
-                            }
+                    // Create ProjectPlugin from the .uplugin file
+                    match ProjectPlugin::try_from_path(&uplugin_path, uproject_plugin_data) {
+                        Ok(plugin) => {
+                            plugins.push(plugin);
+                        }
+                        Err(e) => {
+                            error!("Failed to parse plugin file {}: {}", uplugin_path.display(), e);
                         }
                     }
+                }
+                Err(e) => {
+                    error!("Error reading plugin file: {}", e);
                 }
             }
         }
@@ -170,11 +152,7 @@ impl Project {
         // Step 2: Add plugins from .uproject that are not in the project's Plugins folder
         let found_plugin_names: std::collections::HashSet<String> = plugins
             .iter()
-            .map(|p| {
-                // We need to match by the original file name, not the friendly name
-                // So we'll extract the plugin name from the path or use a different approach
-                p.name.clone()
-            })
+            .map(|p| p.name.clone())
             .collect();
 
         for (plugin_name, uproject_plugin_data) in &uproject_plugins {

@@ -19,12 +19,13 @@ export type EngineAssociation =
     | { Standard: string }
     | "Custom"
 
-// Match the backend ProjectPlugin structure (updated with size and scan date)
+// Match the backend ProjectPlugin structure (updated with size, scan date, and docs URL)
 export interface ProjectPlugin {
     name: string
     is_enabled: boolean
     is_in_project: boolean
     marketplace_url: string | null
+    docs_url: string | null // URL to plugin documentation
     size_on_disk: number | null // Size in bytes (null if not in project)
     last_scan_date: number // Duration since UNIX epoch in seconds
 }
