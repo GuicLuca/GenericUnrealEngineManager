@@ -38,7 +38,7 @@
             class="sort-button"
             @click="toggleSortDropdown"
             :disabled="isLoading"
-            title="Sort projects"
+            :title="`Sort by ${getSortText()}`"
           >
             <span class="sort-icon">{{ getSortIcon() }}</span>
             <span class="sort-text">{{ getSortText() }}</span>
@@ -223,48 +223,57 @@ const getTimeSince = (date: number) => {
   return timeSince(date)
 }
 
-// Fuzzy search function with typo tolerance
-const fuzzyMatch = (searchTerm: string, target: string): number => {
-  if (!searchTerm) return 1
+// Optimized scoring algorithm for search
+const calculateProjectScore = (searchTerm: string, projectName: string): number => {
+  if (!searchTerm.trim()) return 1
   
-  const search = searchTerm.toLowerCase()
-  const text = target.toLowerCase()
+  const search = searchTerm.toLowerCase().trim()
+  const name = projectName.toLowerCase()
   
-  // Exact match gets highest score
-  if (text.includes(search)) {
-    return 1
-  }
+  let score = 0
   
-  // Calculate Levenshtein distance for fuzzy matching
-  const matrix = Array(search.length + 1).fill(null).map(() => Array(text.length + 1).fill(null))
-  
-  for (let i = 0; i <= search.length; i++) {
-    matrix[i][0] = i
-  }
-  
-  for (let j = 0; j <= text.length; j++) {
-    matrix[0][j] = j
-  }
-  
-  for (let i = 1; i <= search.length; i++) {
-    for (let j = 1; j <= text.length; j++) {
-      const cost = search[i - 1] === text[j - 1] ? 0 : 1
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1,      // deletion
-        matrix[i][j - 1] + 1,      // insertion
-        matrix[i - 1][j - 1] + cost // substitution
-      )
+  // Count individual letter occurrences (+1 point each)
+  const letterCounts = new Map<string, number>()
+  for (const char of search) {
+    if (char !== ' ') {
+      letterCounts.set(char, (letterCounts.get(char) || 0) + 1)
     }
   }
   
-  const distance = matrix[search.length][text.length]
-  const maxLength = Math.max(search.length, text.length)
+  for (const char of name) {
+    if (letterCounts.has(char) && letterCounts.get(char)! > 0) {
+      score += 1
+      letterCounts.set(char, letterCounts.get(char)! - 1)
+    }
+  }
   
-  // Convert distance to similarity score (0-1)
-  const similarity = 1 - (distance / maxLength)
+  // Find substring matches and add 2*length points
+  const words = search.split(/\s+/).filter(word => word.length > 0)
   
-  // Only consider matches with similarity > 0.6
-  return similarity > 0.6 ? similarity : 0
+  for (const word of words) {
+    let startIndex = 0
+    while (true) {
+      const index = name.indexOf(word, startIndex)
+      if (index === -1) break
+      
+      score += 2 * word.length
+      startIndex = index + 1
+    }
+  }
+  
+  // Also check for the full search term as a substring
+  if (search.includes(' ')) {
+    let startIndex = 0
+    while (true) {
+      const index = name.indexOf(search, startIndex)
+      if (index === -1) break
+      
+      score += 2 * search.length
+      startIndex = index + 1
+    }
+  }
+  
+  return score
 }
 
 // Helper function for tie-breaking comparison
@@ -312,25 +321,36 @@ const tieBreakingCompare = (a: Project, b: Project, direction: 'asc' | 'desc'): 
   return direction === 'asc' ? comparison : -comparison
 }
 
-// Filtered and sorted projects
+// Filtered and sorted projects with optimized search
 const filteredAndSortedProjects = computed(() => {
   let filtered = projects.value
   
-  // Apply search filter
-  if (searchQuery.value) {
-    const searchResults = projects.value
-      .map(project => ({
-        project,
-        score: fuzzyMatch(searchQuery.value, project.name)
-      }))
-      .filter(result => result.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .map(result => result.project)
+  // Apply search filter with scoring
+  if (searchQuery.value.trim()) {
+    // Calculate scores for all projects
+    const scoredProjects = projects.value.map(project => ({
+      project,
+      score: calculateProjectScore(searchQuery.value, project.name)
+    }))
     
-    filtered = searchResults
+    // Filter out projects with score 0
+    const validProjects = scoredProjects.filter(item => item.score > 0)
+    
+    if (validProjects.length === 0) {
+      return []
+    }
+    
+    // Sort by score (highest first)
+    validProjects.sort((a, b) => b.score - a.score)
+    
+    // Take top 25% of results (minimum 1, maximum all results)
+    const top25PercentCount = Math.max(1, Math.ceil(validProjects.length * 0.25))
+    const topResults = validProjects.slice(0, top25PercentCount)
+    
+    filtered = topResults.map(item => item.project)
   }
   
-  // Apply sorting
+  // Apply sorting to filtered results
   return filtered.sort((a, b) => {
     let comparison = 0
     
