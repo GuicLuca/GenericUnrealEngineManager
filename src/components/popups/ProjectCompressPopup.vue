@@ -15,7 +15,7 @@
 
     <div class="popup-content">
       <!-- Clean Before Compress Section -->
-      <div class="compress-section">
+      <div class="compress-section" :class="{ 'section-collapsed': !cleanBeforeCompress }">
         <div class="section-header">
           <input
             id="clean-before-compress"
@@ -514,6 +514,10 @@ onMounted(() => {
 
 .compress-section:last-of-type {
   margin-bottom: 0;
+}
+
+.compress-section.section-collapsed {
+  padding-bottom: var(--spacing-md);
 }
 
 .section-header {
