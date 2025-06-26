@@ -420,8 +420,8 @@ onMounted(() => {
 
 .popup-content {
   flex-grow: 1;
-  overflow-y: auto;
   padding: var(--spacing-lg);
+  overflow: hidden;
 }
 
 .project-info {

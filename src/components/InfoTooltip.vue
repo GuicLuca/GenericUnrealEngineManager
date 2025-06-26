@@ -10,24 +10,88 @@
     >
       ℹ️
     </div>
-    <Transition name="tooltip">
-      <div v-if="showTooltip" class="tooltip">
-        {{ content }}
-      </div>
-    </Transition>
+    <Teleport to="body">
+      <Transition name="tooltip">
+        <div v-if="showTooltip" class="tooltip" :style="tooltipStyle" ref="tooltipRef">
+          {{ content }}
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 
 interface Props {
   content: string
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 const showTooltip = ref(false)
+const tooltipRef = ref<HTMLElement | null>(null)
+
+// Calculate dynamic width based on content length
+const tooltipStyle = computed(() => {
+  const contentLength = props.content.length
+  let width = '20rem' // Default width
+  
+  if (contentLength > 100) {
+    width = '30rem'
+  } else if (contentLength > 200) {
+    width = '40rem'
+  } else if (contentLength > 300) {
+    width = '50rem'
+  }
+  
+  return {
+    width,
+    maxWidth: '90vw' // Ensure it doesn't exceed viewport
+  }
+})
+
+// Position tooltip when it becomes visible
+watch(showTooltip, async (visible) => {
+  if (visible) {
+    await nextTick()
+    positionTooltip()
+  }
+})
+
+const positionTooltip = () => {
+  if (!tooltipRef.value) return
+  
+  const tooltip = tooltipRef.value
+  const container = tooltip.closest('.info-tooltip-container') as HTMLElement
+  if (!container) return
+  
+  const containerRect = container.getBoundingClientRect()
+  const tooltipRect = tooltip.getBoundingClientRect()
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+  
+  let left = containerRect.left + containerRect.width / 2
+  let top = containerRect.top - tooltipRect.height - 8
+  
+  // Adjust horizontal position if tooltip would overflow
+  if (left + tooltipRect.width / 2 > viewportWidth - 10) {
+    left = viewportWidth - tooltipRect.width - 10
+  } else if (left - tooltipRect.width / 2 < 10) {
+    left = 10
+  } else {
+    left = left - tooltipRect.width / 2
+  }
+  
+  // Adjust vertical position if tooltip would overflow top
+  if (top < 10) {
+    top = containerRect.bottom + 8
+  }
+  
+  tooltip.style.left = `${left}px`
+  tooltip.style.top = `${top}px`
+  tooltip.style.transform = 'none'
+}
 </script>
 
 <style scoped>
@@ -56,22 +120,18 @@ const showTooltip = ref(false)
 }
 
 .tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
+  position: fixed;
   background-color: var(--text-primary);
   color: var(--background-color);
   padding: var(--spacing-sm);
   border-radius: var(--border-radius-sm);
   font-size: var(--font-size-xs);
   white-space: normal;
-  min-width: 20rem;
-  max-width: 40rem;
-  z-index: 1001;
-  margin-bottom: var(--spacing-xs);
+  z-index: 10000;
   box-shadow: var(--shadow-md);
   line-height: var(--line-height-normal);
+  word-wrap: break-word;
+  pointer-events: none;
 }
 
 .tooltip::after {
@@ -92,6 +152,6 @@ const showTooltip = ref(false)
 .tooltip-enter-from,
 .tooltip-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(4px);
+  transform: translateY(4px);
 }
 </style>

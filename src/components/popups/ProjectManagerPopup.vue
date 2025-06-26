@@ -216,8 +216,8 @@ onUnmounted(() => {
 
 .popup-content {
   flex-grow: 1;
-  overflow-y: auto;
   padding: var(--spacing-lg);
+  overflow: hidden;
 }
 
 .projects-section {
@@ -332,6 +332,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
+  overflow-y: auto;
+  max-height: calc(80vh - 12rem);
 }
 
 .project-item {

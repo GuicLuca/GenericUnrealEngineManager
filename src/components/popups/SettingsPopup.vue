@@ -11,202 +11,224 @@
     </div>
 
     <div class="popup-content">
-      <!-- IDE Programs Section -->
-      <div class="settings-section">
-        <h3 class="section-title">IDE Programs</h3>
-        <div class="section-description">
-          Configure your preferred IDEs for opening C++ projects. Add any IDE or code editor you want to use.
-        </div>
-
-        <!-- Custom Programs Section -->
-        <div class="custom-programs">
-          <div class="custom-program-list">
-            <div 
-              v-for="(path, name) in localSettings.ide_programs.custom_programs"
-              :key="name"
-              class="custom-program-item"
-            >
-              <div class="program-icon">
-                <img 
-                  v-if="programIcons[name]" 
-                  :src="programIcons[name]" 
-                  :alt="name"
-                  class="icon-image"
-                  @error="handleIconError(name)"
-                />
-                <span v-else class="fallback-icon">⚙️</span>
-              </div>
-              <input
-                v-model="customProgramNames[name]"
-                type="text"
-                class="custom-name-input"
-                placeholder="Program name..."
-                @blur="updateCustomProgramName(name, customProgramNames[name])"
-              />
-              <input
-                v-model="localSettings.ide_programs.custom_programs[name]"
-                type="text"
-                class="custom-path-input"
-                placeholder="Path to executable..."
-                @change="extractIcon(name, localSettings.ide_programs.custom_programs[name])"
-              />
-              <button
-                class="browse-button"
-                @click="browseForCustomIde(name)"
-                title="Browse for executable"
-              >
-                📂
-              </button>
-              <button
-                class="remove-button"
-                @click="removeCustomProgram(name)"
-                title="Remove program"
-              >
-                🗑️
-              </button>
-            </div>
-          </div>
-          <button class="add-custom-button" @click="addCustomProgram">
-            <span class="button-icon">➕</span>
-            Add IDE Program
-          </button>
-        </div>
+      <!-- Tabs Navigation -->
+      <div class="tabs-nav">
+        <button 
+          v-for="tab in tabs" 
+          :key="tab.id"
+          class="tab-button"
+          :class="{ active: activeTab === tab.id }"
+          @click="activeTab = tab.id"
+        >
+          <span class="tab-icon">{{ tab.icon }}</span>
+          <span class="tab-title">{{ tab.title }}</span>
+        </button>
       </div>
 
-      <!-- Cleaning Defaults Section -->
-      <div class="settings-section">
-        <h3 class="section-title">Cleaning Default Selection</h3>
-        <div class="section-description">
-          Set the default selection for the clean project popup.
-        </div>
+      <!-- Tab Content -->
+      <div class="tab-content">
+        <!-- IDE Programs Tab -->
+        <div v-if="activeTab === 'ide'" class="tab-panel">
+          <div class="settings-section">
+            <h3 class="section-title">IDE Programs</h3>
+            <div class="section-description">
+              Configure your preferred IDEs for opening C++ projects. Add any IDE or code editor you want to use.
+            </div>
 
-        <div class="cleaning-defaults">
-          <div class="defaults-subsection">
-            <h4 class="subsection-title">Project Scanning</h4>
-            <div class="checkbox-group">
-              <div class="checkbox-item">
-                <input
-                  id="default-ide-files"
-                  v-model="localSettings.cleaning_defaults.ide_files"
-                  type="checkbox"
-                  class="checkbox-input"
-                />
-                <label for="default-ide-files" class="checkbox-label">
-                  IDE files (.vs and .idea)
-                </label>
+            <div class="custom-programs">
+              <div class="custom-program-list">
+                <div 
+                  v-for="(path, name) in localSettings.ide_programs.custom_programs"
+                  :key="name"
+                  class="custom-program-item"
+                >
+                  <div class="program-icon">
+                    <img 
+                      v-if="programIcons[name]" 
+                      :src="programIcons[name]" 
+                      :alt="name"
+                      class="icon-image"
+                      @error="handleIconError(name)"
+                    />
+                    <span v-else class="fallback-icon">⚙️</span>
+                  </div>
+                  <input
+                    v-model="customProgramNames[name]"
+                    type="text"
+                    class="custom-name-input"
+                    placeholder="Program name..."
+                    @blur="updateCustomProgramName(name, customProgramNames[name])"
+                  />
+                  <input
+                    v-model="localSettings.ide_programs.custom_programs[name]"
+                    type="text"
+                    class="custom-path-input"
+                    placeholder="Path to executable..."
+                    @change="extractIcon(name, localSettings.ide_programs.custom_programs[name])"
+                  />
+                  <button
+                    class="browse-button"
+                    @click="browseForCustomIde(name)"
+                    title="Browse for executable"
+                  >
+                    📂
+                  </button>
+                  <button
+                    class="remove-button"
+                    @click="removeCustomProgram(name)"
+                    title="Remove program"
+                  >
+                    🗑️
+                  </button>
+                </div>
               </div>
-
-              <div class="checkbox-item">
-                <input
-                  id="default-binaries"
-                  v-model="localSettings.cleaning_defaults.binaries"
-                  type="checkbox"
-                  class="checkbox-input"
-                />
-                <label for="default-binaries" class="checkbox-label">
-                  Binaries
-                </label>
-              </div>
-
-              <div class="checkbox-item">
-                <input
-                  id="default-build"
-                  v-model="localSettings.cleaning_defaults.build"
-                  type="checkbox"
-                  class="checkbox-input"
-                />
-                <label for="default-build" class="checkbox-label">
-                  Build
-                </label>
-              </div>
-
-              <div class="checkbox-item">
-                <input
-                  id="default-intermediate"
-                  v-model="localSettings.cleaning_defaults.intermediate"
-                  type="checkbox"
-                  class="checkbox-input"
-                />
-                <label for="default-intermediate" class="checkbox-label">
-                  Intermediate
-                </label>
-              </div>
-
-              <div class="checkbox-item">
-                <input
-                  id="default-derived-data-cache"
-                  v-model="localSettings.cleaning_defaults.derived_data_cache"
-                  type="checkbox"
-                  class="checkbox-input"
-                />
-                <label for="default-derived-data-cache" class="checkbox-label">
-                  DerivedDataCache
-                </label>
-              </div>
-
-              <div class="checkbox-item">
-                <input
-                  id="default-saved"
-                  v-model="localSettings.cleaning_defaults.saved"
-                  type="checkbox"
-                  class="checkbox-input"
-                />
-                <label for="default-saved" class="checkbox-label">
-                  Saved
-                </label>
-              </div>
-
-              <div class="checkbox-item">
-                <input
-                  id="default-analyze-plugins"
-                  v-model="localSettings.cleaning_defaults.analyze_plugins"
-                  type="checkbox"
-                  class="checkbox-input"
-                />
-                <label for="default-analyze-plugins" class="checkbox-label">
-                  Analyze plugins
-                </label>
-              </div>
+              <button class="add-custom-button" @click="addCustomProgram">
+                <span class="button-icon">➕</span>
+                Add IDE Program
+              </button>
             </div>
           </div>
+        </div>
 
-          <div v-if="localSettings.cleaning_defaults.analyze_plugins" class="defaults-subsection">
-            <h4 class="subsection-title">Plugins Scanning</h4>
-            <div class="checkbox-group">
-              <div class="checkbox-item">
-                <input
-                  id="default-plugin-binaries"
-                  v-model="localSettings.cleaning_defaults.plugin_binaries"
-                  type="checkbox"
-                  class="checkbox-input"
-                />
-                <label for="default-plugin-binaries" class="checkbox-label">
-                  Binaries
-                </label>
+        <!-- Cleaning Defaults Tab -->
+        <div v-if="activeTab === 'cleaning'" class="tab-panel">
+          <div class="settings-section">
+            <h3 class="section-title">Cleaning Default Selection</h3>
+            <div class="section-description">
+              Set the default selection for the clean project popup.
+            </div>
+
+            <div class="cleaning-defaults-grid">
+              <!-- Project Scanning Column -->
+              <div class="defaults-column">
+                <h4 class="subsection-title">Project Scanning</h4>
+                <div class="checkbox-group">
+                  <div class="checkbox-item">
+                    <input
+                      id="default-ide-files"
+                      v-model="localSettings.cleaning_defaults.ide_files"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label for="default-ide-files" class="checkbox-label">
+                      IDE files (.vs and .idea)
+                    </label>
+                  </div>
+
+                  <div class="checkbox-item">
+                    <input
+                      id="default-binaries"
+                      v-model="localSettings.cleaning_defaults.binaries"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label for="default-binaries" class="checkbox-label">
+                      Binaries
+                    </label>
+                  </div>
+
+                  <div class="checkbox-item">
+                    <input
+                      id="default-build"
+                      v-model="localSettings.cleaning_defaults.build"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label for="default-build" class="checkbox-label">
+                      Build
+                    </label>
+                  </div>
+
+                  <div class="checkbox-item">
+                    <input
+                      id="default-intermediate"
+                      v-model="localSettings.cleaning_defaults.intermediate"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label for="default-intermediate" class="checkbox-label">
+                      Intermediate
+                    </label>
+                  </div>
+
+                  <div class="checkbox-item">
+                    <input
+                      id="default-derived-data-cache"
+                      v-model="localSettings.cleaning_defaults.derived_data_cache"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label for="default-derived-data-cache" class="checkbox-label">
+                      DerivedDataCache
+                    </label>
+                  </div>
+
+                  <div class="checkbox-item">
+                    <input
+                      id="default-saved"
+                      v-model="localSettings.cleaning_defaults.saved"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label for="default-saved" class="checkbox-label">
+                      Saved
+                    </label>
+                  </div>
+
+                  <div class="checkbox-item">
+                    <input
+                      id="default-analyze-plugins"
+                      v-model="localSettings.cleaning_defaults.analyze_plugins"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label for="default-analyze-plugins" class="checkbox-label">
+                      Analyze plugins
+                    </label>
+                  </div>
+                </div>
               </div>
 
-              <div class="checkbox-item">
-                <input
-                  id="default-plugin-intermediate"
-                  v-model="localSettings.cleaning_defaults.plugin_intermediate"
-                  type="checkbox"
-                  class="checkbox-input"
-                />
-                <label for="default-plugin-intermediate" class="checkbox-label">
-                  Intermediate
-                </label>
-              </div>
+              <!-- Plugins Scanning Column -->
+              <div class="defaults-column">
+                <h4 class="subsection-title">Plugins Scanning</h4>
+                <div class="checkbox-group">
+                  <div class="checkbox-item">
+                    <input
+                      id="default-plugin-binaries"
+                      v-model="localSettings.cleaning_defaults.plugin_binaries"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label for="default-plugin-binaries" class="checkbox-label">
+                      Binaries
+                    </label>
+                  </div>
 
-              <div class="checkbox-item">
-                <input
-                  id="default-plugin-node-size-cache"
-                  v-model="localSettings.cleaning_defaults.plugin_node_size_cache"
-                  type="checkbox"
-                  class="checkbox-input"
-                />
-                <label for="default-plugin-node-size-cache" class="checkbox-label">
-                  NodeSizeCache
-                </label>
+                  <div class="checkbox-item">
+                    <input
+                      id="default-plugin-intermediate"
+                      v-model="localSettings.cleaning_defaults.plugin_intermediate"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label for="default-plugin-intermediate" class="checkbox-label">
+                      Intermediate
+                    </label>
+                  </div>
+
+                  <div class="checkbox-item">
+                    <input
+                      id="default-plugin-node-size-cache"
+                      v-model="localSettings.cleaning_defaults.plugin_node_size_cache"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label for="default-plugin-node-size-cache" class="checkbox-label">
+                      NodeSizeCache
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -250,15 +272,27 @@ interface AppSettings {
   }
 }
 
+interface Tab {
+  id: string
+  title: string
+  icon: string
+}
+
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
 const { addLog } = useLogStore()
 
+const activeTab = ref('ide')
 const isSaving = ref(false)
 const customProgramNames = ref<Record<string, string>>({})
 const programIcons = ref<Record<string, string>>({})
+
+const tabs: Tab[] = [
+  { id: 'ide', title: 'IDE Programs', icon: '💻' },
+  { id: 'cleaning', title: 'Cleaning Defaults', icon: '🧹' }
+]
 
 const localSettings = reactive<AppSettings>({
   ide_programs: {
@@ -407,7 +441,7 @@ onMounted(() => {
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-lg);
   width: 100%;
-  max-width: 42rem;
+  max-width: 48rem;
   max-height: 80vh;
   overflow: hidden;
   display: flex;
@@ -460,8 +494,57 @@ onMounted(() => {
 
 .popup-content {
   flex-grow: 1;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tabs-nav {
+  display: flex;
+  background-color: var(--surface-color);
+  border-bottom: var(--border-width) solid var(--border-color);
+}
+
+.tab-button {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: none;
+  background-color: transparent;
+  border-right: var(--border-width) solid var(--border-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  font-weight: var(--font-weight-medium);
+}
+
+.tab-button:hover {
+  background-color: var(--hover-color);
+  color: var(--text-primary);
+}
+
+.tab-button.active {
+  background-color: var(--background-color);
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--accent-color);
+  font-weight: var(--font-weight-semibold);
+}
+
+.tab-icon {
+  font-size: var(--font-size-md);
+}
+
+.tab-content {
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.tab-panel {
+  height: 100%;
   padding: var(--spacing-lg);
+  overflow-y: auto;
 }
 
 .settings-section {
@@ -589,17 +672,17 @@ onMounted(() => {
   border-color: var(--accent-color);
 }
 
-.cleaning-defaults {
+.cleaning-defaults-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-xl);
   border-top: var(--border-width) solid var(--border-color);
   padding-top: var(--spacing-lg);
 }
 
-.defaults-subsection {
-  margin-bottom: var(--spacing-lg);
-}
-
-.defaults-subsection:last-child {
-  margin-bottom: 0;
+.defaults-column {
+  display: flex;
+  flex-direction: column;
 }
 
 .subsection-title {
