@@ -45,7 +45,7 @@
             <span class="dropdown-arrow" :class="{ 'open': showSortDropdown }">▼</span>
           </button>
           
-          <div v-if="showSortDropdown" class="sort-dropdown" @click.stop>
+          <div v-if="showSortDropdown" class="sort-dropdown" ref="sortDropdownRef" @click.stop>
             <div class="sort-group">
               <div class="sort-group-title">Name</div>
               <button
@@ -233,7 +233,8 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted, onUnmounted, onClickOutside} from 'vue'
+import {ref, computed, onMounted, onUnmounted} from 'vue'
+import {onClickOutside} from '@vueuse/core'
 import {useProjectStore, type Project} from '../../stores/projectStore'
 import { useLogStore } from '../../stores/logStore'
 import { usePopup } from '../../composables/usePopup'
