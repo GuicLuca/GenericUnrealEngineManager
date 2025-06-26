@@ -31,7 +31,7 @@
 
         <button 
           class="launch-option ide-option"
-          @click="showIdeSelection = true"
+          @click="showProjectIdeSelection"
           :disabled="isLaunching"
         >
           <div class="option-icon">💻</div>
@@ -45,7 +45,7 @@
         <button 
           v-if="isCustomEngine"
           class="launch-option custom-engine-option"
-          @click="showCustomEngineIdeSelection = true"
+          @click="showCustomEngineIdeSelection"
           :disabled="isLaunching"
         >
           <div class="option-icon">🔧</div>
@@ -57,7 +57,7 @@
       </div>
 
       <!-- IDE Selection for Project -->
-      <div v-if="showIdeSelection" class="ide-selection">
+      <div v-if="activeIdeSelection === 'project'" class="ide-selection">
         <h3 class="ide-title">Select IDE for {{ projectName }}</h3>
         <div class="ide-list">
           <button 
@@ -86,7 +86,7 @@
       </div>
 
       <!-- IDE Selection for Custom Engine -->
-      <div v-if="showCustomEngineIdeSelection" class="ide-selection">
+      <div v-if="activeIdeSelection === 'custom-engine'" class="ide-selection">
         <h3 class="ide-title">Select IDE for Custom Engine</h3>
         <div class="ide-list">
           <button 
@@ -152,8 +152,7 @@ const { showPopup } = usePopup()
 const { selectedProject } = useProjectStore()
 
 const isLaunching = ref(false)
-const showIdeSelection = ref(false)
-const showCustomEngineIdeSelection = ref(false)
+const activeIdeSelection = ref<'project' | 'custom-engine' | null>(null)
 const settings = ref<AppSettings | null>(null)
 
 // Check if this is a custom engine project
@@ -197,6 +196,14 @@ const launchWithEngine = async () => {
   } finally {
     isLaunching.value = false
   }
+}
+
+const showProjectIdeSelection = () => {
+  activeIdeSelection.value = 'project'
+}
+
+const showCustomEngineIdeSelection = () => {
+  activeIdeSelection.value = 'custom-engine'
 }
 
 const launchProjectWithIde = async (idePath: string) => {
