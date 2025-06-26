@@ -14,137 +14,129 @@
     </div>
 
     <div class="popup-content">
-      <!-- Project Scanning Section -->
-      <div class="cleaning-section">
-        <h3 class="section-title">Project Scanning</h3>
-        <div class="cleaning-options">
-          <div class="cleaning-column">
-            <div class="checkbox-group">
-              <div class="checkbox-item">
-                <input
-                  id="ide-files"
-                  v-model="selection.ide_files"
-                  type="checkbox"
-                  class="checkbox-input"
-                  :disabled="isCleaning"
+      <div class="cleaning-layout">
+        <!-- Left Column: Project Scanning -->
+        <div class="cleaning-column left-column">
+          <h3 class="section-title">Project Scanning</h3>
+          <div class="checkbox-group">
+            <div class="checkbox-item">
+              <input
+                id="ide-files"
+                v-model="selection.ide_files"
+                type="checkbox"
+                class="checkbox-input"
+                :disabled="isCleaning"
+              />
+              <label for="ide-files" class="checkbox-label">
+                IDE files (.vs and .idea)
+                <InfoTooltip 
+                  content="Visual Studio and JetBrains IDE cache and configuration files. Generated when opening the project."
                 />
-                <label for="ide-files" class="checkbox-label">
-                  IDE files (.vs and .idea)
-                  <InfoTooltip 
-                    content="Visual Studio and JetBrains IDE cache and configuration files. Generated when opening the project."
-                  />
-                </label>
-              </div>
-
-              <div class="checkbox-item">
-                <input
-                  id="binaries"
-                  v-model="selection.binaries"
-                  type="checkbox"
-                  class="checkbox-input"
-                  :disabled="isCleaning"
-                />
-                <label for="binaries" class="checkbox-label">
-                  Binaries
-                  <InfoTooltip 
-                    content="Contains executable files or other files created during compiling."
-                  />
-                </label>
-              </div>
-
-              <div class="checkbox-item">
-                <input
-                  id="build"
-                  v-model="selection.build"
-                  type="checkbox"
-                  class="checkbox-input"
-                  :disabled="isCleaning"
-                />
-                <label for="build" class="checkbox-label">
-                  Build
-                  <InfoTooltip 
-                    content="Holds files needed for building the engine or game, including files necessary for creating platform-specific builds."
-                  />
-                </label>
-              </div>
-
-              <div class="checkbox-item">
-                <input
-                  id="intermediate"
-                  v-model="selection.intermediate"
-                  type="checkbox"
-                  class="checkbox-input"
-                  :disabled="isCleaning"
-                />
-                <label for="intermediate" class="checkbox-label">
-                  Intermediate
-                  <InfoTooltip 
-                    content="Contains temporary files generated during building the engine or game. In game directories, Shaders are stored in the Intermediate directory."
-                  />
-                </label>
-              </div>
+              </label>
             </div>
-          </div>
 
-          <div class="cleaning-column">
-            <div class="checkbox-group">
-              <div class="checkbox-item">
-                <input
-                  id="derived-data-cache"
-                  v-model="selection.derived_data_cache"
-                  type="checkbox"
-                  class="checkbox-input"
-                  :disabled="isCleaning"
+            <div class="checkbox-item">
+              <input
+                id="binaries"
+                v-model="selection.binaries"
+                type="checkbox"
+                class="checkbox-input"
+                :disabled="isCleaning"
+              />
+              <label for="binaries" class="checkbox-label">
+                Binaries
+                <InfoTooltip 
+                  content="Contains executable files or other files created during compiling."
                 />
-                <label for="derived-data-cache" class="checkbox-label">
-                  DerivedDataCache
-                  <InfoTooltip 
-                    content="Contains derived data files generated on-load for referenced content. Not having cache files present for referenced content can increase load times dramatically."
-                  />
-                </label>
-              </div>
+              </label>
+            </div>
 
-              <div class="checkbox-item">
-                <input
-                  id="saved"
-                  v-model="selection.saved"
-                  type="checkbox"
-                  class="checkbox-input"
-                  :disabled="isCleaning"
+            <div class="checkbox-item">
+              <input
+                id="build"
+                v-model="selection.build"
+                type="checkbox"
+                class="checkbox-input"
+                :disabled="isCleaning"
+              />
+              <label for="build" class="checkbox-label">
+                Build
+                <InfoTooltip 
+                  content="Holds files needed for building the engine or game, including files necessary for creating platform-specific builds."
                 />
-                <label for="saved" class="checkbox-label">
-                  Saved
-                  <InfoTooltip 
-                    content="Contains autosaves, configuration (.ini) files, and log files. Additionally, the Engine>Saved directory contains crash logs, hardware information, and Swarm options and data."
-                  />
-                </label>
-              </div>
+              </label>
+            </div>
 
-              <div class="checkbox-item">
-                <input
-                  id="analyze-plugins"
-                  v-model="selection.analyze_plugins"
-                  type="checkbox"
-                  class="checkbox-input"
-                  :disabled="isCleaning"
+            <div class="checkbox-item">
+              <input
+                id="intermediate"
+                v-model="selection.intermediate"
+                type="checkbox"
+                class="checkbox-input"
+                :disabled="isCleaning"
+              />
+              <label for="intermediate" class="checkbox-label">
+                Intermediate
+                <InfoTooltip 
+                  content="Contains temporary files generated during building the engine or game. In game directories, Shaders are stored in the Intermediate directory."
                 />
-                <label for="analyze-plugins" class="checkbox-label">
-                  Analyze plugins
-                  <InfoTooltip 
-                    content="Enable cleaning of temporary files within plugin directories. This will scan all plugins for cleanable files."
-                  />
-                </label>
-              </div>
+              </label>
+            </div>
+
+            <div class="checkbox-item">
+              <input
+                id="derived-data-cache"
+                v-model="selection.derived_data_cache"
+                type="checkbox"
+                class="checkbox-input"
+                :disabled="isCleaning"
+              />
+              <label for="derived-data-cache" class="checkbox-label">
+                DerivedDataCache
+                <InfoTooltip 
+                  content="Contains derived data files generated on-load for referenced content. Not having cache files present for referenced content can increase load times dramatically."
+                />
+              </label>
+            </div>
+
+            <div class="checkbox-item">
+              <input
+                id="saved"
+                v-model="selection.saved"
+                type="checkbox"
+                class="checkbox-input"
+                :disabled="isCleaning"
+              />
+              <label for="saved" class="checkbox-label">
+                Saved
+                <InfoTooltip 
+                  content="Contains autosaves, configuration (.ini) files, and log files. Additionally, the Engine>Saved directory contains crash logs, hardware information, and Swarm options and data."
+                />
+              </label>
+            </div>
+
+            <div class="checkbox-item">
+              <input
+                id="analyze-plugins"
+                v-model="selection.analyze_plugins"
+                type="checkbox"
+                class="checkbox-input"
+                :disabled="isCleaning"
+              />
+              <label for="analyze-plugins" class="checkbox-label">
+                Analyze plugins
+                <InfoTooltip 
+                  content="Enable cleaning of temporary files within plugin directories. This will scan all plugins for cleanable files."
+                />
+              </label>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Plugins Scanning Section -->
-      <div v-if="selection.analyze_plugins" class="cleaning-section">
-        <h3 class="section-title">Plugins Scanning</h3>
-        <div class="cleaning-options">
-          <div class="cleaning-column">
+        <!-- Right Column: Plugins Scanning (only shown when analyze_plugins is checked) -->
+        <div class="cleaning-column right-column">
+          <div v-if="selection.analyze_plugins" class="plugins-section">
+            <h3 class="section-title">Plugins Scanning</h3>
             <div class="checkbox-group">
               <div class="checkbox-item">
                 <input
@@ -177,11 +169,7 @@
                   />
                 </label>
               </div>
-            </div>
-          </div>
 
-          <div class="cleaning-column">
-            <div class="checkbox-group">
               <div class="checkbox-item">
                 <input
                   id="plugin-node-size-cache"
@@ -198,6 +186,13 @@
                 </label>
               </div>
             </div>
+          </div>
+          
+          <!-- Placeholder when plugins are not being analyzed -->
+          <div v-else class="plugins-placeholder">
+            <div class="placeholder-icon">🔌</div>
+            <div class="placeholder-text">Plugin Scanning</div>
+            <div class="placeholder-subtext">Enable "Analyze plugins" to scan plugin directories for temporary files</div>
           </div>
         </div>
       </div>
@@ -447,15 +442,29 @@ onMounted(() => {
   overflow-y: auto;
 }
 
-.cleaning-section {
-  margin-bottom: var(--spacing-lg);
+.cleaning-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+  height: 100%;
+}
+
+.cleaning-column {
+  display: flex;
+  flex-direction: column;
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-md);
   padding: var(--spacing-md);
+  background-color: var(--surface-color);
 }
 
-.cleaning-section:last-of-type {
-  margin-bottom: 0;
+.left-column {
+  /* Project scanning column styles */
+}
+
+.right-column {
+  /* Plugins scanning column styles */
+  position: relative;
 }
 
 .section-title {
@@ -463,17 +472,8 @@ onMounted(() => {
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
   margin: 0 0 var(--spacing-md) 0;
-}
-
-.cleaning-options {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-lg);
-}
-
-.cleaning-column {
-  display: flex;
-  flex-direction: column;
+  padding-bottom: var(--spacing-sm);
+  border-bottom: var(--border-width) solid var(--border-color);
 }
 
 .checkbox-group {
@@ -510,6 +510,41 @@ onMounted(() => {
   gap: var(--spacing-xs);
   line-height: var(--line-height-normal);
   flex-grow: 1;
+}
+
+.plugins-section {
+  flex-grow: 1;
+}
+
+.plugins-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--spacing-xl);
+  flex-grow: 1;
+  opacity: 0.6;
+}
+
+.placeholder-icon {
+  font-size: var(--icon-size-xl);
+  margin-bottom: var(--spacing-md);
+  opacity: 0.5;
+}
+
+.placeholder-text {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.placeholder-subtext {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  opacity: 0.7;
+  line-height: var(--line-height-normal);
 }
 
 .popup-actions {
@@ -583,7 +618,7 @@ onMounted(() => {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .cleaning-options {
+  .cleaning-layout {
     grid-template-columns: 1fr;
   }
 }
