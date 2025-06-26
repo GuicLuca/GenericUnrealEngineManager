@@ -24,7 +24,7 @@
         >
           <div class="option-icon">🎮</div>
           <div class="option-content">
-            <div class="option-title">Launch with Unreal Engine</div>
+            <div class="option-title">Open {{ projectName }} with Unreal Engine</div>
             <div class="option-description">Open the project directly in Unreal Engine</div>
           </div>
         </button>
@@ -36,21 +36,64 @@
         >
           <div class="option-icon">💻</div>
           <div class="option-content">
-            <div class="option-title">Open with IDE</div>
+            <div class="option-title">Open {{ projectName }} with IDE</div>
             <div class="option-description">Open the project solution file in your preferred IDE</div>
+          </div>
+        </button>
+
+        <!-- Custom Engine Option (only for custom engine projects) -->
+        <button 
+          v-if="isCustomEngine"
+          class="launch-option custom-engine-option"
+          @click="showCustomEngineIdeSelection = true"
+          :disabled="isLaunching"
+        >
+          <div class="option-icon">🔧</div>
+          <div class="option-content">
+            <div class="option-title">Open the custom engine with IDE</div>
+            <div class="option-description">Open the custom engine solution file in your preferred IDE</div>
           </div>
         </button>
       </div>
 
-      <!-- IDE Selection -->
+      <!-- IDE Selection for Project -->
       <div v-if="showIdeSelection" class="ide-selection">
-        <h3 class="ide-title">Select IDE</h3>
+        <h3 class="ide-title">Select IDE for {{ projectName }}</h3>
         <div class="ide-list">
           <button 
             v-for="ide in availableIdes"
             :key="ide.name"
             class="ide-item"
-            @click="launchWithIde(ide.path)"
+            @click="launchProjectWithIde(ide.path)"
+            :disabled="isLaunching"
+          >
+            <div class="ide-icon">{{ ide.icon }}</div>
+            <div class="ide-info">
+              <div class="ide-name">{{ ide.name }}</div>
+              <div class="ide-path">{{ ide.path }}</div>
+            </div>
+          </button>
+          
+          <div v-if="availableIdes.length === 0" class="no-ides">
+            <div class="no-ides-icon">⚠️</div>
+            <div class="no-ides-text">No IDEs configured</div>
+            <div class="no-ides-subtext">Configure IDE programs in settings</div>
+            <button class="settings-button" @click="openSettings">
+              Open Settings
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- IDE Selection for Custom Engine -->
+      <div v-if="showCustomEngineIdeSelection" class="ide-selection">
+        <h3 class="ide-title">Select IDE for Custom Engine</h3>
+        <div class="ide-list">
+          <button 
+            v-for="ide in availableIdes"
+            :key="ide.name"
+            class="ide-item"
+            @click="launchCustomEngineWithIde(ide.path)"
             :disabled="isLaunching"
           >
             <div class="ide-icon">{{ ide.icon }}</div>
@@ -79,10 +122,12 @@ import { ref, onMounted, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useLogStore } from '../../stores/logStore'
 import { usePopup } from '../../composables/usePopup'
+import { useProjectStore, type EngineAssociation } from '../../stores/projectStore'
 
 interface Props {
   projectName: string
   projectPath: string
+  engineAssociation?: EngineAssociation
 }
 
 interface IdeInfo {
@@ -104,10 +149,18 @@ const emit = defineEmits<{
 
 const { addLog } = useLogStore()
 const { showPopup } = usePopup()
+const { selectedProject } = useProjectStore()
 
 const isLaunching = ref(false)
 const showIdeSelection = ref(false)
+const showCustomEngineIdeSelection = ref(false)
 const settings = ref<AppSettings | null>(null)
+
+// Check if this is a custom engine project
+const isCustomEngine = computed(() => {
+  const engineAssoc = props.engineAssociation || selectedProject.value?.engine_association
+  return typeof engineAssoc === 'string' && engineAssoc === 'Custom'
+})
 
 const availableIdes = computed(() => {
   if (!settings.value) return []
@@ -146,7 +199,7 @@ const launchWithEngine = async () => {
   }
 }
 
-const launchWithIde = async (idePath: string) => {
+const launchProjectWithIde = async (idePath: string) => {
   try {
     isLaunching.value = true
     addLog(`Launching ${props.projectName} with IDE`)
@@ -158,8 +211,35 @@ const launchWithIde = async (idePath: string) => {
     
     emit('close')
   } catch (error) {
-    console.error('Failed to launch with IDE:', error)
+    console.error('Failed to launch project with IDE:', error)
     addLog('Failed to launch project with IDE', 'error')
+  } finally {
+    isLaunching.value = false
+  }
+}
+
+const launchCustomEngineWithIde = async (idePath: string) => {
+  try {
+    isLaunching.value = true
+    addLog(`Opening custom engine with IDE`)
+    
+    // Get the custom engine directory (parent of project directory)
+    const projectDir = props.projectPath.replace(/[^/\\]*\.uproject$/, '')
+    const pathParts = projectDir.replace(/[/\\]+$/, '').split(/[/\\]/)
+    pathParts.pop() // Remove the project directory name
+    const customEngineDir = pathParts.join('/')
+    
+    // Look for .sln file in the custom engine directory
+    const result = await invoke('launch_custom_engine_with_ide', {
+      customEngineDir,
+      idePath
+    })
+    
+    addLog('Custom engine opened with IDE successfully')
+    emit('close')
+  } catch (error) {
+    console.error('Failed to launch custom engine with IDE:', error)
+    addLog('Failed to open custom engine with IDE. No .sln file found in the custom engine directory.', 'error')
   } finally {
     isLaunching.value = false
   }
@@ -243,6 +323,7 @@ onMounted(() => {
 
 .popup-content {
   padding: var(--spacing-lg);
+  overflow: hidden;
 }
 
 .project-info {
@@ -290,6 +371,15 @@ onMounted(() => {
 .launch-option:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.custom-engine-option {
+  border-color: #f56500;
+}
+
+.custom-engine-option:hover:not(:disabled) {
+  border-color: #f56500;
+  background-color: rgba(245, 101, 0, 0.1);
 }
 
 .option-icon {

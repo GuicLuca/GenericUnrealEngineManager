@@ -90,7 +90,8 @@ const handleOpen = async () => {
         component: 'ProjectLaunchChoice',
         props: {
           projectName: selectedProject.value.name,
-          projectPath: selectedProject.value.path
+          projectPath: selectedProject.value.path,
+          engineAssociation: selectedProject.value.engine_association
         }
       })
     }

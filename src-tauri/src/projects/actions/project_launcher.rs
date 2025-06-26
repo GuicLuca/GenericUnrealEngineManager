@@ -128,6 +128,74 @@ pub async fn launch_project_with_ide(
     }
 }
 
+/// Launch custom engine with IDE
+#[command]
+pub async fn launch_custom_engine_with_ide(
+    app_handle: AppHandle,
+    custom_engine_dir: String,
+    ide_path: String,
+) -> Result<(), String> {
+    let custom_engine_dir = PathBuf::from(custom_engine_dir);
+    let ide_path = PathBuf::from(ide_path);
+
+    if !custom_engine_dir.exists() {
+        let error_msg = format!("Custom engine directory does not exist: {}", custom_engine_dir.display());
+        error!("{}", error_msg);
+        log(&app_handle, ErrorLevel::Error, &error_msg);
+        return Err(error_msg);
+    }
+
+    if !ide_path.exists() {
+        let error_msg = format!("IDE executable does not exist: {}", ide_path.display());
+        error!("{}", error_msg);
+        log(&app_handle, ErrorLevel::Error, &error_msg);
+        return Err(error_msg);
+    }
+
+    // Look for .sln file in the custom engine directory
+    let sln_file = find_sln_file(&custom_engine_dir);
+
+    let file_to_open = if let Some(sln_path) = sln_file {
+        info!("Found custom engine .sln file: {}", sln_path.display());
+        sln_path
+    } else {
+        let error_msg = format!("No .sln file found in custom engine directory: {}", custom_engine_dir.display());
+        error!("{}", error_msg);
+        log(&app_handle, ErrorLevel::Error, &error_msg);
+        return Err(error_msg);
+    };
+
+    info!(
+        "Launching custom engine with IDE: {} -> {}",
+        ide_path.display(),
+        file_to_open.display()
+    );
+    log(
+        &app_handle,
+        ErrorLevel::Info,
+        &format!("Launching custom engine with IDE: {}", file_to_open.display()),
+    );
+
+    let result = Command::new(&ide_path).arg(&file_to_open).spawn();
+
+    match result {
+        Ok(_) => {
+            log(
+                &app_handle,
+                ErrorLevel::Info,
+                "Custom engine launched with IDE successfully",
+            );
+            Ok(())
+        }
+        Err(e) => {
+            let error_msg = format!("Failed to launch custom engine with IDE: {}", e);
+            error!("{}", error_msg);
+            log(&app_handle, ErrorLevel::Error, &error_msg);
+            Err(error_msg)
+        }
+    }
+}
+
 /// Find .sln file in the project directory
 fn find_sln_file(project_dir: &Path) -> Option<PathBuf> {
     if let Ok(entries) = std::fs::read_dir(project_dir) {
