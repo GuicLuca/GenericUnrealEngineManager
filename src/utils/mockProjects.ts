@@ -9,25 +9,44 @@ export const mockProjects: Project[] = [
     has_cpp: false,
     plugins: [
       {
-        name: "EnhancedInput",
+        name: "Enhanced Input",
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
-        target_allow_list: ["Editor", "Game"]
+        size_on_disk: null,
+        last_scan_date: Math.floor(Date.now() / 1000) - 3600
       },
       {
         name: "Niagara",
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
-        target_allow_list: ["Editor", "Game"]
+        size_on_disk: null,
+        last_scan_date: Math.floor(Date.now() / 1000) - 3600
       },
       {
-        name: "GameplayAbilities",
+        name: "Gameplay Abilities",
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
-        target_allow_list: ["Game"]
+        size_on_disk: null,
+        last_scan_date: Math.floor(Date.now() / 1000) - 3600
+      },
+      {
+        name: "Magic System",
+        is_enabled: true,
+        is_in_project: true,
+        marketplace_url: "com.epicgames.launcher://ue/marketplace/content/magic-system-pro",
+        size_on_disk: 45678912, // ~43.5 MB
+        last_scan_date: Math.floor(Date.now() / 1000) - 3600
+      },
+      {
+        name: "Inventory Framework",
+        is_enabled: true,
+        is_in_project: true,
+        marketplace_url: "com.epicgames.launcher://ue/marketplace/content/inventory-framework",
+        size_on_disk: 23456789, // ~22.4 MB
+        last_scan_date: Math.floor(Date.now() / 1000) - 3600
       }
     ],
     size_on_disk: 2147483648, // 2GB
@@ -41,32 +60,52 @@ export const mockProjects: Project[] = [
     has_cpp: true,
     plugins: [
       {
-        name: "OnlineSubsystem",
+        name: "Online Subsystem",
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
-        target_allow_list: ["Game", "Server"]
+        size_on_disk: null,
+        last_scan_date: Math.floor(Date.now() / 1000) - 1800
       },
       {
-        name: "ReplicationGraph",
+        name: "Replication Graph",
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
-        target_allow_list: ["Game", "Server"]
+        size_on_disk: null,
+        last_scan_date: Math.floor(Date.now() / 1000) - 1800
       },
       {
-        name: "NetworkPrediction",
+        name: "Network Prediction",
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
-        target_allow_list: ["Game"]
+        size_on_disk: null,
+        last_scan_date: Math.floor(Date.now() / 1000) - 1800
       },
       {
-        name: "WeaponSystem",
+        name: "Weapon System Pro",
+        is_enabled: true,
+        is_in_project: true,
+        marketplace_url: "com.epicgames.launcher://ue/marketplace/content/weapon-system-pro",
+        size_on_disk: 156789123, // ~149.5 MB
+        last_scan_date: Math.floor(Date.now() / 1000) - 1800
+      },
+      {
+        name: "Anti-Cheat Integration",
         is_enabled: true,
         is_in_project: true,
         marketplace_url: null,
-        target_allow_list: ["Game"]
+        size_on_disk: 34567890, // ~33 MB
+        last_scan_date: Math.floor(Date.now() / 1000) - 1800
+      },
+      {
+        name: "Advanced Locomotion",
+        is_enabled: false,
+        is_in_project: true,
+        marketplace_url: "com.epicgames.launcher://ue/marketplace/content/advanced-locomotion-system",
+        size_on_disk: 78901234, // ~75.3 MB
+        last_scan_date: Math.floor(Date.now() / 1000) - 1800
       }
     ],
     size_on_disk: 5368709120, // 5GB
@@ -80,25 +119,36 @@ export const mockProjects: Project[] = [
     has_cpp: true,
     plugins: [
       {
-        name: "ProceduralMeshComponent",
+        name: "Procedural Mesh Component",
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
-        target_allow_list: ["Editor", "Game"]
+        size_on_disk: null,
+        last_scan_date: Math.floor(Date.now() / 1000) - 7200
       },
       {
-        name: "CustomRenderer",
+        name: "Custom Renderer",
         is_enabled: true,
         is_in_project: true,
         marketplace_url: null,
-        target_allow_list: ["Editor", "Game"]
+        size_on_disk: 234567890, // ~223.7 MB
+        last_scan_date: Math.floor(Date.now() / 1000) - 7200
       },
       {
-        name: "ProprietaryTools",
+        name: "Proprietary Tools",
         is_enabled: true,
         is_in_project: true,
         marketplace_url: null,
-        target_allow_list: ["Editor"]
+        size_on_disk: 123456789, // ~117.7 MB
+        last_scan_date: Math.floor(Date.now() / 1000) - 7200
+      },
+      {
+        name: "Procedural Generation Suite",
+        is_enabled: true,
+        is_in_project: true,
+        marketplace_url: null,
+        size_on_disk: 345678901, // ~329.6 MB
+        last_scan_date: Math.floor(Date.now() / 1000) - 7200
       }
     ],
     size_on_disk: 8589934592, // 8GB
@@ -112,32 +162,44 @@ export const mockProjects: Project[] = [
     has_cpp: false,
     plugins: [
       {
-        name: "MobileUtils",
+        name: "Mobile Utils",
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
-        target_allow_list: ["Game"]
+        size_on_disk: null,
+        last_scan_date: Math.floor(Date.now() / 1000) - 86400
       },
       {
-        name: "InAppPurchase",
+        name: "In App Purchase",
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
-        target_allow_list: ["Game"]
+        size_on_disk: null,
+        last_scan_date: Math.floor(Date.now() / 1000) - 86400
       },
       {
-        name: "PuzzleFramework",
+        name: "Puzzle Framework",
         is_enabled: true,
         is_in_project: true,
-        marketplace_url: "https://www.unrealengine.com/marketplace/puzzle-framework",
-        target_allow_list: ["Game"]
+        marketplace_url: "com.epicgames.launcher://ue/marketplace/content/puzzle-framework",
+        size_on_disk: 67890123, // ~64.7 MB
+        last_scan_date: Math.floor(Date.now() / 1000) - 86400
       },
       {
-        name: "SocialPlugin",
+        name: "Social Integration",
         is_enabled: true,
         is_in_project: true,
-        marketplace_url: "https://www.unrealengine.com/marketplace/social-integration",
-        target_allow_list: ["Game"]
+        marketplace_url: "com.epicgames.launcher://ue/marketplace/content/social-integration",
+        size_on_disk: 12345678, // ~11.8 MB
+        last_scan_date: Math.floor(Date.now() / 1000) - 86400
+      },
+      {
+        name: "Touch Controls Pro",
+        is_enabled: true,
+        is_in_project: true,
+        marketplace_url: "com.epicgames.launcher://ue/marketplace/content/touch-controls-pro",
+        size_on_disk: 8901234, // ~8.5 MB
+        last_scan_date: Math.floor(Date.now() / 1000) - 86400
       }
     ],
     size_on_disk: 1073741824, // 1GB
@@ -151,39 +213,52 @@ export const mockProjects: Project[] = [
     has_cpp: true,
     plugins: [
       {
-        name: "VRTemplate",
+        name: "VR Template",
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
-        target_allow_list: ["Game"]
+        size_on_disk: null,
+        last_scan_date: Math.floor(Date.now() / 1000) - 300
       },
       {
         name: "OpenXR",
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
-        target_allow_list: ["Game"]
+        size_on_disk: null,
+        last_scan_date: Math.floor(Date.now() / 1000) - 300
       },
       {
-        name: "HandTracking",
+        name: "Hand Tracking Pro",
         is_enabled: true,
+        is_in_project: true,
+        marketplace_url: "com.epicgames.launcher://ue/marketplace/content/hand-tracking-pro",
+        size_on_disk: 89012345, // ~84.9 MB
+        last_scan_date: Math.floor(Date.now() / 1000) - 300
+      },
+      {
+        name: "Haptic Feedback Suite",
+        is_enabled: true,
+        is_in_project: true,
+        marketplace_url: "com.epicgames.launcher://ue/marketplace/content/haptic-suite",
+        size_on_disk: 45678901, // ~43.5 MB
+        last_scan_date: Math.floor(Date.now() / 1000) - 300
+      },
+      {
+        name: "ArchViz Tools",
+        is_enabled: true,
+        is_in_project: true,
+        marketplace_url: "com.epicgames.launcher://ue/marketplace/content/archviz-tools",
+        size_on_disk: 123456789, // ~117.7 MB
+        last_scan_date: Math.floor(Date.now() / 1000) - 300
+      },
+      {
+        name: "VR Interaction Framework",
+        is_enabled: false,
         is_in_project: true,
         marketplace_url: null,
-        target_allow_list: ["Game"]
-      },
-      {
-        name: "HapticFeedback",
-        is_enabled: true,
-        is_in_project: true,
-        marketplace_url: "https://www.unrealengine.com/marketplace/haptic-suite",
-        target_allow_list: ["Game"]
-      },
-      {
-        name: "ArchViz",
-        is_enabled: true,
-        is_in_project: true,
-        marketplace_url: "https://www.unrealengine.com/marketplace/archviz-tools",
-        target_allow_list: ["Editor", "Game"]
+        size_on_disk: 56789012, // ~54.1 MB
+        last_scan_date: Math.floor(Date.now() / 1000) - 300
       }
     ],
     size_on_disk: 4294967296, // 4GB

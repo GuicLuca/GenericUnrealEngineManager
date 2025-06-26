@@ -231,6 +231,45 @@ impl Project {
         Ok(())
     }
 
+    /// Scan plugins for specific projects
+    pub fn scan_project_plugins(
+        app_handle: &tauri::AppHandle,
+        project_paths: &[PathBuf],
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut projects = Project::get_projects(app_handle)?;
+        
+        for project_path in project_paths {
+            if let Some(existing_project) = projects.iter_mut().find(|p| p.path == *project_path) {
+                // Re-discover plugins for this project
+                let contents = std::fs::read_to_string(project_path)?;
+                let uproject_content: serde_json::Value = serde_json::from_str(&contents)?;
+                
+                existing_project.plugins = Self::discover_plugins(project_path, &uproject_content)?;
+                existing_project.last_scan_date = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs();
+            }
+        }
+        
+        // Save the updated projects list to the store
+        Project::save_projects(app_handle, &projects)?;
+        
+        Ok(())
+    }
+
+    /// Refresh plugins for all tracked projects
+    pub fn refresh_all_plugins(
+        app_handle: &tauri::AppHandle,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let projects = Project::get_projects(app_handle)?;
+        let project_paths: Vec<PathBuf> = projects.iter().map(|p| p.path.clone()).collect();
+        
+        Self::scan_project_plugins(app_handle, &project_paths)?;
+        
+        Ok(())
+    }
+
     pub fn get_projects(
         app_handle: &tauri::AppHandle,
     ) -> Result<Vec<Project>, Box<dyn std::error::Error>> {

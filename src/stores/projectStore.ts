@@ -19,12 +19,14 @@ export type EngineAssociation =
     | { Standard: string }
     | "Custom"
 
-// Match the backend ProjectPlugin structure (updated without target_allow_list)
+// Match the backend ProjectPlugin structure (updated with size and scan date)
 export interface ProjectPlugin {
     name: string
     is_enabled: boolean
     is_in_project: boolean
     marketplace_url: string | null
+    size_on_disk: number | null // Size in bytes (null if not in project)
+    last_scan_date: number // Duration since UNIX epoch in seconds
 }
 
 // Global project state
@@ -136,6 +138,34 @@ export const useProjectStore = () => {
         }
     }
 
+    // Scan plugins for specific projects
+    const scanPlugins = async (projectPaths: string[]) => {
+        try {
+            isLoading.value = true
+            await invoke('scan_plugins', { projectPaths })
+            // Backend will emit events to update the store
+        } catch (error) {
+            console.error('Failed to scan plugins:', error)
+            throw error
+        } finally {
+            isLoading.value = false
+        }
+    }
+
+    // Refresh plugins for all projects
+    const refreshAllPlugins = async () => {
+        try {
+            isLoading.value = true
+            await invoke('refresh_all_plugins')
+            // Backend will emit events to update the store
+        } catch (error) {
+            console.error('Failed to refresh all plugins:', error)
+            throw error
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     // Helper to get engine version string
     const getEngineVersionString = (engineAssociation: EngineAssociation): string => {
         if (typeof engineAssociation === 'string' && engineAssociation === 'Custom') {
@@ -172,6 +202,8 @@ export const useProjectStore = () => {
         discoverProjects,
         removeProjects,
         refreshProjects,
+        scanPlugins,
+        refreshAllPlugins,
 
         // Helpers
         getEngineVersionString,
