@@ -6,7 +6,6 @@
         class="project-dropdown" 
         :value="selectedProject?.path || ''"
         @change="handleProjectChange"
-        :disabled="isLoading"
       >
         <option value="">Select Project</option>
         <option 
@@ -21,7 +20,6 @@
         class="manage-projects-btn"
         @click="openProjectManager"
         title="Add projects"
-        :disabled="isLoading"
       >
         ➕
       </button>
@@ -32,7 +30,7 @@
           v-if="selectedProject"
           :project-path="selectedProject.path"
           :project-name="selectedProject.name"
-          :disabled="!selectedProject || isLoading"
+          :disabled="!selectedProject"
       />
     </div>
     <div class="top-bar-actions">
@@ -53,7 +51,7 @@ import { useLogStore } from '../stores/logStore'
 import { usePopup } from '../composables/usePopup'
 import FileExplorerButton from './FileExplorerButton.vue'
 
-const { selectedProject, projects, setSelectedProject, isLoading, findProjectByPath } = useProjectStore()
+const { selectedProject, projects, setSelectedProject, findProjectByPath } = useProjectStore()
 const { addLog } = useLogStore()
 const { showPopup } = usePopup()
 
@@ -129,11 +127,6 @@ const openSettings = () => {
   box-shadow: 0 0 0 2px var(--accent-color-alpha);
 }
 
-.project-dropdown:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .manage-projects-btn,
 .settings-btn {
   background: none;
@@ -151,15 +144,10 @@ const openSettings = () => {
   background-color: var(--surface-color);
 }
 
-.manage-projects-btn:hover:not(:disabled),
+.manage-projects-btn:hover,
 .settings-btn:hover {
   background-color: var(--hover-color);
   border-color: var(--accent-color);
-}
-
-.manage-projects-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .project-path {
