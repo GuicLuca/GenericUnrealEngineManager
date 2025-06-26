@@ -13,6 +13,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
+        docs_url: null,
         size_on_disk: null,
         last_scan_date: Math.floor(Date.now() / 1000) - 3600
       },
@@ -21,6 +22,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
+        docs_url: "https://docs.unrealengine.com/5.3/en-US/overview-of-niagara-effects-for-unreal-engine/",
         size_on_disk: null,
         last_scan_date: Math.floor(Date.now() / 1000) - 3600
       },
@@ -29,6 +31,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
+        docs_url: "https://docs.unrealengine.com/5.3/en-US/gameplay-ability-system-for-unreal-engine/",
         size_on_disk: null,
         last_scan_date: Math.floor(Date.now() / 1000) - 3600
       },
@@ -37,6 +40,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: true,
         marketplace_url: "com.epicgames.launcher://ue/marketplace/content/magic-system-pro",
+        docs_url: "https://docs.magicsystem.com/getting-started",
         size_on_disk: 45678912, // ~43.5 MB
         last_scan_date: Math.floor(Date.now() / 1000) - 3600
       },
@@ -45,6 +49,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: true,
         marketplace_url: "com.epicgames.launcher://ue/marketplace/content/inventory-framework",
+        docs_url: null,
         size_on_disk: 23456789, // ~22.4 MB
         last_scan_date: Math.floor(Date.now() / 1000) - 3600
       }
@@ -64,6 +69,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
+        docs_url: "https://docs.unrealengine.com/5.4/en-US/online-subsystem-in-unreal-engine/",
         size_on_disk: null,
         last_scan_date: Math.floor(Date.now() / 1000) - 1800
       },
@@ -72,6 +78,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
+        docs_url: "https://docs.unrealengine.com/5.4/en-US/replication-graph-in-unreal-engine/",
         size_on_disk: null,
         last_scan_date: Math.floor(Date.now() / 1000) - 1800
       },
@@ -80,6 +87,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
+        docs_url: null,
         size_on_disk: null,
         last_scan_date: Math.floor(Date.now() / 1000) - 1800
       },
@@ -88,6 +96,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: true,
         marketplace_url: "com.epicgames.launcher://ue/marketplace/content/weapon-system-pro",
+        docs_url: "https://weaponsystempro.com/documentation",
         size_on_disk: 156789123, // ~149.5 MB
         last_scan_date: Math.floor(Date.now() / 1000) - 1800
       },
@@ -96,6 +105,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: true,
         marketplace_url: null,
+        docs_url: "https://github.com/anticheat/ue-integration/wiki",
         size_on_disk: 34567890, // ~33 MB
         last_scan_date: Math.floor(Date.now() / 1000) - 1800
       },
@@ -104,6 +114,7 @@ export const mockProjects: Project[] = [
         is_enabled: false,
         is_in_project: true,
         marketplace_url: "com.epicgames.launcher://ue/marketplace/content/advanced-locomotion-system",
+        docs_url: "https://als.community/documentation",
         size_on_disk: 78901234, // ~75.3 MB
         last_scan_date: Math.floor(Date.now() / 1000) - 1800
       }
@@ -123,6 +134,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
+        docs_url: "https://docs.unrealengine.com/5.2/en-US/procedural-mesh-component-in-unreal-engine/",
         size_on_disk: null,
         last_scan_date: Math.floor(Date.now() / 1000) - 7200
       },
@@ -131,6 +143,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: true,
         marketplace_url: null,
+        docs_url: null,
         size_on_disk: 234567890, // ~223.7 MB
         last_scan_date: Math.floor(Date.now() / 1000) - 7200
       },
@@ -139,6 +152,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: true,
         marketplace_url: null,
+        docs_url: "https://internal.company.com/tools/documentation",
         size_on_disk: 123456789, // ~117.7 MB
         last_scan_date: Math.floor(Date.now() / 1000) - 7200
       },
@@ -147,6 +161,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: true,
         marketplace_url: null,
+        docs_url: null,
         size_on_disk: 345678901, // ~329.6 MB
         last_scan_date: Math.floor(Date.now() / 1000) - 7200
       }
@@ -166,6 +181,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
+        docs_url: "https://docs.unrealengine.com/4.27/en-US/SharingAndReleasing/Mobile/",
         size_on_disk: null,
         last_scan_date: Math.floor(Date.now() / 1000) - 86400
       },
@@ -174,6 +190,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
+        docs_url: null,
         size_on_disk: null,
         last_scan_date: Math.floor(Date.now() / 1000) - 86400
       },
@@ -182,6 +199,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: true,
         marketplace_url: "com.epicgames.launcher://ue/marketplace/content/puzzle-framework",
+        docs_url: "https://puzzleframework.dev/docs",
         size_on_disk: 67890123, // ~64.7 MB
         last_scan_date: Math.floor(Date.now() / 1000) - 86400
       },
@@ -190,6 +208,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: true,
         marketplace_url: "com.epicgames.launcher://ue/marketplace/content/social-integration",
+        docs_url: null,
         size_on_disk: 12345678, // ~11.8 MB
         last_scan_date: Math.floor(Date.now() / 1000) - 86400
       },
@@ -198,6 +217,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: true,
         marketplace_url: "com.epicgames.launcher://ue/marketplace/content/touch-controls-pro",
+        docs_url: "https://touchcontrolspro.com/documentation",
         size_on_disk: 8901234, // ~8.5 MB
         last_scan_date: Math.floor(Date.now() / 1000) - 86400
       }
@@ -217,6 +237,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
+        docs_url: "https://docs.unrealengine.com/5.2/en-US/vr-template-in-unreal-engine/",
         size_on_disk: null,
         last_scan_date: Math.floor(Date.now() / 1000) - 300
       },
@@ -225,6 +246,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: false,
         marketplace_url: null,
+        docs_url: "https://docs.unrealengine.com/5.2/en-US/openxr-in-unreal-engine/",
         size_on_disk: null,
         last_scan_date: Math.floor(Date.now() / 1000) - 300
       },
@@ -233,6 +255,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: true,
         marketplace_url: "com.epicgames.launcher://ue/marketplace/content/hand-tracking-pro",
+        docs_url: "https://handtrackingpro.com/docs",
         size_on_disk: 89012345, // ~84.9 MB
         last_scan_date: Math.floor(Date.now() / 1000) - 300
       },
@@ -241,6 +264,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: true,
         marketplace_url: "com.epicgames.launcher://ue/marketplace/content/haptic-suite",
+        docs_url: null,
         size_on_disk: 45678901, // ~43.5 MB
         last_scan_date: Math.floor(Date.now() / 1000) - 300
       },
@@ -249,6 +273,7 @@ export const mockProjects: Project[] = [
         is_enabled: true,
         is_in_project: true,
         marketplace_url: "com.epicgames.launcher://ue/marketplace/content/archviz-tools",
+        docs_url: "https://archviztools.com/documentation",
         size_on_disk: 123456789, // ~117.7 MB
         last_scan_date: Math.floor(Date.now() / 1000) - 300
       },
@@ -257,6 +282,7 @@ export const mockProjects: Project[] = [
         is_enabled: false,
         is_in_project: true,
         marketplace_url: null,
+        docs_url: "https://github.com/vrinteraction/framework/wiki",
         size_on_disk: 56789012, // ~54.1 MB
         last_scan_date: Math.floor(Date.now() / 1000) - 300
       }

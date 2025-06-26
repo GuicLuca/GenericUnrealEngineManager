@@ -8,16 +8,6 @@
         </h2>
         <div class="plugins-count">{{ pluginCount }} plugin(s)</div>
       </div>
-      <div class="header-actions">
-        <button 
-          class="refresh-btn"
-          @click="handleRefreshPlugins"
-          :disabled="isLoading"
-          title="Refresh plugins"
-        >
-          {{ isLoading ? '⏳' : '🔄' }}
-        </button>
-      </div>
     </div>
 
     <div v-if="!selectedProject" class="no-project">
@@ -102,6 +92,14 @@
               >
                 🛒
               </button>
+              <button
+                v-if="plugin.docs_url"
+                class="action-btn docs-btn"
+                @click="openDocsUrl(plugin.docs_url)"
+                title="Open Documentation"
+              >
+                📖
+              </button>
               <FileExplorerButton
                 v-if="plugin.is_in_project"
                 :project-path="getPluginPath(plugin.name)"
@@ -124,9 +122,9 @@
                 <span class="meta-label">Location:</span>
                 <span class="meta-value">{{ plugin.is_in_project ? 'Project' : 'Engine/External' }}</span>
               </div>
-              <div v-if="plugin.size_on_disk !== null" class="meta-item">
+              <div class="meta-item">
                 <span class="meta-label">Size:</span>
-                <span class="meta-value">{{ formatSize(plugin.size_on_disk) }}</span>
+                <span class="meta-value">{{ plugin.size_on_disk !== null ? formatSize(plugin.size_on_disk) : 'N/A' }}</span>
               </div>
               <div class="meta-item">
                 <span class="meta-label">Last scan:</span>
@@ -147,7 +145,7 @@ import { useLogStore } from '../stores/logStore'
 import FileExplorerButton from './FileExplorerButton.vue'
 import { formatSize, timeSince } from '../utils'
 
-const { selectedProject, isLoading, scanPlugins } = useProjectStore()
+const { selectedProject, isLoading } = useProjectStore()
 const { addLog } = useLogStore()
 
 const activeFilter = ref('all')
@@ -175,7 +173,7 @@ const getFilteredPlugins = (filterId: string): ProjectPlugin[] => {
     case 'external':
       return plugins.value.filter(p => !p.is_in_project)
     case 'marketplace':
-      return plugins.value.filter(p => p.marketplace_url !== null)
+      return plugins.value.filter(p => p.marketplace_url !== null && p.marketplace_url !== undefined)
     default:
       return plugins.value
   }
@@ -197,16 +195,10 @@ const openMarketplaceUrl = (url: string) => {
   addLog(`Opened marketplace URL: ${url}`)
 }
 
-const handleRefreshPlugins = async () => {
-  if (!selectedProject.value) return
-  
-  try {
-    await scanPlugins([selectedProject.value.path])
-    addLog(`Refreshed plugins for: ${selectedProject.value.name}`)
-  } catch (error) {
-    console.error('Failed to refresh plugins:', error)
-    addLog('Failed to refresh plugins. Check console for details.', 'error')
-  }
+const openDocsUrl = (url: string) => {
+  // Open the documentation URL in the default browser
+  window.open(url, '_blank')
+  addLog(`Opened documentation URL: ${url}`)
 }
 </script>
 
@@ -256,37 +248,6 @@ const handleRefreshPlugins = async () => {
   padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--border-radius-sm);
   border: var(--border-width) solid var(--border-color);
-}
-
-.header-actions {
-  display: flex;
-  gap: var(--spacing-xs);
-}
-
-.refresh-btn {
-  background: none;
-  border: var(--border-width) solid var(--border-color);
-  cursor: pointer;
-  font-size: var(--font-size-md);
-  padding: var(--spacing-xs);
-  border-radius: var(--border-radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-fast);
-  width: 2rem;
-  height: 2rem;
-  background-color: var(--surface-color);
-}
-
-.refresh-btn:hover:not(:disabled) {
-  background-color: var(--hover-color);
-  border-color: var(--accent-color);
-}
-
-.refresh-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .no-project,
@@ -416,6 +377,7 @@ const handleRefreshPlugins = async () => {
 .plugin-name-section {
   flex-grow: 1;
   margin-right: var(--spacing-md);
+  min-width: 0;
 }
 
 .plugin-name {
@@ -423,6 +385,7 @@ const handleRefreshPlugins = async () => {
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
   margin-bottom: var(--spacing-xs);
+  word-break: break-word;
 }
 
 .plugin-badges {
@@ -438,6 +401,7 @@ const handleRefreshPlugins = async () => {
   font-weight: var(--font-weight-medium);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .plugin-badge.disabled {
@@ -464,6 +428,7 @@ const handleRefreshPlugins = async () => {
   display: flex;
   gap: var(--spacing-xs);
   flex-shrink: 0;
+  align-items: flex-start;
 }
 
 .action-btn {
@@ -479,6 +444,7 @@ const handleRefreshPlugins = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .action-btn:hover {
@@ -491,6 +457,11 @@ const handleRefreshPlugins = async () => {
   border-color: #3182ce;
 }
 
+.docs-btn:hover {
+  background-color: #f0fff4;
+  border-color: #38a169;
+}
+
 .plugin-details {
   border-top: var(--border-width) solid var(--border-color);
   padding-top: var(--spacing-sm);
@@ -498,7 +469,7 @@ const handleRefreshPlugins = async () => {
 
 .plugin-meta {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--spacing-sm);
 }
 
@@ -506,6 +477,7 @@ const handleRefreshPlugins = async () => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
+  min-width: 0;
 }
 
 .meta-label {
@@ -514,12 +486,14 @@ const handleRefreshPlugins = async () => {
   font-weight: var(--font-weight-medium);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .meta-value {
   font-size: var(--font-size-sm);
   color: var(--text-primary);
   font-family: var(--font-mono);
+  word-break: break-word;
 }
 
 .meta-value.status-enabled {
@@ -544,6 +518,12 @@ const handleRefreshPlugins = async () => {
     align-self: flex-end;
   }
   
+  .plugin-meta {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
   .plugin-meta {
     grid-template-columns: 1fr;
   }
