@@ -33,11 +33,24 @@
         <div class="button-group">
           <button 
             class="dev-button"
-            @click="addFakeTask"
-            :disabled="isCreatingFakeTask"
+            @click="addSingleFakeTask"
           >
-            <span class="button-icon">{{ isCreatingFakeTask ? '⏳' : '🔄' }}</span>
-            {{ isCreatingFakeTask ? 'Creating Task...' : 'Add Random Fake Task' }}
+            <span class="button-icon">🔄</span>
+            Add Single Random Task
+          </button>
+          <button 
+            class="dev-button"
+            @click="addMultipleFakeTasks"
+          >
+            <span class="button-icon">⚡</span>
+            Add 3-5 Random Tasks
+          </button>
+          <button 
+            class="dev-button"
+            @click="addStressTestTasks"
+          >
+            <span class="button-icon">🚀</span>
+            Stress Test (10 Tasks)
           </button>
         </div>
       </div>
@@ -52,6 +65,10 @@
           <div class="info-item">
             <span class="info-label">App Version:</span>
             <span class="info-value">{{ appVersion }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Active Tasks:</span>
+            <span class="info-value">{{ activeTaskCount }}</span>
           </div>
         </div>
       </div>
@@ -73,7 +90,10 @@ const { addLog } = useLogStore()
 const platformInfo = ref('Unknown')
 const appVersion = ref('0.1.0')
 const isAddingMockProjects = ref(false)
-const isCreatingFakeTask = ref(false)
+const activeTaskCount = ref(0)
+
+// Track running tasks to update counter
+const runningTasks = new Set<string>()
 
 const openProjectDiscoveryPopup = () => {
   showPopup({
@@ -112,44 +132,74 @@ const addMockProjects = async () => {
   }
 }
 
-const addFakeTask = async () => {
-  if (isCreatingFakeTask.value) return
+const addSingleFakeTask = () => {
+  createFakeTask()
+}
+
+const addMultipleFakeTasks = () => {
+  const taskCount = Math.floor(Math.random() * 3) + 3 // 3-5 tasks
+  addLog(`Creating ${taskCount} concurrent tasks...`)
   
-  try {
-    isCreatingFakeTask.value = true
-    
-    // Generate random task parameters
-    const taskNames = [
-      'Processing large dataset',
-      'Compiling shaders',
-      'Building lighting',
-      'Optimizing textures',
-      'Generating navigation mesh',
-      'Baking audio',
-      'Analyzing code complexity',
-      'Synchronizing assets',
-      'Validating project structure',
-      'Cleaning temporary files'
-    ]
-    
-    const taskName = taskNames[Math.floor(Math.random() * taskNames.length)]
-    const duration = Math.floor(Math.random() * 20000) + 10000 // 10-30 seconds
-    const taskId = `fake_task_${Date.now()}`
-    
-    addLog(`Starting fake task: ${taskName} (${duration}ms)`)
-    
-    // Simulate task progress
-    await simulateTaskProgress(taskId, taskName, duration)
-    
-  } catch (error) {
-    console.error('Failed to create fake task:', error)
-    addLog('Failed to create fake task', 'error')
-  } finally {
-    isCreatingFakeTask.value = false
+  for (let i = 0; i < taskCount; i++) {
+    // Add small delay between task starts to make it more realistic
+    setTimeout(() => {
+      createFakeTask()
+    }, i * 200)
   }
 }
 
+const addStressTestTasks = () => {
+  const taskCount = 10
+  addLog(`Starting stress test with ${taskCount} concurrent tasks...`)
+  
+  for (let i = 0; i < taskCount; i++) {
+    // Stagger task starts over 2 seconds
+    setTimeout(() => {
+      createFakeTask()
+    }, i * 200)
+  }
+}
+
+const createFakeTask = () => {
+  // Generate random task parameters
+  const taskNames = [
+    'Processing large dataset',
+    'Compiling shaders',
+    'Building lighting',
+    'Optimizing textures',
+    'Generating navigation mesh',
+    'Baking audio',
+    'Analyzing code complexity',
+    'Synchronizing assets',
+    'Validating project structure',
+    'Cleaning temporary files',
+    'Importing 3D models',
+    'Converting video files',
+    'Calculating physics',
+    'Rendering preview',
+    'Compressing assets',
+    'Updating dependencies',
+    'Running unit tests',
+    'Deploying to server',
+    'Scanning for errors',
+    'Optimizing performance'
+  ]
+  
+  const taskName = taskNames[Math.floor(Math.random() * taskNames.length)]
+  const duration = Math.floor(Math.random() * 20000) + 10000 // 10-30 seconds
+  const taskId = `fake_task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  
+  addLog(`Starting task: ${taskName} (${Math.round(duration/1000)}s)`)
+  
+  // Start the task simulation (non-blocking)
+  simulateTaskProgress(taskId, taskName, duration)
+}
+
 const simulateTaskProgress = async (taskId: string, taskName: string, duration: number) => {
+  // Add to running tasks
+  runningTasks.add(taskId)
+  activeTaskCount.value = runningTasks.size
+  
   const steps = [
     'Initializing...',
     'Loading resources...',
@@ -159,33 +209,62 @@ const simulateTaskProgress = async (taskId: string, taskName: string, duration: 
     'Finalizing...'
   ]
   
-  // Emit task started event
-  window.__TAURI__.event.emit('task_progress', {
-    task_id: taskId,
-    task_name: taskName,
-    progress: 0.0,
-    status: 'Started',
-    message: steps[0]
-  })
-  
-  const stepDuration = duration / steps.length
-  
-  for (let i = 0; i < steps.length; i++) {
-    await new Promise(resolve => setTimeout(resolve, stepDuration))
-    
-    const progress = (i + 1) / steps.length
-    const message = i < steps.length - 1 ? steps[i + 1] : 'Completed'
-    
+  try {
+    // Emit task started event
     window.__TAURI__.event.emit('task_progress', {
       task_id: taskId,
       task_name: taskName,
-      progress: progress,
-      status: progress >= 1.0 ? 'Completed' : 'InProgress',
-      message: message
+      progress: 0.0,
+      status: 'Started',
+      message: steps[0]
     })
+    
+    const stepDuration = duration / steps.length
+    
+    for (let i = 0; i < steps.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, stepDuration))
+      
+      // Check if task was cancelled (for cleanup)
+      if (!runningTasks.has(taskId)) {
+        return
+      }
+      
+      const progress = (i + 1) / steps.length
+      const message = i < steps.length - 1 ? steps[i + 1] : 'Completed'
+      
+      // Add some randomness to make it more realistic
+      const actualProgress = Math.min(progress + (Math.random() - 0.5) * 0.1, 1.0)
+      
+      window.__TAURI__.event.emit('task_progress', {
+        task_id: taskId,
+        task_name: taskName,
+        progress: Math.max(0, actualProgress),
+        status: progress >= 1.0 ? 'Completed' : 'InProgress',
+        message: message
+      })
+    }
+    
+    addLog(`Task completed: ${taskName}`)
+    
+  } catch (error) {
+    console.error('Task simulation error:', error)
+    
+    // Emit failure event
+    window.__TAURI__.event.emit('task_progress', {
+      task_id: taskId,
+      task_name: taskName,
+      progress: 0.0,
+      status: 'Failed',
+      message: 'Task failed unexpectedly'
+    })
+    
+    addLog(`Task failed: ${taskName}`, 'error')
+    
+  } finally {
+    // Remove from running tasks
+    runningTasks.delete(taskId)
+    activeTaskCount.value = runningTasks.size
   }
-  
-  addLog(`Fake task completed: ${taskName}`)
 }
 
 onMounted(async () => {
