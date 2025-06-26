@@ -38,8 +38,9 @@ const props = defineProps<Props>()
 const showTooltip = ref(false)
 const iconRef = ref<HTMLElement>()
 const tooltipRef = ref<HTMLElement>()
+const tooltipPosition = ref({ left: 0, top: 0 })
 
-// Calculate dynamic width and position based on content length and icon position
+// Calculate dynamic width based on content length
 const tooltipStyle = computed(() => {
   const contentLength = props.content.length
   let width = '20rem' // Default width
@@ -54,48 +55,46 @@ const tooltipStyle = computed(() => {
   
   return {
     width,
-    maxWidth: '90vw', // Ensure it doesn't exceed viewport
+    maxWidth: '90vw',
     position: 'fixed' as const,
-    zIndex: 10001
+    zIndex: 10001,
+    left: `${tooltipPosition.value.left}px`,
+    top: `${tooltipPosition.value.top}px`,
+    transform: 'translateY(-100%)'
   }
 })
 
 // Position tooltip relative to icon when shown
 watch(showTooltip, async (isVisible) => {
-  if (isVisible && iconRef.value && tooltipRef.value) {
+  if (isVisible && iconRef.value) {
     await nextTick()
     
-    const iconRect = iconRef.value.getBoundingClientRect()
-    const tooltipElement = tooltipRef.value
-    
-    // Calculate initial position (centered above icon)
-    let left = iconRect.left + (iconRect.width / 2)
-    const top = iconRect.top - 8 // 8px gap above icon
-    
-    // Get tooltip dimensions after it's rendered
-    const tooltipRect = tooltipElement.getBoundingClientRect()
-    
-    // Adjust horizontal position to keep tooltip within viewport
-    const viewportWidth = window.innerWidth
-    const tooltipWidth = tooltipRect.width
-    
-    // Center the tooltip horizontally relative to the icon
-    left = left - (tooltipWidth / 2)
-    
-    // Ensure tooltip doesn't go beyond left edge
-    if (left < 8) {
-      left = 8
-    }
-    
-    // Ensure tooltip doesn't go beyond right edge
-    if (left + tooltipWidth > viewportWidth - 8) {
-      left = viewportWidth - tooltipWidth - 8
-    }
-    
-    // Apply the calculated position
-    tooltipElement.style.left = `${left}px`
-    tooltipElement.style.top = `${top}px`
-    tooltipElement.style.transform = 'translateY(-100%)'
+    // Wait a bit more for the tooltip to be fully rendered
+    setTimeout(() => {
+      if (!iconRef.value || !tooltipRef.value) return
+      
+      const iconRect = iconRef.value.getBoundingClientRect()
+      const tooltipElement = tooltipRef.value
+      const tooltipRect = tooltipElement.getBoundingClientRect()
+      
+      // Calculate initial position (centered above icon)
+      let left = iconRect.left + (iconRect.width / 2) - (tooltipRect.width / 2)
+      const top = iconRect.top - 8 // 8px gap above icon
+      
+      // Ensure tooltip doesn't go beyond left edge
+      if (left < 8) {
+        left = 8
+      }
+      
+      // Ensure tooltip doesn't go beyond right edge
+      const viewportWidth = window.innerWidth
+      if (left + tooltipRect.width > viewportWidth - 8) {
+        left = viewportWidth - tooltipRect.width - 8
+      }
+      
+      // Update position
+      tooltipPosition.value = { left, top }
+    }, 10)
   }
 })
 </script>
@@ -136,7 +135,6 @@ watch(showTooltip, async (isVisible) => {
   line-height: var(--line-height-normal);
   word-wrap: break-word;
   pointer-events: none;
-  /* Position will be set dynamically via JavaScript */
 }
 
 .tooltip::after {
