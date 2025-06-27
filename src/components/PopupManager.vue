@@ -15,6 +15,13 @@
               class="popup-container"
               @click.stop
             >
+              <!-- Welcome Popup -->
+              <WelcomePopup
+                v-if="popup.component === 'Welcome'"
+                v-bind="popup.props"
+                @close="hidePopup(popup.id)"
+              />
+              
               <!-- Project Discovery Popup -->
               <ProjectDiscoveryPopup
                 v-if="popup.component === 'ProjectDiscovery'"
@@ -69,8 +76,10 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { listen } from '@tauri-apps/api/event'
 import { usePopup } from '../composables/usePopup'
 import { useLogStore } from '../stores/logStore'
+import WelcomePopup from './popups/WelcomePopup.vue'
 import ProjectDiscoveryPopup from './popups/ProjectDiscoveryPopup.vue'
 import ProjectManagerPopup from './popups/ProjectManagerPopup.vue'
 import ProjectLaunchChoicePopup from './popups/ProjectLaunchChoicePopup.vue'
@@ -78,7 +87,7 @@ import ProjectCleanPopup from './popups/ProjectCleanPopup.vue'
 import ProjectCompressPopup from './popups/ProjectCompressPopup.vue'
 import SettingsPopup from './popups/SettingsPopup.vue'
 
-const { popupState, hidePopup, initPopupListener } = usePopup()
+const { popupState, hidePopup, initPopupListener, showPopup } = usePopup()
 const { addLog } = useLogStore()
 
 const handleOverlayClick = (popup: any) => {
@@ -94,8 +103,21 @@ const handleProjectDiscoverySubmit = (data: any) => {
   hidePopup() // Close the top popup
 }
 
-onMounted(() => {
+onMounted(async () => {
   initPopupListener()
+  
+  // Listen for welcome popup event from backend
+  try {
+    await listen('show_welcome_popup', () => {
+      showPopup({
+        id: 'welcome',
+        component: 'Welcome',
+        props: {}
+      })
+    })
+  } catch (error) {
+    console.error('Failed to listen for welcome popup event:', error)
+  }
 })
 </script>
 

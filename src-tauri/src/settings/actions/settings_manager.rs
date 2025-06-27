@@ -78,3 +78,17 @@ pub fn initialize_settings(app_handle: &AppHandle) -> errors::Result<()> {
     
     Ok(())
 }
+
+/// Check if the welcome popup should be shown
+pub fn should_show_welcome_popup(app_handle: &AppHandle) -> errors::Result<bool> {
+    let settings = load_settings(app_handle)?;
+    Ok(settings.general.show_welcome_popup)
+}
+
+/// Disable the welcome popup
+pub fn disable_welcome_popup(app_handle: &AppHandle) -> errors::Result<()> {
+    let mut settings = load_settings(app_handle)?;
+    settings.general.show_welcome_popup = false;
+    store_settings(app_handle, &settings)?;
+    Ok(())
+}

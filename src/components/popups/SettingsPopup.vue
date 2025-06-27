@@ -29,6 +29,50 @@
 
       <!-- Tab Content Container with Fixed Height -->
       <div class="tab-content-container">
+        <!-- General Tab -->
+        <div v-show="activeTab === 'general'" class="tab-panel">
+          <div class="settings-section">
+            <h3 class="section-title">Application Startup</h3>
+            <div class="section-description">
+              Configure how the application behaves when starting up.
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <label class="setting-label">
+                  <input
+                    v-model="localSettings.general.autostart_enabled"
+                    type="checkbox"
+                    class="setting-checkbox"
+                    @change="handleAutostartChange"
+                  />
+                  <span class="setting-text">Start automatically when I log in</span>
+                </label>
+              </div>
+              <div class="setting-description">
+                The application will start automatically when you log into your computer.
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <label class="setting-label">
+                  <input
+                    v-model="localSettings.general.show_welcome_popup"
+                    type="checkbox"
+                    class="setting-checkbox"
+                    @change="handleWelcomePopupChange"
+                  />
+                  <span class="setting-text">Show welcome message on startup</span>
+                </label>
+              </div>
+              <div class="setting-description">
+                Display the welcome popup when the application starts for the first time.
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Programs Tab -->
         <div v-show="activeTab === 'programs'" class="tab-panel">
           <!-- IDE Programs Subsection -->
@@ -313,6 +357,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { useLogStore } from '../../stores/logStore'
+import { usePopup } from '../../composables/usePopup'
 
 interface AppSettings {
   ide_programs: {
@@ -333,6 +378,10 @@ interface AppSettings {
     plugin_intermediate: boolean
     plugin_node_size_cache: boolean
   }
+  general: {
+    autostart_enabled: boolean
+    show_welcome_popup: boolean
+  }
 }
 
 interface Tab {
@@ -346,14 +395,16 @@ const emit = defineEmits<{
 }>()
 
 const { addLog } = useLogStore()
+const { showPopup } = usePopup()
 
-const activeTab = ref('programs')
+const activeTab = ref('general')
 const isSaving = ref(false)
 const customProgramNames = ref<Record<string, string>>({})
 const customEngineNames = ref<Record<string, string>>({})
 const programIcons = ref<Record<string, string>>({})
 
 const tabs: Tab[] = [
+  { id: 'general', title: 'General', icon: '🏠' },
   { id: 'programs', title: 'Programs', icon: '💻' },
   { id: 'cleaning', title: 'Cleaning Defaults', icon: '🧹' }
 ]
@@ -376,6 +427,10 @@ const localSettings = reactive<AppSettings>({
     plugin_binaries: false,
     plugin_intermediate: false,
     plugin_node_size_cache: false
+  },
+  general: {
+    autostart_enabled: false,
+    show_welcome_popup: true
   }
 })
 
@@ -387,6 +442,7 @@ const loadSettings = async () => {
     localSettings.ide_programs.custom_programs = { ...settings.ide_programs.custom_programs }
     localSettings.engine_programs.custom_engines = { ...(settings.engine_programs?.custom_engines || {}) }
     localSettings.cleaning_defaults = { ...settings.cleaning_defaults }
+    localSettings.general = { ...settings.general }
     
     // Initialize custom program names
     Object.keys(localSettings.ide_programs.custom_programs).forEach(name => {
@@ -417,7 +473,8 @@ const saveSettings = async () => {
       engine_programs: {
         custom_engines: { ...localSettings.engine_programs.custom_engines }
       },
-      cleaning_defaults: { ...localSettings.cleaning_defaults }
+      cleaning_defaults: { ...localSettings.cleaning_defaults },
+      general: { ...localSettings.general }
     }
     
     await invoke('save_settings', { settings: settingsToSave })
@@ -429,6 +486,34 @@ const saveSettings = async () => {
     addLog('Failed to save settings', 'error')
   } finally {
     isSaving.value = false
+  }
+}
+
+const handleAutostartChange = async () => {
+  try {
+    if (localSettings.general.autostart_enabled) {
+      await invoke('enable_autostart')
+      addLog('Autostart enabled')
+    } else {
+      await invoke('disable_autostart')
+      addLog('Autostart disabled')
+    }
+  } catch (error) {
+    console.error('Failed to update autostart:', error)
+    addLog('Failed to update autostart setting', 'error')
+    // Revert the checkbox state
+    localSettings.general.autostart_enabled = !localSettings.general.autostart_enabled
+  }
+}
+
+const handleWelcomePopupChange = () => {
+  // If re-enabling the welcome popup, show it immediately
+  if (localSettings.general.show_welcome_popup) {
+    showPopup({
+      id: 'welcome',
+      component: 'Welcome',
+      props: {}
+    })
   }
 }
 
@@ -721,6 +806,47 @@ onMounted(() => {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
   margin-bottom: var(--spacing-lg);
+}
+
+.setting-item {
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--surface-color);
+}
+
+.setting-item:last-child {
+  margin-bottom: 0;
+}
+
+.setting-header {
+  margin-bottom: var(--spacing-sm);
+}
+
+.setting-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+}
+
+.setting-checkbox {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent-color);
+}
+
+.setting-text {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.setting-description {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-left: 1.5rem;
 }
 
 .custom-programs {

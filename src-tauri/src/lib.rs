@@ -47,6 +47,10 @@ pub fn run() {
         .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--minimized"]),
+        ))
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // when a new instance is opened, show the main window, try to focus and show th main window
             if let Some(window) = app.get_webview_window("main") {
@@ -116,6 +120,9 @@ pub fn run() {
         projects::actions::plugin_manager::refresh_all_plugins,
         settings::actions::settings_manager::get_settings,
         settings::actions::settings_manager::save_settings,
+        settings::actions::autostart_manager::enable_autostart,
+        settings::actions::autostart_manager::disable_autostart,
+        settings::actions::autostart_manager::is_autostart_enabled,
     ]);
 
     ///### Application building
@@ -219,6 +226,21 @@ fn application_setup(app: &mut App) -> errors::Result<()> {
         }
         Err(e) => {
             error!("Failed to initialize settings: {}", e);
+        }
+    }
+
+    // Check if we should show the welcome popup
+    match settings_manager::should_show_welcome_popup(app.handle()) {
+        Ok(should_show) => {
+            if should_show {
+                // Emit event to show welcome popup
+                if let Err(e) = app.emit("show_welcome_popup", ()) {
+                    error!("Failed to emit welcome popup event: {}", e);
+                }
+            }
+        }
+        Err(e) => {
+            error!("Failed to check welcome popup setting: {}", e);
         }
     }
 
