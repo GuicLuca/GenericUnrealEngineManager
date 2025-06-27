@@ -215,7 +215,7 @@
             @change="updatePreview"
           >
             <option 
-              v-for="(format, name) in availableFormats"
+              v-for="(format, name) in sortedAvailableFormats"
               :key="name"
               :value="format"
             >
@@ -271,7 +271,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import InfoTooltip from '../InfoTooltip.vue'
@@ -320,6 +320,8 @@ const selectedFormat = ref('[Project]_[YYYY][MM][DD][HH][mm]')
 const destinationPath = ref('')
 const availableAlgorithms = ref<CompressionAlgorithm[]>([])
 const availableFormats = ref<Record<string, string>>({})
+const systemUsername = ref('john_doe')
+const systemHostname = ref('DESKTOP-PC')
 
 const cleaningSelection = reactive<CleaningSelection>({
   ide_files: true,
@@ -336,6 +338,13 @@ const cleaningSelection = reactive<CleaningSelection>({
 
 const canCompress = computed(() => {
   return destinationPath.value.trim() !== '' && selectedAlgorithm.value !== null
+})
+
+// Sort available formats alphabetically by name
+const sortedAvailableFormats = computed(() => {
+  const entries = Object.entries(availableFormats.value)
+  entries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
+  return Object.fromEntries(entries)
 })
 
 const outputFilename = computed(() => {
@@ -366,8 +375,8 @@ const outputFilename = computed(() => {
     'Mon': now.toLocaleDateString('en-US', { month: 'short' }),
     'Day': now.toLocaleDateString('en-US', { weekday: 'long' }),
     'Weekday': now.toLocaleDateString('en-US', { weekday: 'short' }),
-    'User': 'john_doe',
-    'Computer': 'DESKTOP-PC',
+    'User': systemUsername.value,
+    'Computer': systemHostname.value,
     'Timestamp': Math.floor(now.getTime() / 1000).toString()
   }
   
@@ -381,6 +390,11 @@ const outputFilename = computed(() => {
   }
   
   return preview
+})
+
+// Watch for changes in selectedFormat to update preview
+watch(selectedFormat, () => {
+  // The computed property will automatically update
 })
 
 const getEngineVersionFormatted = (engineAssociation: any): string => {
@@ -420,6 +434,16 @@ const getExtensionForAlgorithm = (algorithm: CompressionAlgorithm): string => {
     case 'Tar': return 'tar'
     case 'TarGz': return 'tar.gz'
     default: return 'zip'
+  }
+}
+
+const loadSystemInfo = async () => {
+  try {
+    systemUsername.value = await invoke('get_system_username') as string
+    systemHostname.value = await invoke('get_system_hostname') as string
+  } catch (error) {
+    console.error('Failed to load system info:', error)
+    // Keep fallback values
   }
 }
 
@@ -523,6 +547,7 @@ const startCompression = async () => {
 }
 
 onMounted(() => {
+  loadSystemInfo()
   loadAvailableAlgorithms()
   loadAvailableFormats()
 })

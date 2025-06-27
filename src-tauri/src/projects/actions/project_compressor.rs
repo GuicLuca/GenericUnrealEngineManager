@@ -38,6 +38,18 @@ pub struct CompressionResult {
     pub duration_ms: u128,
 }
 
+/// Get system username
+#[command]
+pub fn get_system_username() -> String {
+    whoami::username()
+}
+
+/// Get system hostname/computer name
+#[command]
+pub fn get_system_hostname() -> String {
+    whoami::hostname()
+}
+
 /// Compress a project with optional cleaning
 #[command]
 pub async fn compress_project(
@@ -231,7 +243,7 @@ fn generate_filename(
     replacements.insert("Algorithm".to_string(), get_algorithm_name(algorithm).to_string());
     replacements.insert("Compression".to_string(), get_algorithm_name(algorithm).to_string()); // Alternative
     
-    // Additional useful replacements
+    // Additional useful replacements - Get real system values
     replacements.insert("Timestamp".to_string(), now.timestamp().to_string());
     replacements.insert("User".to_string(), whoami::username());
     replacements.insert("Computer".to_string(), whoami::hostname());
@@ -274,7 +286,7 @@ fn sanitize_filename(filename: &str) -> String {
     result = result.trim().trim_matches('.').to_string();
     
     // Ensure the filename is not empty
-    if result.is_empty() {
+    if (result.is_empty()) {
         result = "compressed_project".to_string();
     }
     
