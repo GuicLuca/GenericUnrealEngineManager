@@ -8,6 +8,7 @@ pub struct AppSettings {
     pub engine_programs: EnginePrograms,
     pub cleaning_defaults: CleaningDefaults,
     pub general: GeneralSettings,
+    pub compression: CompressionSettings,
 }
 
 /// IDE program settings - only custom programs
@@ -44,6 +45,12 @@ pub struct GeneralSettings {
     pub show_welcome_popup: bool,
 }
 
+/// Compression settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompressionSettings {
+    pub filename_format: String,
+}
+
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
@@ -51,6 +58,7 @@ impl Default for AppSettings {
             engine_programs: EnginePrograms::default(),
             cleaning_defaults: CleaningDefaults::default(),
             general: GeneralSettings::default(),
+            compression: CompressionSettings::default(),
         }
     }
 }
@@ -93,6 +101,14 @@ impl Default for GeneralSettings {
         Self {
             autostart_enabled: false,
             show_welcome_popup: true,
+        }
+    }
+}
+
+impl Default for CompressionSettings {
+    fn default() -> Self {
+        Self {
+            filename_format: "[Project]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]".to_string(),
         }
     }
 }

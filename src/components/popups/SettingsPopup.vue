@@ -194,6 +194,112 @@
           </div>
         </div>
 
+        <!-- Compression Tab -->
+        <div v-show="activeTab === 'compression'" class="tab-panel">
+          <div class="settings-section">
+            <h3 class="section-title">Filename Format</h3>
+            <div class="section-description">
+              Customize how compressed archive filenames are generated. Use formatting tags in square brackets to insert dynamic values.
+            </div>
+
+            <div class="format-editor">
+              <div class="format-input-section">
+                <label class="format-label">Filename Format Template:</label>
+                <div class="format-input-wrapper">
+                  <input
+                    v-model="localSettings.compression.filename_format"
+                    type="text"
+                    class="format-input"
+                    placeholder="[Project]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]"
+                    @input="updatePreview"
+                  />
+                  <button
+                    class="reset-format-button"
+                    @click="resetToDefault"
+                    title="Reset to default format"
+                  >
+                    🔄
+                  </button>
+                </div>
+              </div>
+
+              <div class="format-preview">
+                <div class="preview-label">Preview:</div>
+                <div class="preview-output">{{ formatPreview }}</div>
+              </div>
+
+              <div class="format-tags">
+                <h4 class="tags-title">Available Format Tags</h4>
+                <div class="tags-grid">
+                  <div class="tag-category">
+                    <h5 class="category-title">Project Information</h5>
+                    <div class="tag-list">
+                      <button 
+                        v-for="tag in projectTags" 
+                        :key="tag.name"
+                        class="tag-button"
+                        @click="insertTag(tag.name)"
+                        :title="tag.description"
+                      >
+                        <span class="tag-name">[{{ tag.name }}]</span>
+                        <span class="tag-desc">{{ tag.description }}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="tag-category">
+                    <h5 class="category-title">Date & Time</h5>
+                    <div class="tag-list">
+                      <button 
+                        v-for="tag in dateTags" 
+                        :key="tag.name"
+                        class="tag-button"
+                        @click="insertTag(tag.name)"
+                        :title="tag.description"
+                      >
+                        <span class="tag-name">[{{ tag.name }}]</span>
+                        <span class="tag-desc">{{ tag.description }}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="tag-category">
+                    <h5 class="category-title">System Information</h5>
+                    <div class="tag-list">
+                      <button 
+                        v-for="tag in systemTags" 
+                        :key="tag.name"
+                        class="tag-button"
+                        @click="insertTag(tag.name)"
+                        :title="tag.description"
+                      >
+                        <span class="tag-name">[{{ tag.name }}]</span>
+                        <span class="tag-desc">{{ tag.description }}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="format-presets">
+                <h4 class="presets-title">Quick Presets</h4>
+                <div class="preset-buttons">
+                  <button 
+                    v-for="preset in formatPresets" 
+                    :key="preset.name"
+                    class="preset-button"
+                    @click="applyPreset(preset.format)"
+                    :title="preset.description"
+                  >
+                    <span class="preset-name">{{ preset.name }}</span>
+                    <span class="preset-format">{{ preset.format }}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Cleaning Defaults Tab -->
         <div v-show="activeTab === 'cleaning'" class="tab-panel">
           <div class="settings-section">
@@ -353,7 +459,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { useLogStore } from '../../stores/logStore'
@@ -382,12 +488,26 @@ interface AppSettings {
     autostart_enabled: boolean
     show_welcome_popup: boolean
   }
+  compression: {
+    filename_format: string
+  }
 }
 
 interface Tab {
   id: string
   title: string
   icon: string
+}
+
+interface FormatTag {
+  name: string
+  description: string
+}
+
+interface FormatPreset {
+  name: string
+  format: string
+  description: string
 }
 
 const emit = defineEmits<{
@@ -406,6 +526,7 @@ const programIcons = ref<Record<string, string>>({})
 const tabs: Tab[] = [
   { id: 'general', title: 'General', icon: '🏠' },
   { id: 'programs', title: 'Programs', icon: '💻' },
+  { id: 'compression', title: 'Compression', icon: '🗜️' },
   { id: 'cleaning', title: 'Cleaning Defaults', icon: '🧹' }
 ]
 
@@ -431,7 +552,113 @@ const localSettings = reactive<AppSettings>({
   general: {
     autostart_enabled: false,
     show_welcome_popup: true
+  },
+  compression: {
+    filename_format: '[Project]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]'
   }
+})
+
+// Format tags organized by category
+const projectTags: FormatTag[] = [
+  { name: 'Project', description: 'Project name' },
+  { name: 'Type', description: 'Cpp or Bp' },
+  { name: 'Engine', description: 'Engine version (5-4-2)' },
+  { name: 'SizeMB', description: 'Project size in MB' },
+  { name: 'SizeGB', description: 'Project size in GB' },
+  { name: 'PluginCount', description: 'Number of plugins' },
+  { name: 'Algorithm', description: 'Compression algorithm' }
+]
+
+const dateTags: FormatTag[] = [
+  { name: 'YYYY', description: 'Full year (2024)' },
+  { name: 'YY', description: 'Short year (24)' },
+  { name: 'MM', description: 'Month number (01-12)' },
+  { name: 'DD', description: 'Day number (01-31)' },
+  { name: 'HH', description: 'Hour (00-23)' },
+  { name: 'mm', description: 'Minutes (00-59)' },
+  { name: 'ss', description: 'Seconds (00-59)' },
+  { name: 'Month', description: 'Full month name' },
+  { name: 'Mon', description: 'Short month name' },
+  { name: 'Day', description: 'Full day name' },
+  { name: 'Weekday', description: 'Short day name' }
+]
+
+const systemTags: FormatTag[] = [
+  { name: 'User', description: 'Current username' },
+  { name: 'Computer', description: 'Computer hostname' },
+  { name: 'Timestamp', description: 'Unix timestamp' }
+]
+
+const formatPresets: FormatPreset[] = [
+  {
+    name: 'Default',
+    format: '[Project]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]',
+    description: 'Project name with date and time'
+  },
+  {
+    name: 'Simple',
+    format: '[Project]_[Type]',
+    description: 'Just project name and type'
+  },
+  {
+    name: 'Detailed',
+    format: '[Project]_[Engine]_[Type]_[YYYY][MM][DD]_[HH][mm]',
+    description: 'Project with engine version and compact timestamp'
+  },
+  {
+    name: 'Archive Style',
+    format: '[YYYY]-[MM]-[DD]_[Project]_[Algorithm]',
+    description: 'Date first, then project and compression type'
+  },
+  {
+    name: 'User Specific',
+    format: '[User]_[Project]_[Mon][DD]_[HH][mm]',
+    description: 'Include username with short date format'
+  }
+]
+
+// Generate preview of the current format
+const formatPreview = computed(() => {
+  const now = new Date()
+  const mockProject = 'MyAwesomeGame'
+  
+  let preview = localSettings.compression.filename_format
+  
+  // Replace common tags with example values
+  const replacements: Record<string, string> = {
+    'Project': mockProject,
+    'Type': 'Cpp',
+    'Engine': '5-4-2',
+    'SizeMB': '1024',
+    'SizeGB': '1',
+    'PluginCount': '5',
+    'Algorithm': 'ZIP',
+    'YYYY': now.getFullYear().toString(),
+    'YY': now.getFullYear().toString().slice(-2),
+    'MM': (now.getMonth() + 1).toString().padStart(2, '0'),
+    'DD': now.getDate().toString().padStart(2, '0'),
+    'HH': now.getHours().toString().padStart(2, '0'),
+    'mm': now.getMinutes().toString().padStart(2, '0'),
+    'ss': now.getSeconds().toString().padStart(2, '0'),
+    'Month': now.toLocaleDateString('en-US', { month: 'long' }),
+    'Mon': now.toLocaleDateString('en-US', { month: 'short' }),
+    'Day': now.toLocaleDateString('en-US', { weekday: 'long' }),
+    'Weekday': now.toLocaleDateString('en-US', { weekday: 'short' }),
+    'User': 'john_doe',
+    'Computer': 'DESKTOP-PC',
+    'Timestamp': Math.floor(now.getTime() / 1000).toString()
+  }
+  
+  for (const [key, value] of Object.entries(replacements)) {
+    preview = preview.replace(new RegExp(`\\[${key}\\]`, 'g'), value)
+  }
+  
+  // Add extension if not present
+  if (!preview.includes('.')) {
+    preview += '.zip'
+  }
+  
+  return preview
 })
 
 const loadSettings = async () => {
@@ -443,6 +670,7 @@ const loadSettings = async () => {
     localSettings.engine_programs.custom_engines = { ...(settings.engine_programs?.custom_engines || {}) }
     localSettings.cleaning_defaults = { ...settings.cleaning_defaults }
     localSettings.general = { ...settings.general }
+    localSettings.compression = { ...settings.compression }
     
     // Initialize custom program names
     Object.keys(localSettings.ide_programs.custom_programs).forEach(name => {
@@ -474,7 +702,8 @@ const saveSettings = async () => {
         custom_engines: { ...localSettings.engine_programs.custom_engines }
       },
       cleaning_defaults: { ...localSettings.cleaning_defaults },
-      general: { ...localSettings.general }
+      general: { ...localSettings.general },
+      compression: { ...localSettings.compression }
     }
     
     await invoke('save_settings', { settings: settingsToSave })
@@ -515,6 +744,23 @@ const handleWelcomePopupChange = () => {
       props: {}
     })
   }
+}
+
+const insertTag = (tagName: string) => {
+  const tag = `[${tagName}]`
+  localSettings.compression.filename_format += tag
+}
+
+const resetToDefault = () => {
+  localSettings.compression.filename_format = '[Project]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]'
+}
+
+const applyPreset = (format: string) => {
+  localSettings.compression.filename_format = format
+}
+
+const updatePreview = () => {
+  // Trigger reactivity for preview
 }
 
 const browseForCustomIde = async (programName: string) => {
@@ -641,8 +887,8 @@ onMounted(() => {
   background-color: var(--background-color);
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-lg);
-  width: 48rem;
-  height: 36rem;
+  width: 56rem;
+  height: 42rem;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -726,7 +972,6 @@ onMounted(() => {
   transition: all var(--transition-fast);
   font-weight: var(--font-weight-medium);
   position: relative;
-  /* Reserve space for the bottom border */
   border-bottom: 2px solid transparent;
 }
 
@@ -847,6 +1092,209 @@ onMounted(() => {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
   margin-left: 1.5rem;
+}
+
+.format-editor {
+  border-top: var(--border-width) solid var(--border-color);
+  padding-top: var(--spacing-lg);
+}
+
+.format-input-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.format-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.format-input-wrapper {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.format-input {
+  flex: 1;
+  padding: var(--spacing-sm);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background-color: var(--background-color);
+  font-family: var(--font-mono);
+}
+
+.format-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-color-alpha);
+}
+
+.reset-format-button {
+  padding: var(--spacing-sm);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--surface-color);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
+  min-width: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reset-format-button:hover {
+  background-color: var(--hover-color);
+  border-color: var(--accent-color);
+}
+
+.format-preview {
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background-color: var(--surface-color);
+  border-radius: var(--border-radius-sm);
+  border: var(--border-width) solid var(--border-color);
+}
+
+.preview-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.preview-output {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  background-color: var(--background-color);
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius-sm);
+  border: var(--border-width) solid var(--border-color);
+}
+
+.format-tags {
+  margin-bottom: var(--spacing-lg);
+}
+
+.tags-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-md) 0;
+}
+
+.tags-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-md);
+}
+
+.tag-category {
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-sm);
+  background-color: var(--surface-color);
+}
+
+.category-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-sm) 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tag-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.tag-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--background-color);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+
+.tag-button:hover {
+  background-color: var(--hover-color);
+  border-color: var(--accent-color);
+}
+
+.tag-name {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--accent-color);
+  font-family: var(--font-mono);
+}
+
+.tag-desc {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
+
+.format-presets {
+  border-top: var(--border-width) solid var(--border-color);
+  padding-top: var(--spacing-lg);
+}
+
+.presets-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-md) 0;
+}
+
+.preset-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.preset-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--surface-color);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+
+.preset-button:hover {
+  background-color: var(--hover-color);
+  border-color: var(--accent-color);
+}
+
+.preset-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.preset-format {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
 }
 
 .custom-programs {
@@ -1033,5 +1481,16 @@ onMounted(() => {
 
 .button-icon {
   font-size: var(--font-size-sm);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .tags-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .cleaning-defaults-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

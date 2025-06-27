@@ -2,6 +2,8 @@ use crate::misc::errors::{ErrorLevel, Result};
 use crate::misc::prelude::{format_size, log};
 use crate::misc::progress::TaskProgress;
 use crate::projects::actions::project_cleaner::{CleaningSelection, clean_project};
+use crate::projects::models::project::Project;
+use crate::settings::actions::settings_manager;
 use log::{error};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -91,11 +93,8 @@ pub async fn compress_project(
     // Get the original size
     let original_size = fs_extra::dir::get_size(project_dir).unwrap_or(0);
     
-    // Generate output filename with timestamp
-    let now = chrono::Local::now();
-    let timestamp = now.format("%Y-%m-%d_%H-%M").to_string();
-    let extension = get_extension_for_algorithm(&request.compression_algorithm);
-    let output_filename = format!("{}_{}.{}", project_name, timestamp, extension);
+    // Generate output filename using user's format
+    let output_filename = generate_filename(&app_handle, &project_path, &request.compression_algorithm)?;
     let output_path = PathBuf::from(&request.destination_path).join(output_filename);
     
     log(&app_handle, ErrorLevel::Info, &format!("Compressing to: {}", output_path.display()));
@@ -147,6 +146,139 @@ pub async fn compress_project(
             Err(MessageError(error_msg))
         }
     }
+}
+
+/// Generate filename based on user's format template
+fn generate_filename(
+    app_handle: &AppHandle,
+    project_path: &Path,
+    algorithm: &CompressionAlgorithm,
+) -> Result<String> {
+    // Load user's filename format from settings
+    let settings = settings_manager::load_settings(app_handle)?;
+    let format_template = &settings.compression.filename_format;
+    
+    // Get project information
+    let project_name = project_path.file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("Unknown");
+    
+    // Try to get project details for additional formatting
+    let project_details = Project::try_from_path(&project_path.to_path_buf()).ok();
+    
+    // Get current date/time
+    let now = chrono::Local::now();
+    
+    // Build replacement map
+    let mut replacements = std::collections::HashMap::new();
+    
+    // Project information
+    replacements.insert("Project".to_string(), project_name.to_string());
+    replacements.insert("ProjectName".to_string(), project_name.to_string()); // Alternative
+    
+    // Date/time formatting
+    replacements.insert("YYYY".to_string(), now.format("%Y").to_string());
+    replacements.insert("YY".to_string(), now.format("%y").to_string());
+    replacements.insert("MM".to_string(), now.format("%m").to_string());
+    replacements.insert("DD".to_string(), now.format("%d").to_string());
+    replacements.insert("HH".to_string(), now.format("%H").to_string());
+    replacements.insert("mm".to_string(), now.format("%M").to_string());
+    replacements.insert("ss".to_string(), now.format("%S").to_string());
+    
+    // Additional date/time formats
+    replacements.insert("Month".to_string(), now.format("%B").to_string()); // Full month name
+    replacements.insert("Mon".to_string(), now.format("%b").to_string()); // Short month name
+    replacements.insert("Day".to_string(), now.format("%A").to_string()); // Full day name
+    replacements.insert("Weekday".to_string(), now.format("%a").to_string()); // Short day name
+    
+    // Project-specific information
+    if let Some(project) = project_details {
+        // Project type
+        let project_type = if project.has_cpp { "Cpp" } else { "Bp" };
+        replacements.insert("Type".to_string(), project_type.to_string());
+        replacements.insert("ProjectType".to_string(), project_type.to_string()); // Alternative
+        
+        // Engine version
+        let engine_version = match project.engine_association {
+            crate::projects::models::project::EngineAssociation::Standard(version) => {
+                version.replace(".", "-")
+            }
+            crate::projects::models::project::EngineAssociation::Custom => "Custom".to_string(),
+        };
+        replacements.insert("Engine".to_string(), engine_version.clone());
+        replacements.insert("EngineVersion".to_string(), engine_version); // Alternative
+        
+        // Project size
+        let size_mb = project.size_on_disk / (1024 * 1024);
+        replacements.insert("SizeMB".to_string(), size_mb.to_string());
+        let size_gb = project.size_on_disk / (1024 * 1024 * 1024);
+        replacements.insert("SizeGB".to_string(), size_gb.to_string());
+        
+        // Plugin count
+        replacements.insert("PluginCount".to_string(), project.plugins.len().to_string());
+    } else {
+        // Fallback values if project details can't be loaded
+        replacements.insert("Type".to_string(), "Unknown".to_string());
+        replacements.insert("ProjectType".to_string(), "Unknown".to_string());
+        replacements.insert("Engine".to_string(), "Unknown".to_string());
+        replacements.insert("EngineVersion".to_string(), "Unknown".to_string());
+        replacements.insert("SizeMB".to_string(), "0".to_string());
+        replacements.insert("SizeGB".to_string(), "0".to_string());
+        replacements.insert("PluginCount".to_string(), "0".to_string());
+    }
+    
+    // Algorithm information
+    replacements.insert("Algorithm".to_string(), get_algorithm_name(algorithm).to_string());
+    replacements.insert("Compression".to_string(), get_algorithm_name(algorithm).to_string()); // Alternative
+    
+    // Additional useful replacements
+    replacements.insert("Timestamp".to_string(), now.timestamp().to_string());
+    replacements.insert("User".to_string(), whoami::username());
+    replacements.insert("Computer".to_string(), whoami::hostname());
+    
+    // Process the format template
+    let mut result = format_template.clone();
+    
+    // Replace all [key] patterns
+    for (key, value) in replacements {
+        let pattern = format!("[{}]", key);
+        result = result.replace(&pattern, &value);
+    }
+    
+    // Add file extension
+    let extension = get_extension_for_algorithm(algorithm);
+    if !result.ends_with(&format!(".{}", extension)) {
+        result = format!("{}.{}", result, extension);
+    }
+    
+    // Sanitize filename (remove invalid characters)
+    result = sanitize_filename(&result);
+    
+    Ok(result)
+}
+
+/// Sanitize filename by removing or replacing invalid characters
+fn sanitize_filename(filename: &str) -> String {
+    let invalid_chars = ['<', '>', ':', '"', '|', '?', '*'];
+    let mut result = filename.to_string();
+    
+    // Replace invalid characters with underscores
+    for &ch in &invalid_chars {
+        result = result.replace(ch, "_");
+    }
+    
+    // Replace forward slashes and backslashes (path separators)
+    result = result.replace('/', "_").replace('\\', "_");
+    
+    // Trim whitespace and dots from the beginning and end
+    result = result.trim().trim_matches('.').to_string();
+    
+    // Ensure the filename is not empty
+    if result.is_empty() {
+        result = "compressed_project".to_string();
+    }
+    
+    result
 }
 
 fn compress_directory(

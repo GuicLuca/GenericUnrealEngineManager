@@ -254,6 +254,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import InfoTooltip from '../InfoTooltip.vue'
 import { useLogStore } from '../../stores/logStore'
+import { useProjectStore } from '../../stores/projectStore'
 
 interface Props {
   projectName: string
@@ -281,6 +282,7 @@ const emit = defineEmits<{
 }>()
 
 const { addLog } = useLogStore()
+const { findProjectByPath } = useProjectStore()
 
 const isCompressing = ref(false)
 const cleanBeforeCompress = ref(false)
@@ -308,17 +310,30 @@ const canCompress = computed(() => {
 const outputFilename = computed(() => {
   if (!destinationPath.value) return ''
   
+  // Get the project details for better filename generation
+  const project = findProjectByPath(props.projectPath)
+  
+  // Use a simple format for preview (the backend will use the user's format)
   const now = new Date()
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
   const hour = String(now.getHours()).padStart(2, '0')
   const minute = String(now.getMinutes()).padStart(2, '0')
+  const second = String(now.getSeconds()).padStart(2, '0')
   
-  const timestamp = `${year}-${month}-${day}_${hour}-${minute}`
+  const timestamp = `${year}-${month}-${day}_${hour}-${minute}-${second}`
   const extension = getExtensionForAlgorithm(selectedAlgorithm.value)
   
-  return `${props.projectName}_${timestamp}.${extension}`
+  // Show a preview based on the current format (this will be replaced by the actual user format)
+  let filename = `${props.projectName}_${timestamp}`
+  
+  if (project) {
+    const projectType = project.has_cpp ? 'Cpp' : 'Bp'
+    filename = `${props.projectName}_${projectType}_${timestamp}`
+  }
+  
+  return `${filename}.${extension}`
 })
 
 const getAlgorithmDisplayName = (algorithm: CompressionAlgorithm): string => {
