@@ -15,12 +15,12 @@
     <div class="popup-content">
       <!-- Tabs Navigation -->
       <div class="tabs-nav">
-        <button
-            v-for="tab in tabs"
-            :key="tab.id"
-            class="tab-button"
-            :class="{ active: activeTab === tab.id }"
-            @click="activeTab = tab.id"
+        <button 
+          v-for="tab in tabs" 
+          :key="tab.id"
+          class="tab-button"
+          :class="{ active: activeTab === tab.id }"
+          @click="activeTab = tab.id"
         >
           <span class="tab-icon">{{ tab.icon }}</span>
           <span class="tab-title">{{ tab.title }}</span>
@@ -32,42 +32,52 @@
         <!-- General Tab -->
         <div v-show="activeTab === 'general'" class="tab-panel">
           <div class="settings-section">
-            <h3 class="section-title">Application Startup</h3>
+            <h3 class="section-title">Application Settings</h3>
             <div class="section-description">
-              Configure how the application behaves when starting up.
+              Configure general application behavior and startup options.
             </div>
 
-            <div class="setting-item">
-              <div class="setting-header">
-                <label class="setting-label">
-                  <input
+            <div class="settings-grid">
+              <div class="setting-item">
+                <div class="setting-header">
+                  <label class="setting-label">Autostart</label>
+                  <div class="setting-control">
+                    <input
+                      id="autostart-enabled"
                       v-model="localSettings.general.autostart_enabled"
                       type="checkbox"
-                      class="setting-checkbox"
+                      class="checkbox-input"
                       @change="handleAutostartChange"
-                  />
-                  <span class="setting-text">Start automatically when I log in</span>
-                </label>
+                    />
+                    <label for="autostart-enabled" class="checkbox-label">
+                      Start automatically when you log in
+                    </label>
+                  </div>
+                </div>
+                <div class="setting-description">
+                  When enabled, the application will start automatically when you log into your computer.
+                </div>
               </div>
-              <div class="setting-description">
-                The application will start automatically when you log into your computer.
-              </div>
-            </div>
 
-            <div class="setting-item">
-              <div class="setting-header">
-                <label class="setting-label">
-                  <input
+              <div class="setting-item">
+                <div class="setting-header">
+                  <label class="setting-label">Welcome Popup</label>
+                  <div class="setting-control">
+                    <input
+                      id="show-welcome-popup"
                       v-model="localSettings.general.show_welcome_popup"
                       type="checkbox"
-                      class="setting-checkbox"
+                      class="checkbox-input"
                       @change="handleWelcomePopupChange"
-                  />
-                  <span class="setting-text">Show welcome message on startup</span>
-                </label>
-              </div>
-              <div class="setting-description">
-                Display the welcome popup when the application starts for the first time.
+                    />
+                    <label for="show-welcome-popup" class="checkbox-label">
+                      Show welcome message on startup
+                    </label>
+                  </div>
+                </div>
+                <div class="setting-description">
+                  When enabled, a welcome message will be shown when the application starts.
+                </div>
               </div>
             </div>
           </div>
@@ -75,252 +85,116 @@
 
         <!-- Programs Tab -->
         <div v-show="activeTab === 'programs'" class="tab-panel">
-          <!-- IDE Programs Subsection -->
+          <!-- IDE Programs Section -->
           <div class="settings-section">
             <div class="section-header">
               <h3 class="section-title">IDE Programs</h3>
               <button class="add-button" @click="addCustomIdeProgram">
                 <span class="button-icon">➕</span>
-                Add IDE Program
+                Add IDE
               </button>
             </div>
             <div class="section-description">
-              Configure your preferred IDEs for opening C++ projects. Add any IDE or code editor you want to use.
+              Configure your preferred IDEs for opening C++ projects.
             </div>
 
-            <div class="custom-programs">
-              <div class="custom-program-list">
-                <div
-                    v-for="(_path, name) in localSettings.ide_programs.custom_programs"
-                    :key="name"
-                    class="custom-program-item"
-                >
-                  <div class="program-icon">
-                    <img
-                        v-if="programIcons[name]"
-                        :src="programIcons[name]"
-                        :alt="name"
-                        class="icon-image"
-                        @error="handleIconError(name)"
-                    />
-                    <span v-else class="fallback-icon">⚙️</span>
-                  </div>
-                  <input
-                      v-model="customProgramNames[name]"
-                      type="text"
-                      class="custom-name-input"
-                      placeholder="Program name..."
-                      @blur="updateCustomProgramName(name, customProgramNames[name])"
+            <div class="program-list">
+              <div 
+                v-for="(path, name) in localSettings.ide_programs.custom_programs"
+                :key="name"
+                class="program-item"
+              >
+                <div class="program-icon">
+                  <img 
+                    v-if="programIcons[name]" 
+                    :src="programIcons[name]" 
+                    :alt="name"
+                    class="icon-image"
+                    @error="handleIconError(name)"
                   />
-                  <input
-                      v-model="localSettings.ide_programs.custom_programs[name]"
-                      type="text"
-                      class="custom-path-input"
-                      placeholder="Path to executable..."
-                      @change="extractIcon(name, localSettings.ide_programs.custom_programs[name])"
-                  />
-                  <button
-                      class="browse-button"
-                      @click="browseForCustomIde(name)"
-                      title="Browse for executable"
-                  >
-                    📂
-                  </button>
-                  <button
-                      class="remove-button"
-                      @click="removeCustomProgram(name)"
-                      title="Remove program"
-                  >
-                    🗑️
-                  </button>
+                  <span v-else class="fallback-icon">💻</span>
                 </div>
+                <input
+                  v-model="customProgramNames[name]"
+                  type="text"
+                  class="program-name-input"
+                  placeholder="Program name..."
+                  @blur="updateCustomProgramName(name, customProgramNames[name])"
+                />
+                <input
+                  v-model="localSettings.ide_programs.custom_programs[name]"
+                  type="text"
+                  class="program-path-input"
+                  placeholder="Path to executable..."
+                  @change="extractIcon(name, localSettings.ide_programs.custom_programs[name])"
+                />
+                <button
+                  class="browse-button"
+                  @click="browseForCustomIde(name)"
+                  title="Browse for executable"
+                >
+                  📂
+                </button>
+                <button
+                  class="remove-button"
+                  @click="removeCustomIdeProgram(name)"
+                  title="Remove program"
+                >
+                  🗑️
+                </button>
               </div>
             </div>
           </div>
 
-          <!-- Engines Subsection -->
+          <!-- Engine Programs Section -->
           <div class="settings-section">
             <div class="section-header">
-              <h3 class="section-title">Engines</h3>
-              <button class="add-button" @click="addCustomEngine">
+              <h3 class="section-title">Engine Programs</h3>
+              <button class="add-button" @click="addCustomEngineProgram">
                 <span class="button-icon">➕</span>
                 Add Engine
               </button>
             </div>
             <div class="section-description">
-              Configure custom Unreal Engine installations. The path must point to the engine folder containing Engine,
-              Samples, and Templates directories.
+              Configure paths to your Unreal Engine installations.
             </div>
 
-            <div class="custom-programs">
-              <div class="custom-program-list">
-                <div
-                    v-for="(_path, name) in localSettings.engine_programs.custom_engines"
-                    :key="name"
-                    class="custom-program-item"
+            <div class="program-list">
+              <div 
+                v-for="(path, name) in localSettings.engine_programs.custom_engines"
+                :key="name"
+                class="program-item"
+              >
+                <div class="program-icon">
+                  <span class="fallback-icon">⚙️</span>
+                </div>
+                <input
+                  v-model="customEngineNames[name]"
+                  type="text"
+                  class="program-name-input"
+                  placeholder="Engine name..."
+                  @blur="updateCustomEngineName(name, customEngineNames[name])"
+                />
+                <input
+                  v-model="localSettings.engine_programs.custom_engines[name]"
+                  type="text"
+                  class="program-path-input"
+                  placeholder="Path to engine folder..."
+                />
+                <button
+                  class="browse-button"
+                  @click="browseForCustomEngine(name)"
+                  title="Browse for engine folder"
                 >
-                  <div class="program-icon">
-                    <span class="fallback-icon">🎮</span>
-                  </div>
-                  <input
-                      v-model="customEngineNames[name]"
-                      type="text"
-                      class="custom-name-input"
-                      placeholder="Engine name..."
-                      @blur="updateCustomEngineName(name, customEngineNames[name])"
-                  />
-                  <input
-                      v-model="localSettings.engine_programs.custom_engines[name]"
-                      type="text"
-                      class="custom-path-input"
-                      placeholder="Path to engine folder..."
-                  />
-                  <button
-                      class="browse-button"
-                      @click="browseForCustomEngine(name)"
-                      title="Browse for engine folder"
-                  >
-                    📂
-                  </button>
-                  <button
-                      class="remove-button"
-                      @click="removeCustomEngine(name)"
-                      title="Remove engine"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Compression Tab -->
-        <div v-show="activeTab === 'compression'" class="tab-panel">
-          <div class="settings-section">
-            <h3 class="section-title">Filename Format</h3>
-            <div class="section-description">
-              Customize how compressed archive filenames are generated. Use formatting tags in square brackets to insert
-              dynamic values.
-            </div>
-
-            <!-- Compact Format Tags -->
-            <div class="format-tags compact">
-              <h4 class="tags-title">Available Format Tags</h4>
-              <div class="tags-compact-grid">
-                <div class="tag-category-compact">
-                  <h5 class="category-title-compact">Project</h5>
-                  <div class="tag-list-compact">
-                    <div
-                        v-for="tag in projectTags"
-                        :key="tag.name"
-                        class="tag-button-compact"
-                        @click="insertTag(tag.name)"
-                        @mouseenter="showTooltip($event, tag.description)"
-                        @mouseleave="hideTooltip"
-                    >
-                      [{{ tag.name }}]
-                    </div>
-                  </div>
-                </div>
-
-                <div class="tag-category-compact">
-                  <h5 class="category-title-compact">Date & Time</h5>
-                  <div class="tag-list-compact">
-                    <div
-                        v-for="tag in dateTags"
-                        :key="tag.name"
-                        class="tag-button-compact"
-                        @click="insertTag(tag.name)"
-                        @mouseenter="showTooltip($event, tag.description)"
-                        @mouseleave="hideTooltip"
-                    >
-                      [{{ tag.name }}]
-                    </div>
-                  </div>
-                </div>
-
-                <div class="tag-category-compact">
-                  <h5 class="category-title-compact">System</h5>
-                  <div class="tag-list-compact">
-                    <div
-                        v-for="tag in systemTags"
-                        :key="tag.name"
-                        class="tag-button-compact"
-                        @click="insertTag(tag.name)"
-                        @mouseenter="showTooltip($event, tag.description)"
-                        @mouseleave="hideTooltip"
-                    >
-                      [{{ tag.name }}]
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="format-editor">
-              <div class="format-input-section">
-                <label class="format-label">Filename Format Template:</label>
-                <div class="format-input-wrapper">
-                  <input
-                      v-model="localSettings.compression.filename_format"
-                      type="text"
-                      class="format-input"
-                      placeholder="[Project]_[YYYY][MM][DD][HH][mm]"
-                      @input="updatePreview"
-                  />
-                  <button
-                      class="save-preset-button"
-                      @click="showSavePresetDialog"
-                      title="Save current format as preset"
-                  >
-                    💾
-                  </button>
-                </div>
-
-                <!-- Warning for invalid tags -->
-                <div v-if="invalidTags.length > 0" class="format-warning">
-                  ⚠️ Unknown tags detected: {{ invalidTags.join(', ') }}
-                </div>
-              </div>
-
-              <!-- Compact Preview -->
-              <div class="format-preview compact">
-                <span class="preview-label">Preview:</span>
-                <span class="preview-output">{{ formatPreview }}</span>
-              </div>
-
-              <!-- Presets Management -->
-              <div class="format-presets">
-                <div class="presets-header">
-                  <h4 class="presets-title">Saved Presets</h4>
-                </div>
-                  <div
-                      v-for="(format, name) in localSettings.compression.custom_presets"
-                      :key="name"
-                      class="preset-item"
-                  >
-                    <div class="preset-info">
-                      <span class="preset-name">{{ name }}</span>
-                      <span class="preset-format">{{ format }}</span>
-                    </div>
-                    <div class="preset-actions">
-                      <button
-                          class="preset-action-btn apply-btn"
-                          @click="applyPreset(format)"
-                          title="Copy this preset in the format field"
-                      >
-                        📋
-                      </button>
-                      <button
-                          class="preset-action-btn delete-btn"
-                          @click="deletePreset(name)"
-                          title="Delete this preset"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </div>
+                  📂
+                </button>
+                <button
+                  class="remove-button"
+                  @click="removeCustomEngineProgram(name)"
+                  title="Remove engine"
+                >
+                  🗑️
+                </button>
               </div>
             </div>
           </div>
@@ -341,10 +215,10 @@
                 <div class="checkbox-group">
                   <div class="checkbox-item">
                     <input
-                        id="default-ide-files"
-                        v-model="localSettings.cleaning_defaults.ide_files"
-                        type="checkbox"
-                        class="checkbox-input"
+                      id="default-ide-files"
+                      v-model="localSettings.cleaning_defaults.ide_files"
+                      type="checkbox"
+                      class="checkbox-input"
                     />
                     <label for="default-ide-files" class="checkbox-label">
                       IDE files (.vs and .idea)
@@ -353,10 +227,10 @@
 
                   <div class="checkbox-item">
                     <input
-                        id="default-binaries"
-                        v-model="localSettings.cleaning_defaults.binaries"
-                        type="checkbox"
-                        class="checkbox-input"
+                      id="default-binaries"
+                      v-model="localSettings.cleaning_defaults.binaries"
+                      type="checkbox"
+                      class="checkbox-input"
                     />
                     <label for="default-binaries" class="checkbox-label">
                       Binaries
@@ -365,10 +239,10 @@
 
                   <div class="checkbox-item">
                     <input
-                        id="default-build"
-                        v-model="localSettings.cleaning_defaults.build"
-                        type="checkbox"
-                        class="checkbox-input"
+                      id="default-build"
+                      v-model="localSettings.cleaning_defaults.build"
+                      type="checkbox"
+                      class="checkbox-input"
                     />
                     <label for="default-build" class="checkbox-label">
                       Build
@@ -377,10 +251,10 @@
 
                   <div class="checkbox-item">
                     <input
-                        id="default-intermediate"
-                        v-model="localSettings.cleaning_defaults.intermediate"
-                        type="checkbox"
-                        class="checkbox-input"
+                      id="default-intermediate"
+                      v-model="localSettings.cleaning_defaults.intermediate"
+                      type="checkbox"
+                      class="checkbox-input"
                     />
                     <label for="default-intermediate" class="checkbox-label">
                       Intermediate
@@ -389,10 +263,10 @@
 
                   <div class="checkbox-item">
                     <input
-                        id="default-derived-data-cache"
-                        v-model="localSettings.cleaning_defaults.derived_data_cache"
-                        type="checkbox"
-                        class="checkbox-input"
+                      id="default-derived-data-cache"
+                      v-model="localSettings.cleaning_defaults.derived_data_cache"
+                      type="checkbox"
+                      class="checkbox-input"
                     />
                     <label for="default-derived-data-cache" class="checkbox-label">
                       DerivedDataCache
@@ -401,10 +275,10 @@
 
                   <div class="checkbox-item">
                     <input
-                        id="default-saved"
-                        v-model="localSettings.cleaning_defaults.saved"
-                        type="checkbox"
-                        class="checkbox-input"
+                      id="default-saved"
+                      v-model="localSettings.cleaning_defaults.saved"
+                      type="checkbox"
+                      class="checkbox-input"
                     />
                     <label for="default-saved" class="checkbox-label">
                       Saved
@@ -413,10 +287,10 @@
 
                   <div class="checkbox-item">
                     <input
-                        id="default-analyze-plugins"
-                        v-model="localSettings.cleaning_defaults.analyze_plugins"
-                        type="checkbox"
-                        class="checkbox-input"
+                      id="default-analyze-plugins"
+                      v-model="localSettings.cleaning_defaults.analyze_plugins"
+                      type="checkbox"
+                      class="checkbox-input"
                     />
                     <label for="default-analyze-plugins" class="checkbox-label">
                       Analyze plugins
@@ -431,10 +305,10 @@
                 <div class="checkbox-group">
                   <div class="checkbox-item">
                     <input
-                        id="default-plugin-binaries"
-                        v-model="localSettings.cleaning_defaults.plugin_binaries"
-                        type="checkbox"
-                        class="checkbox-input"
+                      id="default-plugin-binaries"
+                      v-model="localSettings.cleaning_defaults.plugin_binaries"
+                      type="checkbox"
+                      class="checkbox-input"
                     />
                     <label for="default-plugin-binaries" class="checkbox-label">
                       Binaries
@@ -443,10 +317,10 @@
 
                   <div class="checkbox-item">
                     <input
-                        id="default-plugin-intermediate"
-                        v-model="localSettings.cleaning_defaults.plugin_intermediate"
-                        type="checkbox"
-                        class="checkbox-input"
+                      id="default-plugin-intermediate"
+                      v-model="localSettings.cleaning_defaults.plugin_intermediate"
+                      type="checkbox"
+                      class="checkbox-input"
                     />
                     <label for="default-plugin-intermediate" class="checkbox-label">
                       Intermediate
@@ -455,14 +329,94 @@
 
                   <div class="checkbox-item">
                     <input
-                        id="default-plugin-node-size-cache"
-                        v-model="localSettings.cleaning_defaults.plugin_node_size_cache"
-                        type="checkbox"
-                        class="checkbox-input"
+                      id="default-plugin-node-size-cache"
+                      v-model="localSettings.cleaning_defaults.plugin_node_size_cache"
+                      type="checkbox"
+                      class="checkbox-input"
                     />
                     <label for="default-plugin-node-size-cache" class="checkbox-label">
                       NodeSizeCache
                     </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Compression Tab -->
+        <div v-show="activeTab === 'compression'" class="tab-panel">
+          <div class="settings-section">
+            <h3 class="section-title">Filename Format</h3>
+            <div class="section-description">
+              Customize the output filename format for compressed projects.
+            </div>
+
+            <div class="format-settings">
+              <div class="format-input-section">
+                <label class="format-label">Filename Format Template:</label>
+                <input
+                  v-model="localSettings.compression.filename_format"
+                  type="text"
+                  class="format-input"
+                  placeholder="Enter filename format..."
+                  @input="updatePreview"
+                />
+                <div v-if="formatWarning" class="format-warning">
+                  {{ formatWarning }}
+                </div>
+                <div class="format-preview-small">
+                  <span class="preview-label">Preview:</span>
+                  <span class="preview-text">{{ formatPreview }}</span>
+                </div>
+              </div>
+
+              <div class="format-tags-section">
+                <h4 class="tags-title">Available Format Tags</h4>
+                <div class="format-tags-grid">
+                  <button
+                    v-for="tag in formatTags"
+                    :key="tag.name"
+                    class="format-tag-button"
+                    @click="insertTag(tag.name)"
+                    @mouseenter="showTagTooltip($event, tag)"
+                    @mouseleave="hideTagTooltip"
+                  >
+                    [{{ tag.name }}]
+                  </button>
+                </div>
+              </div>
+
+              <div class="presets-section">
+                <div class="presets-header">
+                  <h4 class="presets-title">Saved Presets</h4>
+                  <button class="save-preset-button" @click="saveCurrentAsPreset">
+                    <span class="button-icon">💾</span>
+                    Save Current
+                  </button>
+                </div>
+                <div class="presets-list">
+                  <div 
+                    v-for="(format, name) in sortedCustomPresets"
+                    :key="name"
+                    class="preset-item"
+                  >
+                    <button
+                      class="preset-button"
+                      @click="loadPreset(format)"
+                      :title="`Load preset: ${name}`"
+                    >
+                      <span class="preset-name">{{ name }}</span>
+                      <span class="preset-format">{{ format }}</span>
+                    </button>
+                    <button
+                      v-if="!isDefaultPreset(name)"
+                      class="delete-preset-button"
+                      @click="deletePreset(name)"
+                      title="Delete preset"
+                    >
+                      🗑️
+                    </button>
                   </div>
                 </div>
               </div>
@@ -482,55 +436,27 @@
       </button>
     </div>
 
-    <!-- Save Preset Dialog -->
-    <div v-if="showPresetDialog" class="preset-dialog-overlay" @click="hidePresetDialog">
-      <div class="preset-dialog" @click.stop>
-        <h3 class="dialog-title">Save Preset</h3>
-        <div class="dialog-content">
-          <label class="dialog-label">Preset Name:</label>
-          <input
-              v-model="newPresetName"
-              type="text"
-              class="dialog-input"
-              placeholder="Enter preset name..."
-              @keyup.enter="saveNewPreset"
-              ref="presetNameInput"
-          />
-        </div>
-        <div class="dialog-actions">
-          <button class="dialog-button cancel" @click="hidePresetDialog">
-            Cancel
-          </button>
-          <button
-              class="dialog-button save"
-              @click="saveNewPreset"
-              :disabled="!newPresetName.trim()"
-          >
-            Save
-          </button>
-        </div>
-      </div>
-    </div>
-
     <!-- Custom Tooltip -->
     <Teleport to="body">
       <div
-          v-if="tooltip.show"
-          class="custom-tooltip"
-          :style="tooltipStyle"
+        v-if="tooltipVisible"
+        class="custom-tooltip"
+        :style="tooltipStyle"
       >
-        {{ tooltip.content }}
+        <div class="tooltip-title">{{ tooltipContent.title }}</div>
+        <div class="tooltip-description">{{ tooltipContent.description }}</div>
+        <div class="tooltip-example">Example: {{ tooltipContent.example }}</div>
       </div>
     </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import {ref, reactive, onMounted, computed, nextTick} from 'vue'
-import {invoke} from '@tauri-apps/api/core'
-import {open} from '@tauri-apps/plugin-dialog'
-import {useLogStore} from '../../stores/logStore'
-import {usePopup} from '../../composables/usePopup'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
+import { useLogStore } from '../../stores/logStore'
+import { usePopup } from '../../composables/usePopup'
 
 interface AppSettings {
   ide_programs: {
@@ -570,37 +496,71 @@ interface Tab {
 interface FormatTag {
   name: string
   description: string
+  example: string
 }
 
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
-const {addLog} = useLogStore()
-const {showPopup} = usePopup()
+const { addLog } = useLogStore()
+const { showPopup } = usePopup()
 
 const activeTab = ref('general')
 const isSaving = ref(false)
 const customProgramNames = ref<Record<string, string>>({})
 const customEngineNames = ref<Record<string, string>>({})
 const programIcons = ref<Record<string, string>>({})
-const showPresetDialog = ref(false)
-const newPresetName = ref('')
-const presetNameInput = ref<HTMLInputElement>()
 
 // Tooltip state
-const tooltip = reactive({
-  show: false,
-  content: '',
-  x: 0,
-  y: 0
-})
+const tooltipVisible = ref(false)
+const tooltipPosition = ref({ x: 0, y: 0 })
+const tooltipContent = ref({ title: '', description: '', example: '' })
 
 const tabs: Tab[] = [
-  {id: 'general', title: 'General', icon: '🏠'},
-  {id: 'programs', title: 'Programs', icon: '💻'},
-  {id: 'compression', title: 'Compression', icon: '🗜️'},
-  {id: 'cleaning', title: 'Cleaning Defaults', icon: '🧹'}
+  { id: 'general', title: 'General', icon: '🏠' },
+  { id: 'programs', title: 'Programs', icon: '💻' },
+  { id: 'cleaning', title: 'Cleaning Defaults', icon: '🧹' },
+  { id: 'compression', title: 'Compression', icon: '🗜️' }
+]
+
+const formatTags: FormatTag[] = [
+  { name: 'Project', description: 'Project name', example: 'MyProject' },
+  { name: 'Type', description: 'Project type (Cpp or Bp)', example: 'Cpp' },
+  { name: 'Engine', description: 'Engine version (dots replaced with dashes)', example: '5-4-2' },
+  { name: 'Algorithm', description: 'Compression algorithm', example: 'ZIP' },
+  { name: 'YYYY', description: 'Full year', example: '2024' },
+  { name: 'YY', description: 'Two-digit year', example: '24' },
+  { name: 'MM', description: 'Month (01-12)', example: '03' },
+  { name: 'DD', description: 'Day (01-31)', example: '15' },
+  { name: 'HH', description: 'Hour (00-23)', example: '14' },
+  { name: 'mm', description: 'Minutes (00-59)', example: '30' },
+  { name: 'ss', description: 'Seconds (00-59)', example: '45' },
+  { name: 'Month', description: 'Full month name', example: 'March' },
+  { name: 'Mon', description: 'Short month name', example: 'Mar' },
+  { name: 'Day', description: 'Full day name', example: 'Friday' },
+  { name: 'Weekday', description: 'Short day name', example: 'Fri' },
+  { name: 'User', description: 'Current username', example: 'john_doe' },
+  { name: 'Computer', description: 'Computer hostname', example: 'DESKTOP-PC' },
+  { name: 'Timestamp', description: 'Unix timestamp', example: '1710504645' },
+  { name: 'SizeMB', description: 'Project size in MB', example: '1024' },
+  { name: 'SizeGB', description: 'Project size in GB', example: '1' },
+  { name: 'PluginCount', description: 'Number of plugins', example: '5' }
+]
+
+const defaultPresets = [
+  'Default',
+  'Default Extended',
+  'Simple',
+  'Detailed',
+  'Archive Style',
+  'User Specific',
+  'Timestamp',
+  'Size Aware',
+  'Engine Specific',
+  'Professional',
+  'Minimal',
+  'Verbose'
 ]
 
 const localSettings = reactive<AppSettings>({
@@ -632,65 +592,21 @@ const localSettings = reactive<AppSettings>({
   }
 })
 
-// Format tags organized by category
-const projectTags: FormatTag[] = [
-  {name: 'Project', description: 'Project name'},
-  {name: 'Type', description: 'Cpp or Bp'},
-  {name: 'Engine', description: 'Engine version (5-4-2)'},
-  {name: 'SizeMB', description: 'Project size in MB'},
-  {name: 'SizeGB', description: 'Project size in GB'},
-  {name: 'PluginCount', description: 'Number of plugins'},
-  {name: 'Algorithm', description: 'Compression algorithm'}
-]
-
-const dateTags: FormatTag[] = [
-  {name: 'YYYY', description: 'Full year (2024)'},
-  {name: 'YY', description: 'Short year (24)'},
-  {name: 'MM', description: 'Month number (01-12)'},
-  {name: 'DD', description: 'Day number (01-31)'},
-  {name: 'HH', description: 'Hour (00-23)'},
-  {name: 'mm', description: 'Minutes (00-59)'},
-  {name: 'ss', description: 'Seconds (00-59)'},
-  {name: 'Month', description: 'Full month name'},
-  {name: 'Mon', description: 'Short month name'},
-  {name: 'Day', description: 'Full day name'},
-  {name: 'Weekday', description: 'Short day name'}
-]
-
-const systemTags: FormatTag[] = [
-  {name: 'User', description: 'Current username'},
-  {name: 'Computer', description: 'Computer hostname'},
-  {name: 'Timestamp', description: 'Unix timestamp'}
-]
-
-// All valid tags for validation
-const allValidTags = computed(() => {
-  return [...projectTags, ...dateTags, ...systemTags].map(tag => tag.name)
+// Sort custom presets alphabetically
+const sortedCustomPresets = computed(() => {
+  const entries = Object.entries(localSettings.compression.custom_presets)
+  entries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
+  return Object.fromEntries(entries)
 })
 
-// Check for invalid tags in the current format
-const invalidTags = computed(() => {
-  const format = localSettings.compression.filename_format
-  const tagMatches = format.match(/\[([^\]]+)\]/g) || []
-  const usedTags = tagMatches.map(match => match.slice(1, -1))
-  return usedTags.filter(tag => !allValidTags.value.includes(tag))
-})
-
-// Generate the preview of the current format
 const formatPreview = computed(() => {
   const now = new Date()
-  const mockProject = 'MyAwesomeGame'
-
   let preview = localSettings.compression.filename_format
-
-  // Replace common tags with example values
+  
   const replacements: Record<string, string> = {
-    'Project': mockProject,
+    'Project': 'MyProject',
     'Type': 'Cpp',
     'Engine': '5-4-2',
-    'SizeMB': '1024',
-    'SizeGB': '1',
-    'PluginCount': '5',
     'Algorithm': 'ZIP',
     'YYYY': now.getFullYear().toString(),
     'YY': now.getFullYear().toString().slice(-2),
@@ -699,76 +615,76 @@ const formatPreview = computed(() => {
     'HH': now.getHours().toString().padStart(2, '0'),
     'mm': now.getMinutes().toString().padStart(2, '0'),
     'ss': now.getSeconds().toString().padStart(2, '0'),
-    'Month': now.toLocaleDateString('en-US', {month: 'long'}),
-    'Mon': now.toLocaleDateString('en-US', {month: 'short'}),
-    'Day': now.toLocaleDateString('en-US', {weekday: 'long'}),
-    'Weekday': now.toLocaleDateString('en-US', {weekday: 'short'}),
+    'Month': now.toLocaleDateString('en-US', { month: 'long' }),
+    'Mon': now.toLocaleDateString('en-US', { month: 'short' }),
+    'Day': now.toLocaleDateString('en-US', { weekday: 'long' }),
+    'Weekday': now.toLocaleDateString('en-US', { weekday: 'short' }),
     'User': 'john_doe',
     'Computer': 'DESKTOP-PC',
-    'Timestamp': Math.floor(now.getTime() / 1000).toString()
+    'Timestamp': Math.floor(now.getTime() / 1000).toString(),
+    'SizeMB': '1024',
+    'SizeGB': '1',
+    'PluginCount': '5'
   }
-
+  
   for (const [key, value] of Object.entries(replacements)) {
     preview = preview.replace(new RegExp(`\\[${key}\\]`, 'g'), value)
   }
+  
+  return preview + '.zip'
+})
 
-  // Add the extension if not present
-  if (!preview.includes('.')) {
-    preview += '.zip'
+const formatWarning = computed(() => {
+  const format = localSettings.compression.filename_format
+  const tagPattern = /\[([^\]]+)\]/g
+  const matches = format.match(tagPattern)
+  
+  if (!matches) return ''
+  
+  const validTags = formatTags.map(tag => `[${tag.name}]`)
+  const invalidTags = matches.filter(match => !validTags.includes(match))
+  
+  if (invalidTags.length > 0) {
+    return `Warning: Unknown format tags: ${invalidTags.join(', ')}`
   }
-
-  return preview
+  
+  return ''
 })
 
 const tooltipStyle = computed(() => ({
   position: 'fixed' as const,
-  left: `${tooltip.x}px`,
-  top: `${tooltip.y}px`,
-  zIndex: 10001
+  left: `${tooltipPosition.value.x}px`,
+  top: `${tooltipPosition.value.y}px`,
+  zIndex: 10001,
+  transform: 'translateY(-100%)'
 }))
 
 const isDefaultPreset = (name: string): boolean => {
-  const defaultPresets = [
-    'Default', 'Default Extended', 'Simple', 'Detailed', 'Archive Style',
-    'User Specific', 'Timestamp', 'Size Aware', 'Engine Specific',
-    'Professional', 'Minimal', 'Verbose'
-  ]
   return defaultPresets.includes(name)
-}
-
-const showTooltip = (event: MouseEvent, content: string) => {
-  tooltip.content = content
-  tooltip.x = event.clientX + 10
-  tooltip.y = event.clientY - 30
-  tooltip.show = true
-}
-
-const hideTooltip = () => {
-  tooltip.show = false
 }
 
 const loadSettings = async () => {
   try {
     const settings = await invoke('get_settings') as AppSettings
-
+    
     // Update local settings
-    localSettings.ide_programs.custom_programs = {...settings.ide_programs.custom_programs}
-    localSettings.engine_programs.custom_engines = {...(settings.engine_programs?.custom_engines || {})}
-    localSettings.cleaning_defaults = {...settings.cleaning_defaults}
-    localSettings.general = {...settings.general}
-    localSettings.compression = {...settings.compression}
-
+    localSettings.ide_programs.custom_programs = { ...settings.ide_programs.custom_programs }
+    localSettings.engine_programs.custom_engines = { ...settings.engine_programs.custom_engines }
+    localSettings.cleaning_defaults = { ...settings.cleaning_defaults }
+    localSettings.general = { ...settings.general }
+    localSettings.compression = { ...settings.compression }
+    
     // Initialize custom program names
     Object.keys(localSettings.ide_programs.custom_programs).forEach(name => {
       customProgramNames.value[name] = name
       extractIcon(name, localSettings.ide_programs.custom_programs[name])
     })
-
+    
     // Initialize custom engine names
     Object.keys(localSettings.engine_programs.custom_engines).forEach(name => {
       customEngineNames.value[name] = name
     })
-
+    
   } catch (error) {
     console.error('Failed to load settings:', error)
     addLog('Failed to load settings', 'error')
@@ -778,24 +694,23 @@ const loadSettings = async () => {
 const saveSettings = async () => {
   try {
     isSaving.value = true
-
-    // Clean up empty values
+    
     const settingsToSave: AppSettings = {
       ide_programs: {
-        custom_programs: {...localSettings.ide_programs.custom_programs}
+        custom_programs: { ...localSettings.ide_programs.custom_programs }
       },
       engine_programs: {
-        custom_engines: {...localSettings.engine_programs.custom_engines}
+        custom_engines: { ...localSettings.engine_programs.custom_engines }
       },
-      cleaning_defaults: {...localSettings.cleaning_defaults},
-      general: {...localSettings.general},
-      compression: {...localSettings.compression}
+      cleaning_defaults: { ...localSettings.cleaning_defaults },
+      general: { ...localSettings.general },
+      compression: { ...localSettings.compression }
     }
-
-    await invoke('save_settings', {settings: settingsToSave})
+    
+    await invoke('save_settings', { settings: settingsToSave })
     addLog('Settings saved successfully')
     emit('close')
-
+    
   } catch (error) {
     console.error('Failed to save settings:', error)
     addLog('Failed to save settings', 'error')
@@ -816,60 +731,20 @@ const handleAutostartChange = async () => {
   } catch (error) {
     console.error('Failed to update autostart:', error)
     addLog('Failed to update autostart setting', 'error')
-    // Revert the checkbox state
+    // Revert the change
     localSettings.general.autostart_enabled = !localSettings.general.autostart_enabled
   }
 }
 
 const handleWelcomePopupChange = () => {
-  // If re-enabling the welcome popup, show it immediately
   if (localSettings.general.show_welcome_popup) {
+    // Show the welcome popup immediately when re-enabled
     showPopup({
       id: 'welcome',
       component: 'Welcome',
       props: {}
     })
   }
-}
-
-const insertTag = (tagName: string) => {
-  const tag = `[${tagName}]`
-  localSettings.compression.filename_format += tag
-}
-
-const applyPreset = (format: string) => {
-  localSettings.compression.filename_format = format
-}
-
-const showSavePresetDialog = () => {
-  newPresetName.value = ''
-  showPresetDialog.value = true
-  nextTick(() => {
-    presetNameInput.value?.focus()
-  })
-}
-
-const hidePresetDialog = () => {
-  showPresetDialog.value = false
-  newPresetName.value = ''
-}
-
-const saveNewPreset = () => {
-  const name = newPresetName.value.trim()
-  if (!name) return
-
-  localSettings.compression.custom_presets[name] = localSettings.compression.filename_format
-  hidePresetDialog()
-  addLog(`Preset "${name}" saved`)
-}
-
-const deletePreset = (name: string) => {
-  delete localSettings.compression.custom_presets[name]
-  addLog(`Preset "${name}" deleted`)
-}
-
-const updatePreview = () => {
-  // Trigger reactivity for preview
 }
 
 const browseForCustomIde = async (programName: string) => {
@@ -883,7 +758,7 @@ const browseForCustomIde = async (programName: string) => {
         extensions: ['exe', 'app', 'AppImage']
       }]
     })
-
+    
     if (selected && typeof selected === 'string') {
       localSettings.ide_programs.custom_programs[programName] = selected
       extractIcon(programName, selected)
@@ -901,7 +776,7 @@ const browseForCustomEngine = async (engineName: string) => {
       multiple: false,
       title: `Select ${engineName} engine folder`
     })
-
+    
     if (selected && typeof selected === 'string') {
       localSettings.engine_programs.custom_engines[engineName] = selected
     }
@@ -917,33 +792,33 @@ const addCustomIdeProgram = () => {
   customProgramNames.value[newName] = newName
 }
 
-const addCustomEngine = () => {
-  const newName = `Custom Engine ${Object.keys(localSettings.engine_programs.custom_engines).length + 1}`
+const addCustomEngineProgram = () => {
+  const newName = `Engine ${Object.keys(localSettings.engine_programs.custom_engines).length + 1}`
   localSettings.engine_programs.custom_engines[newName] = ''
   customEngineNames.value[newName] = newName
 }
 
-const removeCustomProgram = (programName: string) => {
+const removeCustomIdeProgram = (programName: string) => {
   delete localSettings.ide_programs.custom_programs[programName]
   delete customProgramNames.value[programName]
   delete programIcons.value[programName]
 }
 
-const removeCustomEngine = (engineName: string) => {
+const removeCustomEngineProgram = (engineName: string) => {
   delete localSettings.engine_programs.custom_engines[engineName]
   delete customEngineNames.value[engineName]
 }
 
 const updateCustomProgramName = (oldName: string, newName: string) => {
   if (oldName === newName || !newName.trim()) return
-
+  
   const path = localSettings.ide_programs.custom_programs[oldName]
   const icon = programIcons.value[oldName]
-
+  
   delete localSettings.ide_programs.custom_programs[oldName]
   delete customProgramNames.value[oldName]
   delete programIcons.value[oldName]
-
+  
   localSettings.ide_programs.custom_programs[newName] = path
   customProgramNames.value[newName] = newName
   if (icon) {
@@ -953,37 +828,77 @@ const updateCustomProgramName = (oldName: string, newName: string) => {
 
 const updateCustomEngineName = (oldName: string, newName: string) => {
   if (oldName === newName || !newName.trim()) return
-
+  
   const path = localSettings.engine_programs.custom_engines[oldName]
-
+  
   delete localSettings.engine_programs.custom_engines[oldName]
   delete customEngineNames.value[oldName]
-
+  
   localSettings.engine_programs.custom_engines[newName] = path
   customEngineNames.value[newName] = newName
 }
 
 const extractIcon = (programName: string, executablePath: string) => {
   if (!executablePath) return
-
-  // Try to extract icon using file:// protocol for local files
-  // This is a simplified approach - in a real application you might want to use
-  // a more sophisticated icon extraction method
+  
   try {
-    // For now, we'll use a simple file:// URL approach
-    // Note: This might not work in all browsers due to security restrictions
     const iconUrl = `file://${executablePath}`
     programIcons.value[programName] = iconUrl
   } catch (error) {
     console.warn('Failed to extract icon for', programName, error)
-    // Fallback to default icon
     delete programIcons.value[programName]
   }
 }
 
 const handleIconError = (programName: string) => {
-  // Remove the failed icon URL so the fallback icon is shown
   delete programIcons.value[programName]
+}
+
+const insertTag = (tagName: string) => {
+  const tag = `[${tagName}]`
+  localSettings.compression.filename_format += tag
+  updatePreview()
+}
+
+const updatePreview = () => {
+  // Force reactivity update
+}
+
+const showTagTooltip = (event: MouseEvent, tag: FormatTag) => {
+  tooltipContent.value = {
+    title: `[${tag.name}]`,
+    description: tag.description,
+    example: tag.example
+  }
+  tooltipPosition.value = {
+    x: event.clientX,
+    y: event.clientY - 10
+  }
+  tooltipVisible.value = true
+}
+
+const hideTagTooltip = () => {
+  tooltipVisible.value = false
+}
+
+const saveCurrentAsPreset = () => {
+  const presetName = prompt('Enter a name for this preset:')
+  if (presetName && presetName.trim()) {
+    localSettings.compression.custom_presets[presetName.trim()] = localSettings.compression.filename_format
+    addLog(`Preset "${presetName}" saved`)
+  }
+}
+
+const loadPreset = (format: string) => {
+  localSettings.compression.filename_format = format
+  updatePreview()
+}
+
+const deletePreset = (presetName: string) => {
+  if (confirm(`Are you sure you want to delete the preset "${presetName}"?`)) {
+    delete localSettings.compression.custom_presets[presetName]
+    addLog(`Preset "${presetName}" deleted`)
+  }
 }
 
 onMounted(() => {
@@ -996,8 +911,8 @@ onMounted(() => {
   background-color: var(--background-color);
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-lg);
-  width: 56rem;
-  height: 42rem;
+  width: 52rem;
+  height: 40rem;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1111,12 +1026,12 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  padding: var(--spacing-lg);
+  padding: var(--spacing-md);
   overflow-y: auto;
 }
 
 .settings-section {
-  margin-bottom: var(--spacing-md); /* Reduced from var(--spacing-xl) */
+  margin-bottom: var(--spacing-md);
 }
 
 .settings-section:last-child {
@@ -1135,6 +1050,12 @@ onMounted(() => {
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
   margin: 0;
+}
+
+.section-description {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-md);
 }
 
 .add-button {
@@ -1156,316 +1077,53 @@ onMounted(() => {
   border-color: var(--accent-color);
 }
 
-.section-description {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  margin-bottom: var(--spacing-md); /* Reduced from var(--spacing-lg) */
+.settings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  border-top: var(--border-width) solid var(--border-color);
+  padding-top: var(--spacing-md);
 }
 
 .setting-item {
-  margin-bottom: var(--spacing-md); /* Reduced from var(--spacing-lg) */
-  padding: var(--spacing-md);
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  background-color: var(--surface-color);
-}
-
-.setting-item:last-child {
-  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
 }
 
 .setting-header {
-  margin-bottom: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .setting-label {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  cursor: pointer;
-}
-
-.setting-checkbox {
-  width: 1rem;
-  height: 1rem;
-  accent-color: var(--accent-color);
-}
-
-.setting-text {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
+}
+
+.setting-control {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 
 .setting-description {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
-  margin-left: 1.5rem;
+  margin-left: var(--spacing-md);
 }
 
-.format-editor {
-  border-top: var(--border-width) solid var(--border-color);
-  padding-top: var(--spacing-md); /* Reduced from var(--spacing-lg) */
-}
-
-.format-input-section {
-  margin-bottom: var(--spacing-sm); /* Reduced from var(--spacing-md) */
-}
-
-.format-label {
-  display: block;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-primary);
-  margin-bottom: var(--spacing-sm);
-}
-
-.format-input-wrapper {
-  display: flex;
-  gap: var(--spacing-sm);
-}
-
-.format-input {
-  flex: 1;
-  padding: var(--spacing-sm);
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-sm);
-  color: var(--text-primary);
-  background-color: var(--background-color);
-  font-family: var(--font-mono);
-}
-
-.format-input:focus {
-  outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px var(--accent-color-alpha);
-}
-
-.save-preset-button {
-  padding: var(--spacing-sm);
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  background-color: var(--surface-color);
-  cursor: pointer;
-  font-size: var(--font-size-sm);
-  transition: all var(--transition-fast);
-  min-width: 2.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.save-preset-button:hover {
-  background-color: var(--hover-color);
-  border-color: var(--accent-color);
-}
-
-.format-warning {
-  margin-top: var(--spacing-xs);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  background-color: var(--surface-color);
-  border: var(--border-width) solid #f4aa2c;
-  border-radius: var(--border-radius-sm);
-  color: #d69e2e;
-  font-size: var(--font-size-xs);
-  font-style: italic;
-}
-
-.format-preview.compact {
-  margin-bottom: var(--spacing-sm); /* Reduced from var(--spacing-md) */
-  padding: var(--spacing-sm);
-  background-color: var(--surface-color);
-  border-radius: var(--border-radius-sm);
-  border: var(--border-width) solid var(--border-color);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
-.preview-label {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-secondary);
-  flex-shrink: 0;
-}
-
-.preview-output {
-  font-size: var(--font-size-xs);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  background-color: var(--background-color);
-  padding: var(--spacing-xs);
-  border-radius: var(--border-radius-sm);
-  border: var(--border-width) solid var(--border-color);
-  flex-grow: 1;
-}
-
-.format-tags.compact {
-  margin-bottom: var(--spacing-md); /* Reduced from var(--spacing-lg) */
-}
-
-.tags-title {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-primary);
-  margin: 0 0 var(--spacing-sm) 0;
-}
-
-.tags-compact-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-sm);
-}
-
-.tag-category-compact {
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  padding: var(--spacing-sm);
-  background-color: var(--surface-color);
-}
-
-.category-title-compact {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-primary);
-  margin: 0 0 var(--spacing-xs) 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.tag-list-compact {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs);
-}
-
-.tag-button-compact {
-  padding: var(--spacing-xs);
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  background-color: var(--background-color);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  font-size: var(--font-size-xs);
-  color: var(--accent-color);
-  font-family: var(--font-mono);
-  font-weight: var(--font-weight-medium);
-}
-
-.tag-button-compact:hover {
-  background-color: var(--hover-color);
-  border-color: var(--accent-color);
-}
-
-.format-presets {
-  border-top: var(--border-width) solid var(--border-color);
-  padding-top: var(--spacing-md); /* Reduced from var(--spacing-lg) */
-}
-
-.presets-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--spacing-sm);
-}
-
-.presets-title {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.preset-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-  max-height: 8rem;
-  overflow-y: auto;
-}
-
-.preset-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  background-color: var(--surface-color);
-  transition: all var(--transition-fast);
-}
-
-.preset-item:hover {
-  background-color: var(--hover-color);
-}
-
-.preset-info {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-  flex-grow: 1;
-  min-width: 0;
-}
-
-.preset-name {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-primary);
-}
-
-.preset-format {
-  font-size: var(--font-size-xs);
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.preset-actions {
-  display: flex;
-  gap: var(--spacing-xs);
-  flex-shrink: 0;
-}
-
-.preset-action-btn {
-  padding: var(--spacing-xs);
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  background-color: var(--background-color);
-  cursor: pointer;
-  font-size: var(--font-size-xs);
-  transition: all var(--transition-fast);
-  width: 1.5rem;
-  height: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.apply-btn:hover {
-  background-color: #e6fffa;
-  border-color: #319795;
-}
-
-.delete-btn:hover {
-  background-color: #fed7d7;
-  border-color: #e53e3e;
-}
-
-.custom-programs {
-  border-top: var(--border-width) solid var(--border-color);
-  padding-top: var(--spacing-md); /* Reduced from var(--spacing-lg) */
-}
-
-.custom-program-list {
+.program-list {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
+  border-top: var(--border-width) solid var(--border-color);
+  padding-top: var(--spacing-md);
 }
 
-.custom-program-item {
+.program-item {
   display: flex;
   gap: var(--spacing-sm);
   align-items: center;
@@ -1493,7 +1151,7 @@ onMounted(() => {
   font-size: var(--font-size-lg);
 }
 
-.custom-name-input {
+.program-name-input {
   flex: 0 0 8rem;
   padding: var(--spacing-sm);
   border: var(--border-width) solid var(--border-color);
@@ -1503,7 +1161,7 @@ onMounted(() => {
   background-color: var(--background-color);
 }
 
-.custom-path-input {
+.program-path-input {
   flex: 1;
   padding: var(--spacing-sm);
   border: var(--border-width) solid var(--border-color);
@@ -1541,9 +1199,9 @@ onMounted(() => {
 .cleaning-defaults-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-xl);
+  gap: var(--spacing-lg);
   border-top: var(--border-width) solid var(--border-color);
-  padding-top: var(--spacing-md); /* Reduced from var(--spacing-lg) */
+  padding-top: var(--spacing-md);
 }
 
 .defaults-column {
@@ -1584,6 +1242,216 @@ onMounted(() => {
   cursor: pointer;
   line-height: var(--line-height-normal);
   flex-grow: 1;
+}
+
+.format-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  border-top: var(--border-width) solid var(--border-color);
+  padding-top: var(--spacing-md);
+}
+
+.format-input-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.format-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.format-input {
+  padding: var(--spacing-sm);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background-color: var(--background-color);
+  font-family: var(--font-mono);
+}
+
+.format-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-color-alpha);
+}
+
+.format-warning {
+  font-size: var(--font-size-sm);
+  color: #d69e2e;
+  font-style: italic;
+  padding: var(--spacing-xs);
+  background-color: rgba(214, 158, 46, 0.1);
+  border-radius: var(--border-radius-sm);
+  border: var(--border-width) solid #d69e2e;
+}
+
+.format-preview-small {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs);
+  background-color: var(--surface-color);
+  border-radius: var(--border-radius-sm);
+  border: var(--border-width) solid var(--border-color);
+  font-size: var(--font-size-xs);
+}
+
+.preview-label {
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
+  flex-shrink: 0;
+}
+
+.preview-text {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  word-break: break-all;
+  flex-grow: 1;
+}
+
+.format-tags-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.tags-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.format-tags-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  gap: var(--spacing-xs);
+}
+
+.format-tag-button {
+  padding: var(--spacing-xs);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--surface-color);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+  transition: all var(--transition-fast);
+  font-family: var(--font-mono);
+  text-align: center;
+}
+
+.format-tag-button:hover {
+  background-color: var(--hover-color);
+  border-color: var(--accent-color);
+}
+
+.presets-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.presets-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.presets-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.save-preset-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--surface-color);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+  transition: all var(--transition-fast);
+}
+
+.save-preset-button:hover {
+  background-color: var(--hover-color);
+  border-color: var(--accent-color);
+}
+
+.presets-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  max-height: 8rem;
+  overflow-y: auto;
+}
+
+.preset-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.preset-button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--surface-color);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+
+.preset-button:hover {
+  background-color: var(--hover-color);
+  border-color: var(--accent-color);
+}
+
+.preset-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.preset-format {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.delete-preset-button {
+  padding: var(--spacing-xs);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--surface-color);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
+  min-width: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-preset-button:hover {
+  background-color: #fed7d7;
+  border-color: #e53e3e;
 }
 
 .popup-actions {
@@ -1640,130 +1508,29 @@ onMounted(() => {
   font-size: var(--font-size-sm);
 }
 
-/* Preset Dialog */
-.preset-dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-}
-
-.preset-dialog {
-  background-color: var(--background-color);
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-lg);
-  padding: var(--spacing-lg);
-  min-width: 20rem;
-  box-shadow: var(--shadow-md);
-}
-
-.dialog-title {
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-  margin: 0 0 var(--spacing-md) 0;
-}
-
-.dialog-content {
-  margin-bottom: var(--spacing-lg);
-}
-
-.dialog-label {
-  display: block;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-primary);
-  margin-bottom: var(--spacing-sm);
-}
-
-.dialog-input {
-  width: 100%;
-  padding: var(--spacing-sm);
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-sm);
-  color: var(--text-primary);
-  background-color: var(--background-color);
-}
-
-.dialog-input:focus {
-  outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px var(--accent-color-alpha);
-}
-
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--spacing-sm);
-}
-
-.dialog-button {
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  border: var(--border-width) solid;
-}
-
-.dialog-button.cancel {
-  background-color: transparent;
-  border-color: var(--border-color);
-  color: var(--text-secondary);
-}
-
-.dialog-button.cancel:hover {
-  background-color: var(--hover-color);
-  color: var(--text-primary);
-}
-
-.dialog-button.save {
-  background-color: var(--accent-color);
-  border-color: var(--accent-color);
-  color: white;
-}
-
-.dialog-button.save:hover:not(:disabled) {
-  background-color: #2c5aa0;
-  border-color: #2c5aa0;
-}
-
-.dialog-button.save:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Custom Tooltip */
 .custom-tooltip {
   background-color: var(--text-primary);
   color: var(--background-color);
   padding: var(--spacing-sm);
   border-radius: var(--border-radius-sm);
   font-size: var(--font-size-xs);
-  white-space: normal;
   box-shadow: var(--shadow-md);
-  line-height: var(--line-height-normal);
-  word-wrap: break-word;
-  pointer-events: none;
   max-width: 20rem;
+  pointer-events: none;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .tags-compact-grid {
-    grid-template-columns: 1fr;
-  }
+.tooltip-title {
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--spacing-xs);
+  font-family: var(--font-mono);
+}
 
-  .cleaning-defaults-grid {
-    grid-template-columns: 1fr;
-  }
+.tooltip-description {
+  margin-bottom: var(--spacing-xs);
+}
+
+.tooltip-example {
+  font-family: var(--font-mono);
+  opacity: 0.8;
 }
 </style>

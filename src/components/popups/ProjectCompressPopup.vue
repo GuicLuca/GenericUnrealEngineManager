@@ -215,7 +215,7 @@
             @change="updatePreview"
           >
             <option 
-              v-for="(format, name) in availableFormats"
+              v-for="(format, name) in sortedAvailableFormats"
               :key="name"
               :value="format"
             >
@@ -336,6 +336,13 @@ const cleaningSelection = reactive<CleaningSelection>({
 
 const canCompress = computed(() => {
   return destinationPath.value.trim() !== '' && selectedAlgorithm.value !== null
+})
+
+// Sort available formats alphabetically by name
+const sortedAvailableFormats = computed(() => {
+  const entries = Object.entries(availableFormats.value)
+  entries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
+  return Object.fromEntries(entries)
 })
 
 const outputFilename = computed(() => {
