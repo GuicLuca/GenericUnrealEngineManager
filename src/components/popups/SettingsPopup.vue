@@ -29,10 +29,17 @@
 
       <!-- Tab Content Container with Fixed Height -->
       <div class="tab-content-container">
-        <!-- IDE Programs Tab -->
-        <div v-show="activeTab === 'ide'" class="tab-panel">
+        <!-- Programs Tab -->
+        <div v-show="activeTab === 'programs'" class="tab-panel">
+          <!-- IDE Programs Subsection -->
           <div class="settings-section">
-            <h3 class="section-title">IDE Programs</h3>
+            <div class="section-header">
+              <h3 class="section-title">IDE Programs</h3>
+              <button class="add-button" @click="addCustomIdeProgram">
+                <span class="button-icon">➕</span>
+                Add IDE Program
+              </button>
+            </div>
             <div class="section-description">
               Configure your preferred IDEs for opening C++ projects. Add any IDE or code editor you want to use.
             </div>
@@ -84,10 +91,61 @@
                   </button>
                 </div>
               </div>
-              <button class="add-custom-button" @click="addCustomProgram">
+            </div>
+          </div>
+
+          <!-- Engines Subsection -->
+          <div class="settings-section">
+            <div class="section-header">
+              <h3 class="section-title">Engines</h3>
+              <button class="add-button" @click="addCustomEngine">
                 <span class="button-icon">➕</span>
-                Add IDE Program
+                Add Engine
               </button>
+            </div>
+            <div class="section-description">
+              Configure custom Unreal Engine installations. The path must point to the engine folder containing Engine, Samples, and Templates directories.
+            </div>
+
+            <div class="custom-programs">
+              <div class="custom-program-list">
+                <div 
+                  v-for="(_path, name) in localSettings.engine_programs.custom_engines"
+                  :key="name"
+                  class="custom-program-item"
+                >
+                  <div class="program-icon">
+                    <span class="fallback-icon">🎮</span>
+                  </div>
+                  <input
+                    v-model="customEngineNames[name]"
+                    type="text"
+                    class="custom-name-input"
+                    placeholder="Engine name..."
+                    @blur="updateCustomEngineName(name, customEngineNames[name])"
+                  />
+                  <input
+                    v-model="localSettings.engine_programs.custom_engines[name]"
+                    type="text"
+                    class="custom-path-input"
+                    placeholder="Path to engine folder..."
+                  />
+                  <button
+                    class="browse-button"
+                    @click="browseForCustomEngine(name)"
+                    title="Browse for engine folder"
+                  >
+                    📂
+                  </button>
+                  <button
+                    class="remove-button"
+                    @click="removeCustomEngine(name)"
+                    title="Remove engine"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -260,6 +318,9 @@ interface AppSettings {
   ide_programs: {
     custom_programs: Record<string, string>
   }
+  engine_programs: {
+    custom_engines: Record<string, string>
+  }
   cleaning_defaults: {
     ide_files: boolean
     binaries: boolean
@@ -286,19 +347,23 @@ const emit = defineEmits<{
 
 const { addLog } = useLogStore()
 
-const activeTab = ref('ide')
+const activeTab = ref('programs')
 const isSaving = ref(false)
 const customProgramNames = ref<Record<string, string>>({})
+const customEngineNames = ref<Record<string, string>>({})
 const programIcons = ref<Record<string, string>>({})
 
 const tabs: Tab[] = [
-  { id: 'ide', title: 'IDE Programs', icon: '💻' },
+  { id: 'programs', title: 'Programs', icon: '💻' },
   { id: 'cleaning', title: 'Cleaning Defaults', icon: '🧹' }
 ]
 
 const localSettings = reactive<AppSettings>({
   ide_programs: {
     custom_programs: {}
+  },
+  engine_programs: {
+    custom_engines: {}
   },
   cleaning_defaults: {
     ide_files: true,
@@ -320,12 +385,18 @@ const loadSettings = async () => {
     
     // Update local settings
     localSettings.ide_programs.custom_programs = { ...settings.ide_programs.custom_programs }
+    localSettings.engine_programs.custom_engines = { ...(settings.engine_programs?.custom_engines || {}) }
     localSettings.cleaning_defaults = { ...settings.cleaning_defaults }
     
     // Initialize custom program names
     Object.keys(localSettings.ide_programs.custom_programs).forEach(name => {
       customProgramNames.value[name] = name
       extractIcon(name, localSettings.ide_programs.custom_programs[name])
+    })
+    
+    // Initialize custom engine names
+    Object.keys(localSettings.engine_programs.custom_engines).forEach(name => {
+      customEngineNames.value[name] = name
     })
     
   } catch (error) {
@@ -342,6 +413,9 @@ const saveSettings = async () => {
     const settingsToSave: AppSettings = {
       ide_programs: {
         custom_programs: { ...localSettings.ide_programs.custom_programs }
+      },
+      engine_programs: {
+        custom_engines: { ...localSettings.engine_programs.custom_engines }
       },
       cleaning_defaults: { ...localSettings.cleaning_defaults }
     }
@@ -380,16 +454,44 @@ const browseForCustomIde = async (programName: string) => {
   }
 }
 
-const addCustomProgram = () => {
+const browseForCustomEngine = async (engineName: string) => {
+  try {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: `Select ${engineName} engine folder`
+    })
+    
+    if (selected && typeof selected === 'string') {
+      localSettings.engine_programs.custom_engines[engineName] = selected
+    }
+  } catch (error) {
+    console.error('Failed to browse for custom engine:', error)
+    addLog('Failed to browse for custom engine', 'error')
+  }
+}
+
+const addCustomIdeProgram = () => {
   const newName = `IDE Program ${Object.keys(localSettings.ide_programs.custom_programs).length + 1}`
   localSettings.ide_programs.custom_programs[newName] = ''
   customProgramNames.value[newName] = newName
+}
+
+const addCustomEngine = () => {
+  const newName = `Custom Engine ${Object.keys(localSettings.engine_programs.custom_engines).length + 1}`
+  localSettings.engine_programs.custom_engines[newName] = ''
+  customEngineNames.value[newName] = newName
 }
 
 const removeCustomProgram = (programName: string) => {
   delete localSettings.ide_programs.custom_programs[programName]
   delete customProgramNames.value[programName]
   delete programIcons.value[programName]
+}
+
+const removeCustomEngine = (engineName: string) => {
+  delete localSettings.engine_programs.custom_engines[engineName]
+  delete customEngineNames.value[engineName]
 }
 
 const updateCustomProgramName = (oldName: string, newName: string) => {
@@ -407,6 +509,18 @@ const updateCustomProgramName = (oldName: string, newName: string) => {
   if (icon) {
     programIcons.value[newName] = icon
   }
+}
+
+const updateCustomEngineName = (oldName: string, newName: string) => {
+  if (oldName === newName || !newName.trim()) return
+  
+  const path = localSettings.engine_programs.custom_engines[oldName]
+  
+  delete localSettings.engine_programs.custom_engines[oldName]
+  delete customEngineNames.value[oldName]
+  
+  localSettings.engine_programs.custom_engines[newName] = path
+  customEngineNames.value[newName] = newName
 }
 
 const extractIcon = (programName: string, executablePath: string) => {
@@ -570,11 +684,37 @@ onMounted(() => {
   margin-bottom: 0;
 }
 
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-sm);
+}
+
 .section-title {
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
-  margin: 0 0 var(--spacing-sm) 0;
+  margin: 0;
+}
+
+.add-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--surface-color);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+  transition: all var(--transition-fast);
+}
+
+.add-button:hover {
+  background-color: var(--hover-color);
+  border-color: var(--accent-color);
 }
 
 .section-description {
@@ -592,7 +732,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-md);
 }
 
 .custom-program-item {
@@ -666,25 +805,6 @@ onMounted(() => {
 .remove-button:hover {
   background-color: #fed7d7;
   border-color: #e53e3e;
-}
-
-.add-custom-button {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  background-color: var(--surface-color);
-  cursor: pointer;
-  font-size: var(--font-size-sm);
-  color: var(--text-primary);
-  transition: all var(--transition-fast);
-}
-
-.add-custom-button:hover {
-  background-color: var(--hover-color);
-  border-color: var(--accent-color);
 }
 
 .cleaning-defaults-grid {
