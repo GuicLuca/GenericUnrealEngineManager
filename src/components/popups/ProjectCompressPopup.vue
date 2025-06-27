@@ -212,6 +212,7 @@
             v-model="selectedFormat"
             class="format-dropdown"
             :disabled="isCompressing"
+            @change="updatePreview"
           >
             <option 
               v-for="(format, name) in availableFormats"
@@ -461,6 +462,11 @@ const loadAvailableFormats = async () => {
       'Simple': '[Project]_[Type]'
     }
   }
+}
+
+const updatePreview = () => {
+  // Force reactivity update for the computed property
+  // The computed property will automatically recalculate
 }
 
 const selectDestination = async () => {

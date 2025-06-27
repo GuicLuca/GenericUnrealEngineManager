@@ -241,45 +241,48 @@
                   <div class="tag-category-compact">
                     <h5 class="category-title-compact">Project</h5>
                     <div class="tag-list-compact">
-                      <button 
+                      <div 
                         v-for="tag in projectTags" 
                         :key="tag.name"
                         class="tag-button-compact"
                         @click="insertTag(tag.name)"
-                        :title="tag.description"
+                        @mouseenter="showTooltip($event, tag.description)"
+                        @mouseleave="hideTooltip"
                       >
                         [{{ tag.name }}]
-                      </button>
+                      </div>
                     </div>
                   </div>
 
                   <div class="tag-category-compact">
                     <h5 class="category-title-compact">Date & Time</h5>
                     <div class="tag-list-compact">
-                      <button 
+                      <div 
                         v-for="tag in dateTags" 
                         :key="tag.name"
                         class="tag-button-compact"
                         @click="insertTag(tag.name)"
-                        :title="tag.description"
+                        @mouseenter="showTooltip($event, tag.description)"
+                        @mouseleave="hideTooltip"
                       >
                         [{{ tag.name }}]
-                      </button>
+                      </div>
                     </div>
                   </div>
 
                   <div class="tag-category-compact">
                     <h5 class="category-title-compact">System</h5>
                     <div class="tag-list-compact">
-                      <button 
+                      <div 
                         v-for="tag in systemTags" 
                         :key="tag.name"
                         class="tag-button-compact"
                         @click="insertTag(tag.name)"
-                        :title="tag.description"
+                        @mouseenter="showTooltip($event, tag.description)"
+                        @mouseleave="hideTooltip"
                       >
                         [{{ tag.name }}]
-                      </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -509,6 +512,17 @@
         </div>
       </div>
     </div>
+
+    <!-- Custom Tooltip -->
+    <Teleport to="body">
+      <div 
+        v-if="tooltip.show" 
+        class="custom-tooltip" 
+        :style="tooltipStyle"
+      >
+        {{ tooltip.content }}
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -574,6 +588,14 @@ const programIcons = ref<Record<string, string>>({})
 const showPresetDialog = ref(false)
 const newPresetName = ref('')
 const presetNameInput = ref<HTMLInputElement>()
+
+// Tooltip state
+const tooltip = reactive({
+  show: false,
+  content: '',
+  x: 0,
+  y: 0
+})
 
 const tabs: Tab[] = [
   { id: 'general', title: 'General', icon: '🏠' },
@@ -699,9 +721,31 @@ const formatPreview = computed(() => {
   return preview
 })
 
+const tooltipStyle = computed(() => ({
+  position: 'fixed' as const,
+  left: `${tooltip.x}px`,
+  top: `${tooltip.y}px`,
+  zIndex: 10001
+}))
+
 const isDefaultPreset = (name: string): boolean => {
-  const defaultPresets = ['Default', 'Default Extended', 'Simple', 'Detailed', 'Archive Style', 'User Specific']
+  const defaultPresets = [
+    'Default', 'Default Extended', 'Simple', 'Detailed', 'Archive Style', 
+    'User Specific', 'Timestamp', 'Size Aware', 'Engine Specific', 
+    'Professional', 'Minimal', 'Verbose'
+  ]
   return defaultPresets.includes(name)
+}
+
+const showTooltip = (event: MouseEvent, content: string) => {
+  tooltip.content = content
+  tooltip.x = event.clientX + 10
+  tooltip.y = event.clientY - 30
+  tooltip.show = true
+}
+
+const hideTooltip = () => {
+  tooltip.show = false
 }
 
 const loadSettings = async () => {
@@ -1075,7 +1119,7 @@ onMounted(() => {
 }
 
 .settings-section {
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: var(--spacing-md); /* Reduced from var(--spacing-xl) */
 }
 
 .settings-section:last-child {
@@ -1118,11 +1162,11 @@ onMounted(() => {
 .section-description {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-md); /* Reduced from var(--spacing-lg) */
 }
 
 .setting-item {
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-md); /* Reduced from var(--spacing-lg) */
   padding: var(--spacing-md);
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-sm);
@@ -1164,11 +1208,11 @@ onMounted(() => {
 
 .format-editor {
   border-top: var(--border-width) solid var(--border-color);
-  padding-top: var(--spacing-lg);
+  padding-top: var(--spacing-md); /* Reduced from var(--spacing-lg) */
 }
 
 .format-input-section {
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-sm); /* Reduced from var(--spacing-md) */
 }
 
 .format-label {
@@ -1232,7 +1276,7 @@ onMounted(() => {
 }
 
 .format-preview.compact {
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-sm); /* Reduced from var(--spacing-md) */
   padding: var(--spacing-sm);
   background-color: var(--surface-color);
   border-radius: var(--border-radius-sm);
@@ -1261,7 +1305,7 @@ onMounted(() => {
 }
 
 .format-tags.compact {
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-md); /* Reduced from var(--spacing-lg) */
 }
 
 .tags-title {
@@ -1319,7 +1363,7 @@ onMounted(() => {
 
 .format-presets {
   border-top: var(--border-width) solid var(--border-color);
-  padding-top: var(--spacing-lg);
+  padding-top: var(--spacing-md); /* Reduced from var(--spacing-lg) */
 }
 
 .presets-header {
@@ -1415,7 +1459,7 @@ onMounted(() => {
 
 .custom-programs {
   border-top: var(--border-width) solid var(--border-color);
-  padding-top: var(--spacing-lg);
+  padding-top: var(--spacing-md); /* Reduced from var(--spacing-lg) */
 }
 
 .custom-program-list {
@@ -1502,7 +1546,7 @@ onMounted(() => {
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-xl);
   border-top: var(--border-width) solid var(--border-color);
-  padding-top: var(--spacing-lg);
+  padding-top: var(--spacing-md); /* Reduced from var(--spacing-lg) */
 }
 
 .defaults-column {
@@ -1698,6 +1742,21 @@ onMounted(() => {
 .dialog-button.save:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Custom Tooltip */
+.custom-tooltip {
+  background-color: var(--text-primary);
+  color: var(--background-color);
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-xs);
+  white-space: normal;
+  box-shadow: var(--shadow-md);
+  line-height: var(--line-height-normal);
+  word-wrap: break-word;
+  pointer-events: none;
+  max-width: 20rem;
 }
 
 /* Responsive adjustments */
