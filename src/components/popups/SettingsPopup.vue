@@ -260,7 +260,7 @@
 
             <div class="format-editor">
               <div class="format-input-section">
-                <label class="format-label">Filename Format Template:</label>
+                <label class="format-label">Selected Filename Format Template:</label>
                 <div class="format-input-wrapper">
                   <input
                       v-model="localSettings.compression.filename_format"
@@ -296,25 +296,25 @@
                   <h4 class="presets-title">Saved Presets</h4>
                 </div>
                   <div
-                      v-for="(format, name) in localSettings.compression.custom_presets"
-                      :key="name"
+                      v-for="preset in sortedPresets"
+                      :key="preset.name"
                       class="preset-item"
                   >
                     <div class="preset-info">
-                      <span class="preset-name">{{ name }}</span>
-                      <span class="preset-format">{{ format }}</span>
+                      <span class="preset-name">{{ preset.name }}</span>
+                      <span class="preset-format">{{ preset.format }}</span>
                     </div>
                     <div class="preset-actions">
                       <button
                           class="preset-action-btn apply-btn"
-                          @click="applyPreset(format)"
-                          title="Copy this preset in the format field"
+                          @click="applyPreset(preset.format)"
+                          title="Select this preset as default"
                       >
-                        📋
+                        ✅
                       </button>
                       <button
                           class="preset-action-btn delete-btn"
-                          @click="deletePreset(name)"
+                          @click="deletePreset(preset.name)"
                           title="Delete this preset"
                       >
                         🗑️
@@ -526,7 +526,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, reactive, onMounted, computed, nextTick} from 'vue'
+import {ref, reactive, onMounted, computed, nextTick, onUnmounted} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {open} from '@tauri-apps/plugin-dialog'
 import {useLogStore} from '../../stores/logStore'
@@ -727,15 +727,6 @@ const tooltipStyle = computed(() => ({
   zIndex: 10001
 }))
 
-const isDefaultPreset = (name: string): boolean => {
-  const defaultPresets = [
-    'Default', 'Default Extended', 'Simple', 'Detailed', 'Archive Style',
-    'User Specific', 'Timestamp', 'Size Aware', 'Engine Specific',
-    'Professional', 'Minimal', 'Verbose'
-  ]
-  return defaultPresets.includes(name)
-}
-
 const showTooltip = (event: MouseEvent, content: string) => {
   tooltip.content = content
   tooltip.x = event.clientX + 10
@@ -840,6 +831,12 @@ const insertTag = (tagName: string) => {
 const applyPreset = (format: string) => {
   localSettings.compression.filename_format = format
 }
+
+const sortedPresets = computed(() => {
+  return Object.entries(localSettings.compression.custom_presets)
+      .sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
+      .map(([name, format]) => ({ name, format }));
+});
 
 const showSavePresetDialog = () => {
   newPresetName.value = ''
@@ -988,6 +985,14 @@ const handleIconError = (programName: string) => {
 
 onMounted(() => {
   loadSettings()
+})
+
+onUnmounted(() => {
+  // Save settings on unmount
+  saveSettings().catch(error => {
+    console.error('Error saving settings on unmount:', error)
+    addLog('Error saving settings on unmount', 'error')
+  })
 })
 </script>
 
