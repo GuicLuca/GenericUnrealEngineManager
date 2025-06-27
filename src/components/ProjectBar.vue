@@ -9,7 +9,7 @@
       >
         <option value="">Select Project</option>
         <option 
-          v-for="project in sortedProjects" 
+          v-for="project in projects" 
           :key="project.path" 
           :value="project.path"
         >
@@ -46,7 +46,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useProjectStore } from '../stores/projectStore'
 import { useLogStore } from '../stores/logStore'
 import { usePopup } from '../composables/usePopup'
@@ -55,11 +54,6 @@ import FileExplorerButton from './FileExplorerButton.vue'
 const { selectedProject, projects, setSelectedProject, findProjectByPath } = useProjectStore()
 const { addLog } = useLogStore()
 const { showPopup } = usePopup()
-
-// Sort projects alphabetically by name
-const sortedProjects = computed(() => {
-  return [...projects.value].sort((a, b) => a.name.localeCompare(b.name))
-})
 
 const handleProjectChange = (event: Event) => {
   const target = event.target as HTMLSelectElement
