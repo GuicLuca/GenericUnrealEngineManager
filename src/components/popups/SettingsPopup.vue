@@ -15,12 +15,12 @@
     <div class="popup-content">
       <!-- Tabs Navigation -->
       <div class="tabs-nav">
-        <button 
-          v-for="tab in tabs" 
-          :key="tab.id"
-          class="tab-button"
-          :class="{ active: activeTab === tab.id }"
-          @click="activeTab = tab.id"
+        <button
+            v-for="tab in tabs"
+            :key="tab.id"
+            class="tab-button"
+            :class="{ active: activeTab === tab.id }"
+            @click="activeTab = tab.id"
         >
           <span class="tab-icon">{{ tab.icon }}</span>
           <span class="tab-title">{{ tab.title }}</span>
@@ -41,10 +41,10 @@
               <div class="setting-header">
                 <label class="setting-label">
                   <input
-                    v-model="localSettings.general.autostart_enabled"
-                    type="checkbox"
-                    class="setting-checkbox"
-                    @change="handleAutostartChange"
+                      v-model="localSettings.general.autostart_enabled"
+                      type="checkbox"
+                      class="setting-checkbox"
+                      @change="handleAutostartChange"
                   />
                   <span class="setting-text">Start automatically when I log in</span>
                 </label>
@@ -58,10 +58,10 @@
               <div class="setting-header">
                 <label class="setting-label">
                   <input
-                    v-model="localSettings.general.show_welcome_popup"
-                    type="checkbox"
-                    class="setting-checkbox"
-                    @change="handleWelcomePopupChange"
+                      v-model="localSettings.general.show_welcome_popup"
+                      type="checkbox"
+                      class="setting-checkbox"
+                      @change="handleWelcomePopupChange"
                   />
                   <span class="setting-text">Show welcome message on startup</span>
                 </label>
@@ -90,46 +90,46 @@
 
             <div class="custom-programs">
               <div class="custom-program-list">
-                <div 
-                  v-for="(_path, name) in localSettings.ide_programs.custom_programs"
-                  :key="name"
-                  class="custom-program-item"
+                <div
+                    v-for="(_path, name) in localSettings.ide_programs.custom_programs"
+                    :key="name"
+                    class="custom-program-item"
                 >
                   <div class="program-icon">
-                    <img 
-                      v-if="programIcons[name]" 
-                      :src="programIcons[name]" 
-                      :alt="name"
-                      class="icon-image"
-                      @error="handleIconError(name)"
+                    <img
+                        v-if="programIcons[name]"
+                        :src="programIcons[name]"
+                        :alt="name"
+                        class="icon-image"
+                        @error="handleIconError(name)"
                     />
                     <span v-else class="fallback-icon">⚙️</span>
                   </div>
                   <input
-                    v-model="customProgramNames[name]"
-                    type="text"
-                    class="custom-name-input"
-                    placeholder="Program name..."
-                    @blur="updateCustomProgramName(name, customProgramNames[name])"
+                      v-model="customProgramNames[name]"
+                      type="text"
+                      class="custom-name-input"
+                      placeholder="Program name..."
+                      @blur="updateCustomProgramName(name, customProgramNames[name])"
                   />
                   <input
-                    v-model="localSettings.ide_programs.custom_programs[name]"
-                    type="text"
-                    class="custom-path-input"
-                    placeholder="Path to executable..."
-                    @change="extractIcon(name, localSettings.ide_programs.custom_programs[name])"
+                      v-model="localSettings.ide_programs.custom_programs[name]"
+                      type="text"
+                      class="custom-path-input"
+                      placeholder="Path to executable..."
+                      @change="extractIcon(name, localSettings.ide_programs.custom_programs[name])"
                   />
                   <button
-                    class="browse-button"
-                    @click="browseForCustomIde(name)"
-                    title="Browse for executable"
+                      class="browse-button"
+                      @click="browseForCustomIde(name)"
+                      title="Browse for executable"
                   >
                     📂
                   </button>
                   <button
-                    class="remove-button"
-                    @click="removeCustomProgram(name)"
-                    title="Remove program"
+                      class="remove-button"
+                      @click="removeCustomProgram(name)"
+                      title="Remove program"
                   >
                     🗑️
                   </button>
@@ -148,43 +148,44 @@
               </button>
             </div>
             <div class="section-description">
-              Configure custom Unreal Engine installations. The path must point to the engine folder containing Engine, Samples, and Templates directories.
+              Configure custom Unreal Engine installations. The path must point to the engine folder containing Engine,
+              Samples, and Templates directories.
             </div>
 
             <div class="custom-programs">
               <div class="custom-program-list">
-                <div 
-                  v-for="(_path, name) in localSettings.engine_programs.custom_engines"
-                  :key="name"
-                  class="custom-program-item"
+                <div
+                    v-for="(_path, name) in localSettings.engine_programs.custom_engines"
+                    :key="name"
+                    class="custom-program-item"
                 >
                   <div class="program-icon">
                     <span class="fallback-icon">🎮</span>
                   </div>
                   <input
-                    v-model="customEngineNames[name]"
-                    type="text"
-                    class="custom-name-input"
-                    placeholder="Engine name..."
-                    @blur="updateCustomEngineName(name, customEngineNames[name])"
+                      v-model="customEngineNames[name]"
+                      type="text"
+                      class="custom-name-input"
+                      placeholder="Engine name..."
+                      @blur="updateCustomEngineName(name, customEngineNames[name])"
                   />
                   <input
-                    v-model="localSettings.engine_programs.custom_engines[name]"
-                    type="text"
-                    class="custom-path-input"
-                    placeholder="Path to engine folder..."
+                      v-model="localSettings.engine_programs.custom_engines[name]"
+                      type="text"
+                      class="custom-path-input"
+                      placeholder="Path to engine folder..."
                   />
                   <button
-                    class="browse-button"
-                    @click="browseForCustomEngine(name)"
-                    title="Browse for engine folder"
+                      class="browse-button"
+                      @click="browseForCustomEngine(name)"
+                      title="Browse for engine folder"
                   >
                     📂
                   </button>
                   <button
-                    class="remove-button"
-                    @click="removeCustomEngine(name)"
-                    title="Remove engine"
+                      class="remove-button"
+                      @click="removeCustomEngine(name)"
+                      title="Remove engine"
                   >
                     🗑️
                   </button>
@@ -199,7 +200,62 @@
           <div class="settings-section">
             <h3 class="section-title">Filename Format</h3>
             <div class="section-description">
-              Customize how compressed archive filenames are generated. Use formatting tags in square brackets to insert dynamic values.
+              Customize how compressed archive filenames are generated. Use formatting tags in square brackets to insert
+              dynamic values.
+            </div>
+
+            <!-- Compact Format Tags -->
+            <div class="format-tags compact">
+              <h4 class="tags-title">Available Format Tags</h4>
+              <div class="tags-compact-grid">
+                <div class="tag-category-compact">
+                  <h5 class="category-title-compact">Project</h5>
+                  <div class="tag-list-compact">
+                    <div
+                        v-for="tag in projectTags"
+                        :key="tag.name"
+                        class="tag-button-compact"
+                        @click="insertTag(tag.name)"
+                        @mouseenter="showTooltip($event, tag.description)"
+                        @mouseleave="hideTooltip"
+                    >
+                      [{{ tag.name }}]
+                    </div>
+                  </div>
+                </div>
+
+                <div class="tag-category-compact">
+                  <h5 class="category-title-compact">Date & Time</h5>
+                  <div class="tag-list-compact">
+                    <div
+                        v-for="tag in dateTags"
+                        :key="tag.name"
+                        class="tag-button-compact"
+                        @click="insertTag(tag.name)"
+                        @mouseenter="showTooltip($event, tag.description)"
+                        @mouseleave="hideTooltip"
+                    >
+                      [{{ tag.name }}]
+                    </div>
+                  </div>
+                </div>
+
+                <div class="tag-category-compact">
+                  <h5 class="category-title-compact">System</h5>
+                  <div class="tag-list-compact">
+                    <div
+                        v-for="tag in systemTags"
+                        :key="tag.name"
+                        class="tag-button-compact"
+                        @click="insertTag(tag.name)"
+                        @mouseenter="showTooltip($event, tag.description)"
+                        @mouseleave="hideTooltip"
+                    >
+                      [{{ tag.name }}]
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="format-editor">
@@ -207,21 +263,21 @@
                 <label class="format-label">Filename Format Template:</label>
                 <div class="format-input-wrapper">
                   <input
-                    v-model="localSettings.compression.filename_format"
-                    type="text"
-                    class="format-input"
-                    placeholder="[Project]_[YYYY][MM][DD][HH][mm]"
-                    @input="updatePreview"
+                      v-model="localSettings.compression.filename_format"
+                      type="text"
+                      class="format-input"
+                      placeholder="[Project]_[YYYY][MM][DD][HH][mm]"
+                      @input="updatePreview"
                   />
                   <button
-                    class="save-preset-button"
-                    @click="showSavePresetDialog"
-                    title="Save current format as preset"
+                      class="save-preset-button"
+                      @click="showSavePresetDialog"
+                      title="Save current format as preset"
                   >
                     💾
                   </button>
                 </div>
-                
+
                 <!-- Warning for invalid tags -->
                 <div v-if="invalidTags.length > 0" class="format-warning">
                   ⚠️ Unknown tags detected: {{ invalidTags.join(', ') }}
@@ -234,70 +290,15 @@
                 <span class="preview-output">{{ formatPreview }}</span>
               </div>
 
-              <!-- Compact Format Tags -->
-              <div class="format-tags compact">
-                <h4 class="tags-title">Available Format Tags</h4>
-                <div class="tags-compact-grid">
-                  <div class="tag-category-compact">
-                    <h5 class="category-title-compact">Project</h5>
-                    <div class="tag-list-compact">
-                      <div 
-                        v-for="tag in projectTags" 
-                        :key="tag.name"
-                        class="tag-button-compact"
-                        @click="insertTag(tag.name)"
-                        @mouseenter="showTooltip($event, tag.description)"
-                        @mouseleave="hideTooltip"
-                      >
-                        [{{ tag.name }}]
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="tag-category-compact">
-                    <h5 class="category-title-compact">Date & Time</h5>
-                    <div class="tag-list-compact">
-                      <div 
-                        v-for="tag in dateTags" 
-                        :key="tag.name"
-                        class="tag-button-compact"
-                        @click="insertTag(tag.name)"
-                        @mouseenter="showTooltip($event, tag.description)"
-                        @mouseleave="hideTooltip"
-                      >
-                        [{{ tag.name }}]
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="tag-category-compact">
-                    <h5 class="category-title-compact">System</h5>
-                    <div class="tag-list-compact">
-                      <div 
-                        v-for="tag in systemTags" 
-                        :key="tag.name"
-                        class="tag-button-compact"
-                        @click="insertTag(tag.name)"
-                        @mouseenter="showTooltip($event, tag.description)"
-                        @mouseleave="hideTooltip"
-                      >
-                        [{{ tag.name }}]
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               <!-- Presets Management -->
               <div class="format-presets">
                 <div class="presets-header">
-                  <h4 class="presets-title">Presets</h4>
+                  <h4 class="presets-title">Saved Presets</h4>
                 </div>
-                <div class="preset-list">
-                  <div 
-                    v-for="(format, name) in localSettings.compression.custom_presets"
-                    :key="name"
-                    class="preset-item"
+                  <div
+                      v-for="(format, name) in localSettings.compression.custom_presets"
+                      :key="name"
+                      class="preset-item"
                   >
                     <div class="preset-info">
                       <span class="preset-name">{{ name }}</span>
@@ -305,23 +306,21 @@
                     </div>
                     <div class="preset-actions">
                       <button
-                        class="preset-action-btn apply-btn"
-                        @click="applyPreset(format)"
-                        title="Apply this preset"
+                          class="preset-action-btn apply-btn"
+                          @click="applyPreset(format)"
+                          title="Copy this preset in the format field"
                       >
-                        ✓
+                        📋
                       </button>
                       <button
-                        v-if="!isDefaultPreset(name)"
-                        class="preset-action-btn delete-btn"
-                        @click="deletePreset(name)"
-                        title="Delete this preset"
+                          class="preset-action-btn delete-btn"
+                          @click="deletePreset(name)"
+                          title="Delete this preset"
                       >
                         🗑️
                       </button>
                     </div>
                   </div>
-                </div>
               </div>
             </div>
           </div>
@@ -342,10 +341,10 @@
                 <div class="checkbox-group">
                   <div class="checkbox-item">
                     <input
-                      id="default-ide-files"
-                      v-model="localSettings.cleaning_defaults.ide_files"
-                      type="checkbox"
-                      class="checkbox-input"
+                        id="default-ide-files"
+                        v-model="localSettings.cleaning_defaults.ide_files"
+                        type="checkbox"
+                        class="checkbox-input"
                     />
                     <label for="default-ide-files" class="checkbox-label">
                       IDE files (.vs and .idea)
@@ -354,10 +353,10 @@
 
                   <div class="checkbox-item">
                     <input
-                      id="default-binaries"
-                      v-model="localSettings.cleaning_defaults.binaries"
-                      type="checkbox"
-                      class="checkbox-input"
+                        id="default-binaries"
+                        v-model="localSettings.cleaning_defaults.binaries"
+                        type="checkbox"
+                        class="checkbox-input"
                     />
                     <label for="default-binaries" class="checkbox-label">
                       Binaries
@@ -366,10 +365,10 @@
 
                   <div class="checkbox-item">
                     <input
-                      id="default-build"
-                      v-model="localSettings.cleaning_defaults.build"
-                      type="checkbox"
-                      class="checkbox-input"
+                        id="default-build"
+                        v-model="localSettings.cleaning_defaults.build"
+                        type="checkbox"
+                        class="checkbox-input"
                     />
                     <label for="default-build" class="checkbox-label">
                       Build
@@ -378,10 +377,10 @@
 
                   <div class="checkbox-item">
                     <input
-                      id="default-intermediate"
-                      v-model="localSettings.cleaning_defaults.intermediate"
-                      type="checkbox"
-                      class="checkbox-input"
+                        id="default-intermediate"
+                        v-model="localSettings.cleaning_defaults.intermediate"
+                        type="checkbox"
+                        class="checkbox-input"
                     />
                     <label for="default-intermediate" class="checkbox-label">
                       Intermediate
@@ -390,10 +389,10 @@
 
                   <div class="checkbox-item">
                     <input
-                      id="default-derived-data-cache"
-                      v-model="localSettings.cleaning_defaults.derived_data_cache"
-                      type="checkbox"
-                      class="checkbox-input"
+                        id="default-derived-data-cache"
+                        v-model="localSettings.cleaning_defaults.derived_data_cache"
+                        type="checkbox"
+                        class="checkbox-input"
                     />
                     <label for="default-derived-data-cache" class="checkbox-label">
                       DerivedDataCache
@@ -402,10 +401,10 @@
 
                   <div class="checkbox-item">
                     <input
-                      id="default-saved"
-                      v-model="localSettings.cleaning_defaults.saved"
-                      type="checkbox"
-                      class="checkbox-input"
+                        id="default-saved"
+                        v-model="localSettings.cleaning_defaults.saved"
+                        type="checkbox"
+                        class="checkbox-input"
                     />
                     <label for="default-saved" class="checkbox-label">
                       Saved
@@ -414,10 +413,10 @@
 
                   <div class="checkbox-item">
                     <input
-                      id="default-analyze-plugins"
-                      v-model="localSettings.cleaning_defaults.analyze_plugins"
-                      type="checkbox"
-                      class="checkbox-input"
+                        id="default-analyze-plugins"
+                        v-model="localSettings.cleaning_defaults.analyze_plugins"
+                        type="checkbox"
+                        class="checkbox-input"
                     />
                     <label for="default-analyze-plugins" class="checkbox-label">
                       Analyze plugins
@@ -432,10 +431,10 @@
                 <div class="checkbox-group">
                   <div class="checkbox-item">
                     <input
-                      id="default-plugin-binaries"
-                      v-model="localSettings.cleaning_defaults.plugin_binaries"
-                      type="checkbox"
-                      class="checkbox-input"
+                        id="default-plugin-binaries"
+                        v-model="localSettings.cleaning_defaults.plugin_binaries"
+                        type="checkbox"
+                        class="checkbox-input"
                     />
                     <label for="default-plugin-binaries" class="checkbox-label">
                       Binaries
@@ -444,10 +443,10 @@
 
                   <div class="checkbox-item">
                     <input
-                      id="default-plugin-intermediate"
-                      v-model="localSettings.cleaning_defaults.plugin_intermediate"
-                      type="checkbox"
-                      class="checkbox-input"
+                        id="default-plugin-intermediate"
+                        v-model="localSettings.cleaning_defaults.plugin_intermediate"
+                        type="checkbox"
+                        class="checkbox-input"
                     />
                     <label for="default-plugin-intermediate" class="checkbox-label">
                       Intermediate
@@ -456,10 +455,10 @@
 
                   <div class="checkbox-item">
                     <input
-                      id="default-plugin-node-size-cache"
-                      v-model="localSettings.cleaning_defaults.plugin_node_size_cache"
-                      type="checkbox"
-                      class="checkbox-input"
+                        id="default-plugin-node-size-cache"
+                        v-model="localSettings.cleaning_defaults.plugin_node_size_cache"
+                        type="checkbox"
+                        class="checkbox-input"
                     />
                     <label for="default-plugin-node-size-cache" class="checkbox-label">
                       NodeSizeCache
@@ -490,22 +489,22 @@
         <div class="dialog-content">
           <label class="dialog-label">Preset Name:</label>
           <input
-            v-model="newPresetName"
-            type="text"
-            class="dialog-input"
-            placeholder="Enter preset name..."
-            @keyup.enter="saveNewPreset"
-            ref="presetNameInput"
+              v-model="newPresetName"
+              type="text"
+              class="dialog-input"
+              placeholder="Enter preset name..."
+              @keyup.enter="saveNewPreset"
+              ref="presetNameInput"
           />
         </div>
         <div class="dialog-actions">
           <button class="dialog-button cancel" @click="hidePresetDialog">
             Cancel
           </button>
-          <button 
-            class="dialog-button save" 
-            @click="saveNewPreset"
-            :disabled="!newPresetName.trim()"
+          <button
+              class="dialog-button save"
+              @click="saveNewPreset"
+              :disabled="!newPresetName.trim()"
           >
             Save
           </button>
@@ -515,10 +514,10 @@
 
     <!-- Custom Tooltip -->
     <Teleport to="body">
-      <div 
-        v-if="tooltip.show" 
-        class="custom-tooltip" 
-        :style="tooltipStyle"
+      <div
+          v-if="tooltip.show"
+          class="custom-tooltip"
+          :style="tooltipStyle"
       >
         {{ tooltip.content }}
       </div>
@@ -527,11 +526,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, nextTick } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import { open } from '@tauri-apps/plugin-dialog'
-import { useLogStore } from '../../stores/logStore'
-import { usePopup } from '../../composables/usePopup'
+import {ref, reactive, onMounted, computed, nextTick} from 'vue'
+import {invoke} from '@tauri-apps/api/core'
+import {open} from '@tauri-apps/plugin-dialog'
+import {useLogStore} from '../../stores/logStore'
+import {usePopup} from '../../composables/usePopup'
 
 interface AppSettings {
   ide_programs: {
@@ -577,8 +576,8 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
-const { addLog } = useLogStore()
-const { showPopup } = usePopup()
+const {addLog} = useLogStore()
+const {showPopup} = usePopup()
 
 const activeTab = ref('general')
 const isSaving = ref(false)
@@ -598,10 +597,10 @@ const tooltip = reactive({
 })
 
 const tabs: Tab[] = [
-  { id: 'general', title: 'General', icon: '🏠' },
-  { id: 'programs', title: 'Programs', icon: '💻' },
-  { id: 'compression', title: 'Compression', icon: '🗜️' },
-  { id: 'cleaning', title: 'Cleaning Defaults', icon: '🧹' }
+  {id: 'general', title: 'General', icon: '🏠'},
+  {id: 'programs', title: 'Programs', icon: '💻'},
+  {id: 'compression', title: 'Compression', icon: '🗜️'},
+  {id: 'cleaning', title: 'Cleaning Defaults', icon: '🧹'}
 ]
 
 const localSettings = reactive<AppSettings>({
@@ -635,33 +634,33 @@ const localSettings = reactive<AppSettings>({
 
 // Format tags organized by category
 const projectTags: FormatTag[] = [
-  { name: 'Project', description: 'Project name' },
-  { name: 'Type', description: 'Cpp or Bp' },
-  { name: 'Engine', description: 'Engine version (5-4-2)' },
-  { name: 'SizeMB', description: 'Project size in MB' },
-  { name: 'SizeGB', description: 'Project size in GB' },
-  { name: 'PluginCount', description: 'Number of plugins' },
-  { name: 'Algorithm', description: 'Compression algorithm' }
+  {name: 'Project', description: 'Project name'},
+  {name: 'Type', description: 'Cpp or Bp'},
+  {name: 'Engine', description: 'Engine version (5-4-2)'},
+  {name: 'SizeMB', description: 'Project size in MB'},
+  {name: 'SizeGB', description: 'Project size in GB'},
+  {name: 'PluginCount', description: 'Number of plugins'},
+  {name: 'Algorithm', description: 'Compression algorithm'}
 ]
 
 const dateTags: FormatTag[] = [
-  { name: 'YYYY', description: 'Full year (2024)' },
-  { name: 'YY', description: 'Short year (24)' },
-  { name: 'MM', description: 'Month number (01-12)' },
-  { name: 'DD', description: 'Day number (01-31)' },
-  { name: 'HH', description: 'Hour (00-23)' },
-  { name: 'mm', description: 'Minutes (00-59)' },
-  { name: 'ss', description: 'Seconds (00-59)' },
-  { name: 'Month', description: 'Full month name' },
-  { name: 'Mon', description: 'Short month name' },
-  { name: 'Day', description: 'Full day name' },
-  { name: 'Weekday', description: 'Short day name' }
+  {name: 'YYYY', description: 'Full year (2024)'},
+  {name: 'YY', description: 'Short year (24)'},
+  {name: 'MM', description: 'Month number (01-12)'},
+  {name: 'DD', description: 'Day number (01-31)'},
+  {name: 'HH', description: 'Hour (00-23)'},
+  {name: 'mm', description: 'Minutes (00-59)'},
+  {name: 'ss', description: 'Seconds (00-59)'},
+  {name: 'Month', description: 'Full month name'},
+  {name: 'Mon', description: 'Short month name'},
+  {name: 'Day', description: 'Full day name'},
+  {name: 'Weekday', description: 'Short day name'}
 ]
 
 const systemTags: FormatTag[] = [
-  { name: 'User', description: 'Current username' },
-  { name: 'Computer', description: 'Computer hostname' },
-  { name: 'Timestamp', description: 'Unix timestamp' }
+  {name: 'User', description: 'Current username'},
+  {name: 'Computer', description: 'Computer hostname'},
+  {name: 'Timestamp', description: 'Unix timestamp'}
 ]
 
 // All valid tags for validation
@@ -677,13 +676,13 @@ const invalidTags = computed(() => {
   return usedTags.filter(tag => !allValidTags.value.includes(tag))
 })
 
-// Generate preview of the current format
+// Generate the preview of the current format
 const formatPreview = computed(() => {
   const now = new Date()
   const mockProject = 'MyAwesomeGame'
-  
+
   let preview = localSettings.compression.filename_format
-  
+
   // Replace common tags with example values
   const replacements: Record<string, string> = {
     'Project': mockProject,
@@ -700,24 +699,24 @@ const formatPreview = computed(() => {
     'HH': now.getHours().toString().padStart(2, '0'),
     'mm': now.getMinutes().toString().padStart(2, '0'),
     'ss': now.getSeconds().toString().padStart(2, '0'),
-    'Month': now.toLocaleDateString('en-US', { month: 'long' }),
-    'Mon': now.toLocaleDateString('en-US', { month: 'short' }),
-    'Day': now.toLocaleDateString('en-US', { weekday: 'long' }),
-    'Weekday': now.toLocaleDateString('en-US', { weekday: 'short' }),
+    'Month': now.toLocaleDateString('en-US', {month: 'long'}),
+    'Mon': now.toLocaleDateString('en-US', {month: 'short'}),
+    'Day': now.toLocaleDateString('en-US', {weekday: 'long'}),
+    'Weekday': now.toLocaleDateString('en-US', {weekday: 'short'}),
     'User': 'john_doe',
     'Computer': 'DESKTOP-PC',
     'Timestamp': Math.floor(now.getTime() / 1000).toString()
   }
-  
+
   for (const [key, value] of Object.entries(replacements)) {
     preview = preview.replace(new RegExp(`\\[${key}\\]`, 'g'), value)
   }
-  
-  // Add extension if not present
+
+  // Add the extension if not present
   if (!preview.includes('.')) {
     preview += '.zip'
   }
-  
+
   return preview
 })
 
@@ -730,8 +729,8 @@ const tooltipStyle = computed(() => ({
 
 const isDefaultPreset = (name: string): boolean => {
   const defaultPresets = [
-    'Default', 'Default Extended', 'Simple', 'Detailed', 'Archive Style', 
-    'User Specific', 'Timestamp', 'Size Aware', 'Engine Specific', 
+    'Default', 'Default Extended', 'Simple', 'Detailed', 'Archive Style',
+    'User Specific', 'Timestamp', 'Size Aware', 'Engine Specific',
     'Professional', 'Minimal', 'Verbose'
   ]
   return defaultPresets.includes(name)
@@ -751,25 +750,25 @@ const hideTooltip = () => {
 const loadSettings = async () => {
   try {
     const settings = await invoke('get_settings') as AppSettings
-    
+
     // Update local settings
-    localSettings.ide_programs.custom_programs = { ...settings.ide_programs.custom_programs }
-    localSettings.engine_programs.custom_engines = { ...(settings.engine_programs?.custom_engines || {}) }
-    localSettings.cleaning_defaults = { ...settings.cleaning_defaults }
-    localSettings.general = { ...settings.general }
-    localSettings.compression = { ...settings.compression }
-    
+    localSettings.ide_programs.custom_programs = {...settings.ide_programs.custom_programs}
+    localSettings.engine_programs.custom_engines = {...(settings.engine_programs?.custom_engines || {})}
+    localSettings.cleaning_defaults = {...settings.cleaning_defaults}
+    localSettings.general = {...settings.general}
+    localSettings.compression = {...settings.compression}
+
     // Initialize custom program names
     Object.keys(localSettings.ide_programs.custom_programs).forEach(name => {
       customProgramNames.value[name] = name
       extractIcon(name, localSettings.ide_programs.custom_programs[name])
     })
-    
+
     // Initialize custom engine names
     Object.keys(localSettings.engine_programs.custom_engines).forEach(name => {
       customEngineNames.value[name] = name
     })
-    
+
   } catch (error) {
     console.error('Failed to load settings:', error)
     addLog('Failed to load settings', 'error')
@@ -779,24 +778,24 @@ const loadSettings = async () => {
 const saveSettings = async () => {
   try {
     isSaving.value = true
-    
+
     // Clean up empty values
     const settingsToSave: AppSettings = {
       ide_programs: {
-        custom_programs: { ...localSettings.ide_programs.custom_programs }
+        custom_programs: {...localSettings.ide_programs.custom_programs}
       },
       engine_programs: {
-        custom_engines: { ...localSettings.engine_programs.custom_engines }
+        custom_engines: {...localSettings.engine_programs.custom_engines}
       },
-      cleaning_defaults: { ...localSettings.cleaning_defaults },
-      general: { ...localSettings.general },
-      compression: { ...localSettings.compression }
+      cleaning_defaults: {...localSettings.cleaning_defaults},
+      general: {...localSettings.general},
+      compression: {...localSettings.compression}
     }
-    
-    await invoke('save_settings', { settings: settingsToSave })
+
+    await invoke('save_settings', {settings: settingsToSave})
     addLog('Settings saved successfully')
     emit('close')
-    
+
   } catch (error) {
     console.error('Failed to save settings:', error)
     addLog('Failed to save settings', 'error')
@@ -858,15 +857,13 @@ const hidePresetDialog = () => {
 const saveNewPreset = () => {
   const name = newPresetName.value.trim()
   if (!name) return
-  
+
   localSettings.compression.custom_presets[name] = localSettings.compression.filename_format
   hidePresetDialog()
   addLog(`Preset "${name}" saved`)
 }
 
 const deletePreset = (name: string) => {
-  if (isDefaultPreset(name)) return
-  
   delete localSettings.compression.custom_presets[name]
   addLog(`Preset "${name}" deleted`)
 }
@@ -886,7 +883,7 @@ const browseForCustomIde = async (programName: string) => {
         extensions: ['exe', 'app', 'AppImage']
       }]
     })
-    
+
     if (selected && typeof selected === 'string') {
       localSettings.ide_programs.custom_programs[programName] = selected
       extractIcon(programName, selected)
@@ -904,7 +901,7 @@ const browseForCustomEngine = async (engineName: string) => {
       multiple: false,
       title: `Select ${engineName} engine folder`
     })
-    
+
     if (selected && typeof selected === 'string') {
       localSettings.engine_programs.custom_engines[engineName] = selected
     }
@@ -939,14 +936,14 @@ const removeCustomEngine = (engineName: string) => {
 
 const updateCustomProgramName = (oldName: string, newName: string) => {
   if (oldName === newName || !newName.trim()) return
-  
+
   const path = localSettings.ide_programs.custom_programs[oldName]
   const icon = programIcons.value[oldName]
-  
+
   delete localSettings.ide_programs.custom_programs[oldName]
   delete customProgramNames.value[oldName]
   delete programIcons.value[oldName]
-  
+
   localSettings.ide_programs.custom_programs[newName] = path
   customProgramNames.value[newName] = newName
   if (icon) {
@@ -956,19 +953,19 @@ const updateCustomProgramName = (oldName: string, newName: string) => {
 
 const updateCustomEngineName = (oldName: string, newName: string) => {
   if (oldName === newName || !newName.trim()) return
-  
+
   const path = localSettings.engine_programs.custom_engines[oldName]
-  
+
   delete localSettings.engine_programs.custom_engines[oldName]
   delete customEngineNames.value[oldName]
-  
+
   localSettings.engine_programs.custom_engines[newName] = path
   customEngineNames.value[newName] = newName
 }
 
 const extractIcon = (programName: string, executablePath: string) => {
   if (!executablePath) return
-  
+
   // Try to extract icon using file:// protocol for local files
   // This is a simplified approach - in a real application you might want to use
   // a more sophisticated icon extraction method
@@ -1267,8 +1264,8 @@ onMounted(() => {
 .format-warning {
   margin-top: var(--spacing-xs);
   padding: var(--spacing-xs) var(--spacing-sm);
-  background-color: #fef5e7;
-  border: var(--border-width) solid #f6ad55;
+  background-color: var(--surface-color);
+  border: var(--border-width) solid #f4aa2c;
   border-radius: var(--border-radius-sm);
   color: #d69e2e;
   font-size: var(--font-size-xs);
@@ -1764,7 +1761,7 @@ onMounted(() => {
   .tags-compact-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .cleaning-defaults-grid {
     grid-template-columns: 1fr;
   }

@@ -339,12 +339,10 @@ const canCompress = computed(() => {
 })
 
 const outputFilename = computed(() => {
-  if (!destinationPath.value) return ''
-  
   // Get the project details for better filename generation
   const project = findProjectByPath(props.projectPath)
   
-  // Generate preview using the selected format
+  // Generate the preview using the selected format
   const now = new Date()
   let preview = selectedFormat.value
   
@@ -430,7 +428,7 @@ const loadAvailableAlgorithms = async () => {
     const algorithms = await invoke('get_available_compression_algorithms') as CompressionAlgorithm[]
     availableAlgorithms.value = algorithms
     
-    // Set default algorithm to the first available one
+    // Set the default algorithm to the first available one
     if (algorithms.length > 0) {
       selectedAlgorithm.value = algorithms[0]
     }

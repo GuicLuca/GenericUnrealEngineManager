@@ -114,15 +114,10 @@ impl Default for CompressionSettings {
         custom_presets.insert("Default".to_string(), "[Project]_[YYYY][MM][DD][HH][mm]".to_string());
         custom_presets.insert("Default Extended".to_string(), "[Project]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]".to_string());
         custom_presets.insert("Simple".to_string(), "[Project]_[Type]".to_string());
-        custom_presets.insert("Detailed".to_string(), "[Project]_[Engine]_[Type]_[YYYY][MM][DD]_[HH][mm]".to_string());
-        custom_presets.insert("Archive Style".to_string(), "[YYYY]-[MM]-[DD]_[Project]_[Algorithm]".to_string());
-        custom_presets.insert("User Specific".to_string(), "[User]_[Project]_[Mon][DD]_[HH][mm]".to_string());
+        custom_presets.insert("Archive Style".to_string(), "[YYYY]-[MM]-[DD]_[Project]".to_string());
+        custom_presets.insert("User Specific".to_string(), "[User]_[Computer]_[Project]_[Mon][DD]_[HH][mm]".to_string());
         custom_presets.insert("Timestamp".to_string(), "[Project]_[Timestamp]".to_string());
-        custom_presets.insert("Size Aware".to_string(), "[Project]_[SizeGB]GB_[YYYY][MM][DD]".to_string());
         custom_presets.insert("Engine Specific".to_string(), "UE[Engine]_[Project]_[Type]_[YYYY][MM][DD]".to_string());
-        custom_presets.insert("Professional".to_string(), "[Project]_v[YYYY].[MM].[DD]_[Type]_[Algorithm]".to_string());
-        custom_presets.insert("Minimal".to_string(), "[Project]_[YY][MM][DD]".to_string());
-        custom_presets.insert("Verbose".to_string(), "[Computer]_[User]_[Project]_[Engine]_[Type]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]".to_string());
         
         Self {
             filename_format: "[Project]_[YYYY][MM][DD][HH][mm]".to_string(),
