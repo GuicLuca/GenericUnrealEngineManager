@@ -203,6 +203,31 @@
         </div>
       </div>
 
+      <!-- Filename Format Section -->
+      <div class="compress-section">
+        <h3 class="section-title">Filename Format</h3>
+        <div class="format-selection">
+          <label class="format-label">Output filename format:</label>
+          <select
+            v-model="selectedFormat"
+            class="format-dropdown"
+            :disabled="isCompressing"
+          >
+            <option 
+              v-for="(format, name) in availableFormats"
+              :key="name"
+              :value="format"
+            >
+              {{ name }}
+            </option>
+          </select>
+          <div class="format-preview">
+            <span class="preview-label">Preview:</span>
+            <span class="preview-filename">{{ outputFilename }}</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Destination Section -->
       <div class="compress-section">
         <h3 class="section-title">Destination</h3>
@@ -224,10 +249,6 @@
           >
             📂
           </button>
-        </div>
-        <div v-if="outputFilename" class="output-preview">
-          <span class="preview-label">Output file:</span>
-          <span class="preview-filename">{{ outputFilename }}</span>
         </div>
       </div>
     </div>
@@ -276,6 +297,13 @@ interface CleaningSelection {
 
 type CompressionAlgorithm = 'Zip' | 'SevenZip' | 'Tar' | 'TarGz'
 
+interface AppSettings {
+  compression: {
+    filename_format: string
+    custom_presets: Record<string, string>
+  }
+}
+
 const props = defineProps<Props>()
 const emit = defineEmits<{
   (e: 'close'): void
@@ -287,8 +315,10 @@ const { findProjectByPath } = useProjectStore()
 const isCompressing = ref(false)
 const cleanBeforeCompress = ref(false)
 const selectedAlgorithm = ref<CompressionAlgorithm>('Zip')
+const selectedFormat = ref('[Project]_[YYYY][MM][DD][HH][mm]')
 const destinationPath = ref('')
 const availableAlgorithms = ref<CompressionAlgorithm[]>([])
+const availableFormats = ref<Record<string, string>>({})
 
 const cleaningSelection = reactive<CleaningSelection>({
   ide_files: true,
@@ -313,28 +343,56 @@ const outputFilename = computed(() => {
   // Get the project details for better filename generation
   const project = findProjectByPath(props.projectPath)
   
-  // Use a simple format for preview (the backend will use the user's format)
+  // Generate preview using the selected format
   const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  const hour = String(now.getHours()).padStart(2, '0')
-  const minute = String(now.getMinutes()).padStart(2, '0')
-  const second = String(now.getSeconds()).padStart(2, '0')
+  let preview = selectedFormat.value
   
-  const timestamp = `${year}-${month}-${day}_${hour}-${minute}-${second}`
-  const extension = getExtensionForAlgorithm(selectedAlgorithm.value)
-  
-  // Show a preview based on the current format (this will be replaced by the actual user format)
-  let filename = `${props.projectName}_${timestamp}`
-  
-  if (project) {
-    const projectType = project.has_cpp ? 'Cpp' : 'Bp'
-    filename = `${props.projectName}_${projectType}_${timestamp}`
+  // Replace common tags with example values
+  const replacements: Record<string, string> = {
+    'Project': props.projectName,
+    'Type': project?.has_cpp ? 'Cpp' : 'Bp',
+    'Engine': project ? getEngineVersionFormatted(project.engine_association) : 'Unknown',
+    'SizeMB': project ? Math.floor(project.size_on_disk / (1024 * 1024)).toString() : '0',
+    'SizeGB': project ? Math.floor(project.size_on_disk / (1024 * 1024 * 1024)).toString() : '0',
+    'PluginCount': project ? project.plugins.length.toString() : '0',
+    'Algorithm': getAlgorithmDisplayName(selectedAlgorithm.value),
+    'YYYY': now.getFullYear().toString(),
+    'YY': now.getFullYear().toString().slice(-2),
+    'MM': (now.getMonth() + 1).toString().padStart(2, '0'),
+    'DD': now.getDate().toString().padStart(2, '0'),
+    'HH': now.getHours().toString().padStart(2, '0'),
+    'mm': now.getMinutes().toString().padStart(2, '0'),
+    'ss': now.getSeconds().toString().padStart(2, '0'),
+    'Month': now.toLocaleDateString('en-US', { month: 'long' }),
+    'Mon': now.toLocaleDateString('en-US', { month: 'short' }),
+    'Day': now.toLocaleDateString('en-US', { weekday: 'long' }),
+    'Weekday': now.toLocaleDateString('en-US', { weekday: 'short' }),
+    'User': 'john_doe',
+    'Computer': 'DESKTOP-PC',
+    'Timestamp': Math.floor(now.getTime() / 1000).toString()
   }
   
-  return `${filename}.${extension}`
+  for (const [key, value] of Object.entries(replacements)) {
+    preview = preview.replace(new RegExp(`\\[${key}\\]`, 'g'), value)
+  }
+  
+  const extension = getExtensionForAlgorithm(selectedAlgorithm.value)
+  if (!preview.includes('.')) {
+    preview += `.${extension}`
+  }
+  
+  return preview
 })
+
+const getEngineVersionFormatted = (engineAssociation: any): string => {
+  if (typeof engineAssociation === 'string' && engineAssociation === 'Custom') {
+    return 'Custom'
+  }
+  if (typeof engineAssociation === 'object' && engineAssociation.Standard) {
+    return engineAssociation.Standard.replace(/\./g, '-')
+  }
+  return 'Unknown'
+}
 
 const getAlgorithmDisplayName = (algorithm: CompressionAlgorithm): string => {
   switch (algorithm) {
@@ -381,6 +439,27 @@ const loadAvailableAlgorithms = async () => {
     // Fallback to ZIP
     availableAlgorithms.value = ['Zip']
     selectedAlgorithm.value = 'Zip'
+  }
+}
+
+const loadAvailableFormats = async () => {
+  try {
+    const settings = await invoke('get_settings') as AppSettings
+    availableFormats.value = settings.compression.custom_presets
+    
+    // Set default format
+    if (settings.compression.filename_format) {
+      selectedFormat.value = settings.compression.filename_format
+    }
+  } catch (error) {
+    console.error('Failed to load compression settings:', error)
+    addLog('Failed to load compression settings', 'error')
+    // Fallback formats
+    availableFormats.value = {
+      'Default': '[Project]_[YYYY][MM][DD][HH][mm]',
+      'Default Extended': '[Project]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]',
+      'Simple': '[Project]_[Type]'
+    }
   }
 }
 
@@ -441,6 +520,7 @@ const startCompression = async () => {
 
 onMounted(() => {
   loadAvailableAlgorithms()
+  loadAvailableFormats()
 })
 </script>
 
@@ -669,10 +749,67 @@ onMounted(() => {
   color: var(--text-secondary);
 }
 
+.format-selection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.format-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.format-dropdown {
+  padding: var(--spacing-sm);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background-color: var(--surface-color);
+  cursor: pointer;
+}
+
+.format-dropdown:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-color-alpha);
+}
+
+.format-dropdown:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.format-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background-color: var(--surface-color);
+  border-radius: var(--border-radius-sm);
+  border: var(--border-width) solid var(--border-color);
+}
+
+.preview-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
+  flex-shrink: 0;
+}
+
+.preview-filename {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  word-break: break-all;
+  flex-grow: 1;
+}
+
 .destination-input-group {
   display: flex;
   gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-sm);
 }
 
 .destination-input {
@@ -713,29 +850,6 @@ onMounted(() => {
 .browse-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.output-preview {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm);
-  background-color: var(--surface-color);
-  border-radius: var(--border-radius-sm);
-  border: var(--border-width) solid var(--border-color);
-}
-
-.preview-label {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  font-weight: var(--font-weight-medium);
-}
-
-.preview-filename {
-  font-size: var(--font-size-sm);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  word-break: break-all;
 }
 
 .popup-actions {

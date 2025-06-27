@@ -210,90 +210,114 @@
                     v-model="localSettings.compression.filename_format"
                     type="text"
                     class="format-input"
-                    placeholder="[Project]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]"
+                    placeholder="[Project]_[YYYY][MM][DD][HH][mm]"
                     @input="updatePreview"
                   />
                   <button
-                    class="reset-format-button"
-                    @click="resetToDefault"
-                    title="Reset to default format"
+                    class="save-preset-button"
+                    @click="showSavePresetDialog"
+                    title="Save current format as preset"
                   >
-                    🔄
+                    💾
                   </button>
+                </div>
+                
+                <!-- Warning for invalid tags -->
+                <div v-if="invalidTags.length > 0" class="format-warning">
+                  ⚠️ Unknown tags detected: {{ invalidTags.join(', ') }}
                 </div>
               </div>
 
-              <div class="format-preview">
-                <div class="preview-label">Preview:</div>
-                <div class="preview-output">{{ formatPreview }}</div>
+              <!-- Compact Preview -->
+              <div class="format-preview compact">
+                <span class="preview-label">Preview:</span>
+                <span class="preview-output">{{ formatPreview }}</span>
               </div>
 
-              <div class="format-tags">
+              <!-- Compact Format Tags -->
+              <div class="format-tags compact">
                 <h4 class="tags-title">Available Format Tags</h4>
-                <div class="tags-grid">
-                  <div class="tag-category">
-                    <h5 class="category-title">Project Information</h5>
-                    <div class="tag-list">
+                <div class="tags-compact-grid">
+                  <div class="tag-category-compact">
+                    <h5 class="category-title-compact">Project</h5>
+                    <div class="tag-list-compact">
                       <button 
                         v-for="tag in projectTags" 
                         :key="tag.name"
-                        class="tag-button"
+                        class="tag-button-compact"
                         @click="insertTag(tag.name)"
                         :title="tag.description"
                       >
-                        <span class="tag-name">[{{ tag.name }}]</span>
-                        <span class="tag-desc">{{ tag.description }}</span>
+                        [{{ tag.name }}]
                       </button>
                     </div>
                   </div>
 
-                  <div class="tag-category">
-                    <h5 class="category-title">Date & Time</h5>
-                    <div class="tag-list">
+                  <div class="tag-category-compact">
+                    <h5 class="category-title-compact">Date & Time</h5>
+                    <div class="tag-list-compact">
                       <button 
                         v-for="tag in dateTags" 
                         :key="tag.name"
-                        class="tag-button"
+                        class="tag-button-compact"
                         @click="insertTag(tag.name)"
                         :title="tag.description"
                       >
-                        <span class="tag-name">[{{ tag.name }}]</span>
-                        <span class="tag-desc">{{ tag.description }}</span>
+                        [{{ tag.name }}]
                       </button>
                     </div>
                   </div>
 
-                  <div class="tag-category">
-                    <h5 class="category-title">System Information</h5>
-                    <div class="tag-list">
+                  <div class="tag-category-compact">
+                    <h5 class="category-title-compact">System</h5>
+                    <div class="tag-list-compact">
                       <button 
                         v-for="tag in systemTags" 
                         :key="tag.name"
-                        class="tag-button"
+                        class="tag-button-compact"
                         @click="insertTag(tag.name)"
                         :title="tag.description"
                       >
-                        <span class="tag-name">[{{ tag.name }}]</span>
-                        <span class="tag-desc">{{ tag.description }}</span>
+                        [{{ tag.name }}]
                       </button>
                     </div>
                   </div>
                 </div>
               </div>
 
+              <!-- Presets Management -->
               <div class="format-presets">
-                <h4 class="presets-title">Quick Presets</h4>
-                <div class="preset-buttons">
-                  <button 
-                    v-for="preset in formatPresets" 
-                    :key="preset.name"
-                    class="preset-button"
-                    @click="applyPreset(preset.format)"
-                    :title="preset.description"
+                <div class="presets-header">
+                  <h4 class="presets-title">Presets</h4>
+                </div>
+                <div class="preset-list">
+                  <div 
+                    v-for="(format, name) in localSettings.compression.custom_presets"
+                    :key="name"
+                    class="preset-item"
                   >
-                    <span class="preset-name">{{ preset.name }}</span>
-                    <span class="preset-format">{{ preset.format }}</span>
-                  </button>
+                    <div class="preset-info">
+                      <span class="preset-name">{{ name }}</span>
+                      <span class="preset-format">{{ format }}</span>
+                    </div>
+                    <div class="preset-actions">
+                      <button
+                        class="preset-action-btn apply-btn"
+                        @click="applyPreset(format)"
+                        title="Apply this preset"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        v-if="!isDefaultPreset(name)"
+                        class="preset-action-btn delete-btn"
+                        @click="deletePreset(name)"
+                        title="Delete this preset"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -455,11 +479,41 @@
         {{ isSaving ? 'Saving...' : 'Save Settings' }}
       </button>
     </div>
+
+    <!-- Save Preset Dialog -->
+    <div v-if="showPresetDialog" class="preset-dialog-overlay" @click="hidePresetDialog">
+      <div class="preset-dialog" @click.stop>
+        <h3 class="dialog-title">Save Preset</h3>
+        <div class="dialog-content">
+          <label class="dialog-label">Preset Name:</label>
+          <input
+            v-model="newPresetName"
+            type="text"
+            class="dialog-input"
+            placeholder="Enter preset name..."
+            @keyup.enter="saveNewPreset"
+            ref="presetNameInput"
+          />
+        </div>
+        <div class="dialog-actions">
+          <button class="dialog-button cancel" @click="hidePresetDialog">
+            Cancel
+          </button>
+          <button 
+            class="dialog-button save" 
+            @click="saveNewPreset"
+            :disabled="!newPresetName.trim()"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { useLogStore } from '../../stores/logStore'
@@ -490,6 +544,7 @@ interface AppSettings {
   }
   compression: {
     filename_format: string
+    custom_presets: Record<string, string>
   }
 }
 
@@ -501,12 +556,6 @@ interface Tab {
 
 interface FormatTag {
   name: string
-  description: string
-}
-
-interface FormatPreset {
-  name: string
-  format: string
   description: string
 }
 
@@ -522,6 +571,9 @@ const isSaving = ref(false)
 const customProgramNames = ref<Record<string, string>>({})
 const customEngineNames = ref<Record<string, string>>({})
 const programIcons = ref<Record<string, string>>({})
+const showPresetDialog = ref(false)
+const newPresetName = ref('')
+const presetNameInput = ref<HTMLInputElement>()
 
 const tabs: Tab[] = [
   { id: 'general', title: 'General', icon: '🏠' },
@@ -554,7 +606,8 @@ const localSettings = reactive<AppSettings>({
     show_welcome_popup: true
   },
   compression: {
-    filename_format: '[Project]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]'
+    filename_format: '[Project]_[YYYY][MM][DD][HH][mm]',
+    custom_presets: {}
   }
 })
 
@@ -589,33 +642,18 @@ const systemTags: FormatTag[] = [
   { name: 'Timestamp', description: 'Unix timestamp' }
 ]
 
-const formatPresets: FormatPreset[] = [
-  {
-    name: 'Default',
-    format: '[Project]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]',
-    description: 'Project name with date and time'
-  },
-  {
-    name: 'Simple',
-    format: '[Project]_[Type]',
-    description: 'Just project name and type'
-  },
-  {
-    name: 'Detailed',
-    format: '[Project]_[Engine]_[Type]_[YYYY][MM][DD]_[HH][mm]',
-    description: 'Project with engine version and compact timestamp'
-  },
-  {
-    name: 'Archive Style',
-    format: '[YYYY]-[MM]-[DD]_[Project]_[Algorithm]',
-    description: 'Date first, then project and compression type'
-  },
-  {
-    name: 'User Specific',
-    format: '[User]_[Project]_[Mon][DD]_[HH][mm]',
-    description: 'Include username with short date format'
-  }
-]
+// All valid tags for validation
+const allValidTags = computed(() => {
+  return [...projectTags, ...dateTags, ...systemTags].map(tag => tag.name)
+})
+
+// Check for invalid tags in the current format
+const invalidTags = computed(() => {
+  const format = localSettings.compression.filename_format
+  const tagMatches = format.match(/\[([^\]]+)\]/g) || []
+  const usedTags = tagMatches.map(match => match.slice(1, -1))
+  return usedTags.filter(tag => !allValidTags.value.includes(tag))
+})
 
 // Generate preview of the current format
 const formatPreview = computed(() => {
@@ -660,6 +698,11 @@ const formatPreview = computed(() => {
   
   return preview
 })
+
+const isDefaultPreset = (name: string): boolean => {
+  const defaultPresets = ['Default', 'Default Extended', 'Simple', 'Detailed', 'Archive Style', 'User Specific']
+  return defaultPresets.includes(name)
+}
 
 const loadSettings = async () => {
   try {
@@ -751,12 +794,37 @@ const insertTag = (tagName: string) => {
   localSettings.compression.filename_format += tag
 }
 
-const resetToDefault = () => {
-  localSettings.compression.filename_format = '[Project]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]'
-}
-
 const applyPreset = (format: string) => {
   localSettings.compression.filename_format = format
+}
+
+const showSavePresetDialog = () => {
+  newPresetName.value = ''
+  showPresetDialog.value = true
+  nextTick(() => {
+    presetNameInput.value?.focus()
+  })
+}
+
+const hidePresetDialog = () => {
+  showPresetDialog.value = false
+  newPresetName.value = ''
+}
+
+const saveNewPreset = () => {
+  const name = newPresetName.value.trim()
+  if (!name) return
+  
+  localSettings.compression.custom_presets[name] = localSettings.compression.filename_format
+  hidePresetDialog()
+  addLog(`Preset "${name}" saved`)
+}
+
+const deletePreset = (name: string) => {
+  if (isDefaultPreset(name)) return
+  
+  delete localSettings.compression.custom_presets[name]
+  addLog(`Preset "${name}" deleted`)
 }
 
 const updatePreview = () => {
@@ -1100,7 +1168,7 @@ onMounted(() => {
 }
 
 .format-input-section {
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
 }
 
 .format-label {
@@ -1133,7 +1201,7 @@ onMounted(() => {
   box-shadow: 0 0 0 2px var(--accent-color-alpha);
 }
 
-.reset-format-button {
+.save-preset-button {
   padding: var(--spacing-sm);
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-sm);
@@ -1147,37 +1215,52 @@ onMounted(() => {
   justify-content: center;
 }
 
-.reset-format-button:hover {
+.save-preset-button:hover {
   background-color: var(--hover-color);
   border-color: var(--accent-color);
 }
 
-.format-preview {
-  margin-bottom: var(--spacing-lg);
-  padding: var(--spacing-md);
+.format-warning {
+  margin-top: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: #fef5e7;
+  border: var(--border-width) solid #f6ad55;
+  border-radius: var(--border-radius-sm);
+  color: #d69e2e;
+  font-size: var(--font-size-xs);
+  font-style: italic;
+}
+
+.format-preview.compact {
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-sm);
   background-color: var(--surface-color);
   border-radius: var(--border-radius-sm);
   border: var(--border-width) solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 
 .preview-label {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   color: var(--text-secondary);
-  margin-bottom: var(--spacing-xs);
+  flex-shrink: 0;
 }
 
 .preview-output {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   color: var(--text-primary);
   font-family: var(--font-mono);
   background-color: var(--background-color);
-  padding: var(--spacing-sm);
+  padding: var(--spacing-xs);
   border-radius: var(--border-radius-sm);
   border: var(--border-width) solid var(--border-color);
+  flex-grow: 1;
 }
 
-.format-tags {
+.format-tags.compact {
   margin-bottom: var(--spacing-lg);
 }
 
@@ -1185,67 +1268,53 @@ onMounted(() => {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
-  margin: 0 0 var(--spacing-md) 0;
+  margin: 0 0 var(--spacing-sm) 0;
 }
 
-.tags-grid {
+.tags-compact-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
 }
 
-.tag-category {
+.tag-category-compact {
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-sm);
   padding: var(--spacing-sm);
   background-color: var(--surface-color);
 }
 
-.category-title {
+.category-title-compact {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
-  margin: 0 0 var(--spacing-sm) 0;
+  margin: 0 0 var(--spacing-xs) 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.tag-list {
+.tag-list-compact {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: var(--spacing-xs);
 }
 
-.tag-button {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--spacing-xs);
+.tag-button-compact {
   padding: var(--spacing-xs);
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-sm);
   background-color: var(--background-color);
   cursor: pointer;
   transition: all var(--transition-fast);
-  text-align: left;
-}
-
-.tag-button:hover {
-  background-color: var(--hover-color);
-  border-color: var(--accent-color);
-}
-
-.tag-name {
   font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
   color: var(--accent-color);
   font-family: var(--font-mono);
+  font-weight: var(--font-weight-medium);
 }
 
-.tag-desc {
-  font-size: var(--font-size-xs);
-  color: var(--text-secondary);
-  line-height: 1.2;
+.tag-button-compact:hover {
+  background-color: var(--hover-color);
+  border-color: var(--accent-color);
 }
 
 .format-presets {
@@ -1253,40 +1322,53 @@ onMounted(() => {
   padding-top: var(--spacing-lg);
 }
 
+.presets-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-sm);
+}
+
 .presets-title {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
-  margin: 0 0 var(--spacing-md) 0;
+  margin: 0;
 }
 
-.preset-buttons {
+.preset-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.preset-button {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
   gap: var(--spacing-xs);
-  padding: var(--spacing-sm);
+  max-height: 8rem;
+  overflow-y: auto;
+}
+
+.preset-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-xs) var(--spacing-sm);
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-sm);
   background-color: var(--surface-color);
-  cursor: pointer;
   transition: all var(--transition-fast);
-  text-align: left;
 }
 
-.preset-button:hover {
+.preset-item:hover {
   background-color: var(--hover-color);
-  border-color: var(--accent-color);
+}
+
+.preset-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  flex-grow: 1;
+  min-width: 0;
 }
 
 .preset-name {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
 }
@@ -1295,6 +1377,40 @@ onMounted(() => {
   font-size: var(--font-size-xs);
   color: var(--text-secondary);
   font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preset-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex-shrink: 0;
+}
+
+.preset-action-btn {
+  padding: var(--spacing-xs);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--background-color);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  transition: all var(--transition-fast);
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.apply-btn:hover {
+  background-color: #e6fffa;
+  border-color: #319795;
+}
+
+.delete-btn:hover {
+  background-color: #fed7d7;
+  border-color: #e53e3e;
 }
 
 .custom-programs {
@@ -1483,9 +1599,110 @@ onMounted(() => {
   font-size: var(--font-size-sm);
 }
 
+/* Preset Dialog */
+.preset-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.preset-dialog {
+  background-color: var(--background-color);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-lg);
+  min-width: 20rem;
+  box-shadow: var(--shadow-md);
+}
+
+.dialog-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-md) 0;
+}
+
+.dialog-content {
+  margin-bottom: var(--spacing-lg);
+}
+
+.dialog-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.dialog-input {
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background-color: var(--background-color);
+}
+
+.dialog-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-color-alpha);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.dialog-button {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: var(--border-width) solid;
+}
+
+.dialog-button.cancel {
+  background-color: transparent;
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+.dialog-button.cancel:hover {
+  background-color: var(--hover-color);
+  color: var(--text-primary);
+}
+
+.dialog-button.save {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
+.dialog-button.save:hover:not(:disabled) {
+  background-color: #2c5aa0;
+  border-color: #2c5aa0;
+}
+
+.dialog-button.save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .tags-grid {
+  .tags-compact-grid {
     grid-template-columns: 1fr;
   }
   

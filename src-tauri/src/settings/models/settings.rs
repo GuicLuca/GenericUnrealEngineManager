@@ -49,6 +49,7 @@ pub struct GeneralSettings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompressionSettings {
     pub filename_format: String,
+    pub custom_presets: HashMap<String, String>,
 }
 
 impl Default for AppSettings {
@@ -107,8 +108,19 @@ impl Default for GeneralSettings {
 
 impl Default for CompressionSettings {
     fn default() -> Self {
+        let mut custom_presets = HashMap::new();
+        
+        // Add default presets
+        custom_presets.insert("Default".to_string(), "[Project]_[YYYY][MM][DD][HH][mm]".to_string());
+        custom_presets.insert("Default Extended".to_string(), "[Project]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]".to_string());
+        custom_presets.insert("Simple".to_string(), "[Project]_[Type]".to_string());
+        custom_presets.insert("Detailed".to_string(), "[Project]_[Engine]_[Type]_[YYYY][MM][DD]_[HH][mm]".to_string());
+        custom_presets.insert("Archive Style".to_string(), "[YYYY]-[MM]-[DD]_[Project]_[Algorithm]".to_string());
+        custom_presets.insert("User Specific".to_string(), "[User]_[Project]_[Mon][DD]_[HH][mm]".to_string());
+        
         Self {
-            filename_format: "[Project]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]".to_string(),
+            filename_format: "[Project]_[YYYY][MM][DD][HH][mm]".to_string(),
+            custom_presets,
         }
     }
 }
