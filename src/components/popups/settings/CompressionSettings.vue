@@ -16,7 +16,7 @@
           >
             <option value="">Select a preset...</option>
             <option 
-              v-for="(format, name) in localSettings.compression.custom_presets"
+              v-for="(_format, name) in localSettings.compression.custom_presets"
               :key="name"
               :value="name"
             >
@@ -134,16 +134,15 @@
           <div class="preset-actions">
             <button
               class="action-btn edit-btn"
-              @click="editPreset(name, format)"
+              @click="editPreset(name as string, format)"
               title="Edit preset"
             >
               ✏️
             </button>
             <button
               class="action-btn remove-btn"
-              @click="removePreset(name)"
+              @click="removePreset(name as string)"
               title="Remove preset"
-              :disabled="isDefaultPreset(name)"
             >
               🗑️
             </button>
@@ -251,8 +250,6 @@ const systemInfo = ref({
   hostname: 'DESKTOP-PC'
 })
 
-const defaultPresets = ['Default', 'Default Extended', 'Simple', 'Archive Style', 'User Specific', 'Timestamp', 'Engine Specific']
-
 const previewFilename = computed(() => {
   return getPreviewForFormat(localSettings.compression.filename_format)
 })
@@ -308,10 +305,6 @@ const applyPreset = () => {
   }
 }
 
-const isDefaultPreset = (name: string): boolean => {
-  return defaultPresets.includes(name)
-}
-
 const editPreset = (name: string, format: string) => {
   editingPreset.value = name
   presetForm.name = name
@@ -320,8 +313,6 @@ const editPreset = (name: string, format: string) => {
 }
 
 const removePreset = (name: string) => {
-  if (isDefaultPreset(name)) return
-  
   if (confirm(`Are you sure you want to remove the preset "${name}"?`)) {
     delete localSettings.compression.custom_presets[name]
     emitUpdate()

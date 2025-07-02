@@ -33,10 +33,10 @@
 
         <!-- Right Content Area -->
         <div class="settings-content">
-          <div class="content-header">
-            <h3 class="content-title">{{ getCurrentTab()?.label }}</h3>
-            <div class="content-description">{{ getCurrentTab()?.description }}</div>
-          </div>
+<!--          <div class="content-header">-->
+<!--            <h3 class="content-title">{{ getCurrentTab()?.label }}</h3>-->
+<!--            <div class="content-description">{{ getCurrentTab()?.description }}</div>-->
+<!--          </div>-->
 
           <div class="content-body">
             <!-- General Settings -->
@@ -225,9 +225,9 @@ const setActiveTab = (tabId: string) => {
   activeTab.value = tabId
 }
 
-const getCurrentTab = () => {
-  return tabs.find(tab => tab.id === activeTab.value)
-}
+// const getCurrentTab = () => {
+//   return tabs.find(tab => tab.id === activeTab.value)
+// }
 
 const handleSettingsUpdate = (updatedSettings: Partial<AppSettings>) => {
   Object.assign(settings, updatedSettings)

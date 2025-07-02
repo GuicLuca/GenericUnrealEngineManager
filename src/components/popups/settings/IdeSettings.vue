@@ -19,14 +19,14 @@
           <div class="program-actions">
             <button
               class="action-btn edit-btn"
-              @click="editProgram(name, path)"
+              @click="editProgram(name as string, path)"
               title="Edit program"
             >
               ✏️
             </button>
             <button
               class="action-btn remove-btn"
-              @click="removeProgram(name)"
+              @click="removeProgram(name as string)"
               title="Remove program"
             >
               🗑️

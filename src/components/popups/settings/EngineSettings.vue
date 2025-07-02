@@ -19,14 +19,14 @@
           <div class="engine-actions">
             <button
               class="action-btn edit-btn"
-              @click="editEngine(name, path)"
+              @click="editEngine(name as string, path)"
               title="Edit engine"
             >
               ✏️
             </button>
             <button
               class="action-btn remove-btn"
-              @click="removeEngine(name)"
+              @click="removeEngine(name as string)"
               title="Remove engine"
             >
               🗑️
@@ -172,7 +172,7 @@ const browseForEngineDirectory = async () => {
       title: 'Select Engine Root Directory'
     })
     
-    if (selected && typeof selected === 'string') {
+    if (selected) {
       engineForm.path = selected
     }
   } catch (error) {
