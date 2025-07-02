@@ -65,6 +65,13 @@
                 @close="hidePopup(popup.id)"
               />
               
+              <!-- Engine Detection Popup -->
+              <EngineDetectionPopup
+                v-if="popup.component === 'EngineDetection'"
+                v-bind="popup.props"
+                @close="hidePopup(popup.id)"
+              />
+              
               <!-- Add more popup components here as needed -->
             </div>
           </Transition>
@@ -86,6 +93,7 @@ import ProjectLaunchChoicePopup from './popups/ProjectLaunchChoicePopup.vue'
 import ProjectCleanPopup from './popups/ProjectCleanPopup.vue'
 import ProjectCompressPopup from './popups/ProjectCompressPopup.vue'
 import SettingsPopup from './popups/SettingsPopup.vue'
+import EngineDetectionPopup from './popups/EngineDetectionPopup.vue'
 
 const { popupState, hidePopup, initPopupListener, showPopup } = usePopup()
 const { addLog } = useLogStore()
