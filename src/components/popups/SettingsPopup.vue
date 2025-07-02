@@ -67,7 +67,7 @@
                 </label>
               </div>
               <div class="setting-description">
-                Display the welcome popup when the application starts for the first time.
+                Display the welcome popup when the application starts.
               </div>
             </div>
           </div>
