@@ -587,6 +587,8 @@ const programIcons = ref<Record<string, string>>({})
 const showPresetDialog = ref(false)
 const newPresetName = ref('')
 const presetNameInput = ref<HTMLInputElement>()
+const systemUsername = ref('john_doe') // Fallback username
+const systemHostname = ref('DESKTOP-PC') // Fallback hostname
 
 // Tooltip state
 const tooltip = reactive({
@@ -676,6 +678,16 @@ const invalidTags = computed(() => {
   return usedTags.filter(tag => !allValidTags.value.includes(tag))
 })
 
+const loadSystemInfo = async () => {
+  try {
+    systemUsername.value = await invoke('get_system_username') as string
+    systemHostname.value = await invoke('get_system_hostname') as string
+  } catch (error) {
+    console.error('Failed to load system info:', error)
+    // Keep fallback values
+  }
+}
+
 // Generate the preview of the current format
 const formatPreview = computed(() => {
   const now = new Date()
@@ -703,8 +715,8 @@ const formatPreview = computed(() => {
     'Mon': now.toLocaleDateString('en-US', {month: 'short'}),
     'Day': now.toLocaleDateString('en-US', {weekday: 'long'}),
     'Weekday': now.toLocaleDateString('en-US', {weekday: 'short'}),
-    'User': 'john_doe',
-    'Computer': 'DESKTOP-PC',
+    'User': systemUsername.value,
+    'Computer': systemHostname.value,
     'Timestamp': Math.floor(now.getTime() / 1000).toString()
   }
 
@@ -984,11 +996,12 @@ const handleIconError = (programName: string) => {
 }
 
 onMounted(() => {
+  loadSystemInfo()
   loadSettings()
 })
 
 onUnmounted(() => {
-  // Save settings on unmount
+  // Save settings on unmounting
   saveSettings().catch(error => {
     console.error('Error saving settings on unmount:', error)
     addLog('Error saving settings on unmount', 'error')
