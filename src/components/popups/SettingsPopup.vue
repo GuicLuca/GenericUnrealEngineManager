@@ -289,6 +289,68 @@
           <div v-if="activeTab === 'compression'" class="tab-content">
             <h3 class="section-title">Compression</h3>
             
+            <!-- Available Tags Section -->
+            <div class="tags-section">
+              <h4 class="subsection-title">Available Tags</h4>
+              <div class="tags-categories">
+                <!-- Project Information Tags -->
+                <div class="tag-category">
+                  <h5 class="category-title">Project Information</h5>
+                  <div class="category-tags">
+                    <button
+                      v-for="tag in projectTags"
+                      :key="tag.name"
+                      class="tag-button"
+                      @click="insertTag(tag.name)"
+                      :title="tag.description"
+                      @mouseenter="showTagTooltip($event, tag.description)"
+                      @mouseleave="hideTagTooltip"
+                    >
+                      [{{ tag.name }}]
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Date & Time Tags -->
+                <div class="tag-category">
+                  <h5 class="category-title">Date & Time</h5>
+                  <div class="category-tags">
+                    <button
+                      v-for="tag in dateTimeTags"
+                      :key="tag.name"
+                      class="tag-button"
+                      @click="insertTag(tag.name)"
+                      :title="tag.description"
+                      @mouseenter="showTagTooltip($event, tag.description)"
+                      @mouseleave="hideTagTooltip"
+                    >
+                      [{{ tag.name }}]
+                    </button>
+                  </div>
+                </div>
+
+                <!-- System Information Tags -->
+                <div class="tag-category">
+                  <h5 class="category-title">System Information</h5>
+                  <div class="category-tags">
+                    <button
+                      v-for="tag in systemTags"
+                      :key="tag.name"
+                      class="tag-button"
+                      @click="insertTag(tag.name)"
+                      :title="tag.description"
+                      @mouseenter="showTagTooltip($event, tag.description)"
+                      @mouseleave="hideTagTooltip"
+                    >
+                      [{{ tag.name }}]
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-divider"></div>
+
             <div class="compression-section">
               <div class="format-section">
                 <h4 class="subsection-title">Filename Format</h4>
@@ -309,25 +371,6 @@
                 
                 <div v-if="formatWarning" class="format-warning">
                   ⚠️ {{ formatWarning }}
-                </div>
-                
-                <div class="format-tags">
-                  <div class="tags-header">
-                    <span class="tags-title">Available Tags:</span>
-                  </div>
-                  <div class="tags-grid">
-                    <button
-                      v-for="tag in availableTags"
-                      :key="tag.name"
-                      class="tag-button"
-                      @click="insertTag(tag.name)"
-                      :title="tag.description"
-                      @mouseenter="showTagTooltip($event, tag.description)"
-                      @mouseleave="hideTagTooltip"
-                    >
-                      [{{ tag.name }}]
-                    </button>
-                  </div>
                 </div>
               </div>
 
@@ -462,9 +505,18 @@ const tabs = [
 ]
 
 const availableTags = [
+// Categorized tags for better organization
+const projectTags = [
   { name: 'Project', description: 'Project name' },
   { name: 'Type', description: 'Project type (Cpp or Bp)' },
   { name: 'Engine', description: 'Engine version (e.g., 5-4-2)' },
+  { name: 'SizeMB', description: 'Project size in MB' },
+  { name: 'SizeGB', description: 'Project size in GB' },
+  { name: 'PluginCount', description: 'Number of plugins' },
+  { name: 'Algorithm', description: 'Compression algorithm' }
+]
+
+const dateTimeTags = [
   { name: 'YYYY', description: 'Full year (e.g., 2024)' },
   { name: 'YY', description: '2-digit year (e.g., 24)' },
   { name: 'MM', description: 'Month (01-12)' },
@@ -476,14 +528,16 @@ const availableTags = [
   { name: 'Mon', description: 'Short month name (e.g., Jan)' },
   { name: 'Day', description: 'Full day name (e.g., Monday)' },
   { name: 'Weekday', description: 'Short day name (e.g., Mon)' },
-  { name: 'User', description: 'System username' },
-  { name: 'Computer', description: 'Computer hostname' },
-  { name: 'SizeMB', description: 'Project size in MB' },
-  { name: 'SizeGB', description: 'Project size in GB' },
-  { name: 'PluginCount', description: 'Number of plugins' },
-  { name: 'Algorithm', description: 'Compression algorithm' },
   { name: 'Timestamp', description: 'Unix timestamp' }
 ]
+
+const systemTags = [
+  { name: 'User', description: 'System username' },
+  { name: 'Computer', description: 'Computer hostname' }
+]
+
+// Combined for validation
+const availableTags = [...projectTags, ...dateTimeTags, ...systemTags]
 
 const localSettings = reactive<AppSettings>({
   ide_programs: { custom_programs: {} },
@@ -645,7 +699,7 @@ const insertTag = (tagName: string) => {
 const validateFormat = () => {
   const format = localSettings.compression.filename_format
   const tagPattern = /\[([^\]]+)\]/g
-  const validTags = availableTags.map(tag => tag.name)
+  const validTags = [...projectTags, ...dateTimeTags, ...systemTags].map(tag => tag.name)
   const matches = [...format.matchAll(tagPattern)]
   
   const invalidTags = matches
@@ -1109,25 +1163,38 @@ onUnmounted(() => {
 }
 
 .format-tags {
+  display: none; /* Hide old format tags section */
+}
+
+.tags-section {
+  margin-bottom: var(--spacing-sm);
+}
+
+.tags-categories {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-md);
+}
+
+.tag-category {
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-sm);
   padding: var(--spacing-sm);
   background-color: var(--surface-color);
 }
 
-.tags-header {
-  margin-bottom: var(--spacing-sm);
-}
-
-.tags-title {
+.category-title {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
+  margin: 0 0 var(--spacing-sm) 0;
+  padding-bottom: var(--spacing-xs);
+  border-bottom: var(--border-width) solid var(--border-color);
 }
 
-.tags-grid {
+.category-tags {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--spacing-xs);
 }
 
@@ -1290,6 +1357,14 @@ onUnmounted(() => {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+  .tags-categories {
+    grid-template-columns: 1fr;
+  }
+  
+  .category-tags {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
   .settings-popup {
     min-width: 90vw;
     max-width: 90vw;
@@ -1305,10 +1380,6 @@ onUnmounted(() => {
     width: 100%;
     flex-direction: row;
     overflow-x: auto;
-  }
-  
-  .tags-grid {
-    grid-template-columns: repeat(auto-fill, minmax(4rem, 1fr));
   }
   
   .cleaning-section {
