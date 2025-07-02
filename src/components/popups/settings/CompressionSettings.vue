@@ -91,7 +91,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { usePopup } from '../../../composables/usePopup'
 
@@ -199,7 +199,9 @@ const openAddPresetPopup = () => {
   showPopup({
     id: 'preset-form',
     component: 'PresetForm',
-    props: {}
+    props: {
+      onSave: handlePresetSave
+    }
   })
 }
 
@@ -210,7 +212,8 @@ const editPreset = (name: string, format: string) => {
     props: {
       editingPreset: name,
       initialName: name,
-      initialFormat: format
+      initialFormat: format,
+      onSave: handlePresetSave
     }
   })
 }
@@ -275,11 +278,6 @@ onMounted(async () => {
   if (localSettings.compression.custom_presets['Default']) {
     selectedPreset.value = 'Default'
   }
-
-  // Listen for preset save events from the popup
-  window.addEventListener('preset-saved', ((event: CustomEvent) => {
-    handlePresetSave(event.detail)
-  }) as EventListener)
 })
 </script>
 

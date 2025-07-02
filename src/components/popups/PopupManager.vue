@@ -77,7 +77,6 @@
                 v-if="popup.component === 'PresetForm'"
                 v-bind="popup.props"
                 @close="hidePopup(popup.id)"
-                @save="handlePresetSave"
               />
               
               <!-- Add more popup components here as needed -->
@@ -118,15 +117,6 @@ const handleProjectDiscoverySubmit = (data: any) => {
   console.log('Project discovery submitted:', data)
   // Here you would typically call a Tauri command to start the discovery
   hidePopup() // Close the top popup
-}
-
-const handlePresetSave = (data: { name: string; format: string; isEdit: boolean; originalName?: string }) => {
-  // Emit a custom event that the CompressionSettings component can listen to
-  const event = new CustomEvent('preset-saved', { detail: data })
-  window.dispatchEvent(event)
-  
-  // Close the preset form popup
-  hidePopup('preset-form')
 }
 
 onMounted(async () => {

@@ -117,11 +117,11 @@ interface Props {
   editingPreset?: string | null
   initialName?: string
   initialFormat?: string
+  onSave?: (data: { name: string; format: string; isEdit: boolean; originalName?: string }) => void
 }
 
 interface Emits {
   (e: 'close'): void
-  (e: 'save', data: { name: string; format: string; isEdit: boolean; originalName?: string }): void
 }
 
 interface Tag {
@@ -246,12 +246,20 @@ const addTagToFormat = (tagCode: string) => {
 const savePreset = () => {
   if (!presetForm.name.trim() || !presetForm.format.trim()) return
 
-  emit('save', {
+  const data = {
     name: presetForm.name,
     format: presetForm.format,
     isEdit: !!props.editingPreset,
     originalName: props.editingPreset || undefined
-  })
+  }
+
+  // Call the onSave callback if provided
+  if (props.onSave) {
+    props.onSave(data)
+  }
+
+  // Close the popup
+  emit('close')
 }
 
 const loadSystemInfo = async () => {
