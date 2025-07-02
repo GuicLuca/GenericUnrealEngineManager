@@ -85,7 +85,7 @@
               
               <div v-else class="programs-list">
                 <div 
-                  v-for="(path, name) in sortedIdePrograms"
+                  v-for="(_path, name) in sortedIdePrograms"
                   :key="name"
                   class="program-item"
                 >
@@ -99,7 +99,7 @@
                   </div>
                   <button 
                     class="remove-button"
-                    @click="removeIdeProgram(name)"
+                    @click="removeIdeProgram(name as string)"
                     title="Remove IDE program"
                   >
                     🗑️
@@ -134,7 +134,7 @@
               
               <div v-else class="programs-list">
                 <div 
-                  v-for="(path, name) in sortedEnginePrograms"
+                  v-for="(_path, name) in sortedEnginePrograms"
                   :key="name"
                   class="program-item"
                 >
@@ -148,7 +148,7 @@
                   </div>
                   <button 
                     class="remove-button"
-                    @click="removeEngineProgram(name)"
+                    @click="removeEngineProgram(name as string)"
                     title="Remove engine"
                   >
                     🗑️
@@ -368,7 +368,7 @@
                       </button>
                       <button 
                         class="remove-button"
-                        @click="removePreset(name)"
+                        @click="removePreset(name as string)"
                         title="Delete preset"
                       >
                         🗑️
@@ -407,7 +407,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import {ref, reactive, computed, onMounted, nextTick, onUnmounted} from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useLogStore } from '../../stores/logStore'
 import { usePopup } from '../../composables/usePopup'
@@ -448,15 +448,9 @@ const emit = defineEmits<{
 const { addLog } = useLogStore()
 const { showPopup } = usePopup()
 
-const activeTab = ref('programs')
+const activeTab = ref('general') // The default active tab is the General tab
 const isSaving = ref(false)
 const formatWarning = ref('')
-const customProgramNames = ref<Record<string, string>>({})
-const customEngineNames = ref<Record<string, string>>({})
-const programIcons = ref<Record<string, string>>({})
-const showPresetDialog = ref(false)
-const newPresetName = ref('')
-const presetNameInput = ref<HTMLInputElement>()
 const systemUsername = ref('john_doe') // Fallback username
 const systemHostname = ref('DESKTOP-PC') // Fallback hostname
 
