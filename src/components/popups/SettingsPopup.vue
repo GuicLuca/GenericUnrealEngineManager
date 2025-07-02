@@ -308,10 +308,8 @@ onMounted(() => {
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-lg);
   width: 100%;
-  max-width: 56rem;
-  min-width: 56rem;
-  max-height: 85vh;
-  min-height: 40rem;
+  width: 56rem;
+  height: 85vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
