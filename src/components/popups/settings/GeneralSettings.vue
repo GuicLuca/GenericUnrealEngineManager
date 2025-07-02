@@ -7,10 +7,10 @@
         <div class="setting-header">
           <label class="setting-label">
             <input
-              v-model="localSettings.general.autostart_enabled"
+              v-model="localGeneral.autostart_enabled"
               type="checkbox"
               class="setting-checkbox"
-              @change="emitUpdate"
+              @change="handleUpdate"
             />
             <span class="setting-title">Start with system</span>
           </label>
@@ -24,10 +24,10 @@
         <div class="setting-header">
           <label class="setting-label">
             <input
-              v-model="localSettings.general.show_welcome_popup"
+              v-model="localGeneral.show_welcome_popup"
               type="checkbox"
               class="setting-checkbox"
-              @change="emitUpdate"
+              @change="handleUpdate"
             />
             <span class="setting-title">Show welcome popup</span>
           </label>
@@ -64,28 +64,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { useSettingsStore } from '../../../stores/settingsStore'
 
-interface Props {
-  settings: {
-    general: {
-      autostart_enabled: boolean
-      show_welcome_popup: boolean
-    }
-  }
-}
+const { getSettings, updateGeneralSettings } = useSettingsStore()
 
-interface Emits {
-  (e: 'update', settings: any): void
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
-
-const localSettings = reactive({
-  general: { ...props.settings.general }
-})
+const localGeneral = reactive({ ...getSettings('general') })
 
 const systemInfo = ref({
   platform: 'Unknown',
@@ -94,8 +79,8 @@ const systemInfo = ref({
   hostname: 'Unknown'
 })
 
-const emitUpdate = () => {
-  emit('update', { general: localSettings.general })
+const handleUpdate = () => {
+  updateGeneralSettings(localGeneral)
 }
 
 const loadSystemInfo = async () => {
@@ -108,9 +93,9 @@ const loadSystemInfo = async () => {
   }
 }
 
-// Watch for external changes to props
-watch(() => props.settings.general, (newGeneral) => {
-  Object.assign(localSettings.general, newGeneral)
+// Watch for external changes to settings
+watch(() => getSettings('general'), (newGeneral) => {
+  Object.assign(localGeneral, newGeneral)
 }, { deep: true })
 
 onMounted(() => {

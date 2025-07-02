@@ -8,7 +8,7 @@
       
       <div class="programs-list">
         <div 
-          v-for="(path, name) in localSettings.ide_programs.custom_programs"
+          v-for="(path, name) in localPrograms"
           :key="name"
           class="program-item"
         >
@@ -26,7 +26,7 @@
             </button>
             <button
               class="action-btn remove-btn"
-              @click="removeProgram(name as string)"
+              @click="handleRemoveProgram(name as string)"
               title="Remove program"
             >
               🗑️
@@ -34,7 +34,7 @@
           </div>
         </div>
 
-        <div v-if="Object.keys(localSettings.ide_programs.custom_programs).length === 0" class="no-programs">
+        <div v-if="Object.keys(localPrograms).length === 0" class="no-programs">
           <div class="no-programs-icon">💻</div>
           <div class="no-programs-text">No custom IDE programs configured</div>
           <div class="no-programs-subtext">Add IDE programs to launch C++ projects</div>
@@ -104,27 +104,16 @@
 <script setup lang="ts">
 import { ref, reactive, watch } from 'vue'
 import { open } from '@tauri-apps/plugin-dialog'
+import { useSettingsStore } from '../../../stores/settingsStore'
 
-interface Props {
-  settings: {
-    ide_programs: {
-      custom_programs: Record<string, string>
-    }
-  }
-}
+const { 
+  getSettings, 
+  addIdeProgram, 
+  removeIdeProgram, 
+  updateIdeProgram 
+} = useSettingsStore()
 
-interface Emits {
-  (e: 'update', settings: any): void
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
-
-const localSettings = reactive({
-  ide_programs: {
-    custom_programs: { ...props.settings.ide_programs.custom_programs }
-  }
-})
+const localPrograms = reactive({ ...getSettings('ide_programs').custom_programs })
 
 const showAddProgram = ref(false)
 const editingProgram = ref<string | null>(null)
@@ -133,10 +122,6 @@ const programForm = reactive({
   path: ''
 })
 
-const emitUpdate = () => {
-  emit('update', { ide_programs: localSettings.ide_programs })
-}
-
 const editProgram = (name: string, path: string) => {
   editingProgram.value = name
   programForm.name = name
@@ -144,10 +129,10 @@ const editProgram = (name: string, path: string) => {
   showAddProgram.value = false
 }
 
-const removeProgram = (name: string) => {
+const handleRemoveProgram = (name: string) => {
   if (confirm(`Are you sure you want to remove "${name}"?`)) {
-    delete localSettings.ide_programs.custom_programs[name]
-    emitUpdate()
+    removeIdeProgram(name)
+    delete localPrograms[name]
   }
 }
 
@@ -177,14 +162,15 @@ const saveProgram = () => {
   if (!programForm.name.trim() || !programForm.path.trim()) return
 
   if (editingProgram.value) {
-    // Remove old entry if name changed
+    updateIdeProgram(editingProgram.value, programForm.name, programForm.path)
     if (editingProgram.value !== programForm.name) {
-      delete localSettings.ide_programs.custom_programs[editingProgram.value]
+      delete localPrograms[editingProgram.value]
     }
+  } else {
+    addIdeProgram(programForm.name, programForm.path)
   }
 
-  localSettings.ide_programs.custom_programs[programForm.name] = programForm.path
-  emitUpdate()
+  localPrograms[programForm.name] = programForm.path
   cancelForm()
 }
 
@@ -195,9 +181,9 @@ const cancelForm = () => {
   programForm.path = ''
 }
 
-// Watch for external changes to props
-watch(() => props.settings.ide_programs, (newIdePrograms) => {
-  localSettings.ide_programs.custom_programs = { ...newIdePrograms.custom_programs }
+// Watch for external changes to settings
+watch(() => getSettings('ide_programs').custom_programs, (newPrograms) => {
+  Object.assign(localPrograms, newPrograms)
 }, { deep: true })
 </script>
 

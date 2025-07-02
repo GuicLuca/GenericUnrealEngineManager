@@ -13,11 +13,11 @@
           <div class="checkbox-group">
             <div class="checkbox-item">
               <input
-                v-model="localSettings.cleaning_defaults.ide_files"
+                v-model="localCleaning.ide_files"
                 type="checkbox"
                 class="checkbox-input"
                 id="default-ide-files"
-                @change="emitUpdate"
+                @change="handleUpdate"
               />
               <label for="default-ide-files" class="checkbox-label">
                 IDE files (.vs and .idea)
@@ -29,11 +29,11 @@
 
             <div class="checkbox-item">
               <input
-                v-model="localSettings.cleaning_defaults.binaries"
+                v-model="localCleaning.binaries"
                 type="checkbox"
                 class="checkbox-input"
                 id="default-binaries"
-                @change="emitUpdate"
+                @change="handleUpdate"
               />
               <label for="default-binaries" class="checkbox-label">
                 Binaries
@@ -45,11 +45,11 @@
 
             <div class="checkbox-item">
               <input
-                v-model="localSettings.cleaning_defaults.build"
+                v-model="localCleaning.build"
                 type="checkbox"
                 class="checkbox-input"
                 id="default-build"
-                @change="emitUpdate"
+                @change="handleUpdate"
               />
               <label for="default-build" class="checkbox-label">
                 Build
@@ -61,11 +61,11 @@
 
             <div class="checkbox-item">
               <input
-                v-model="localSettings.cleaning_defaults.intermediate"
+                v-model="localCleaning.intermediate"
                 type="checkbox"
                 class="checkbox-input"
                 id="default-intermediate"
-                @change="emitUpdate"
+                @change="handleUpdate"
               />
               <label for="default-intermediate" class="checkbox-label">
                 Intermediate
@@ -77,11 +77,11 @@
 
             <div class="checkbox-item">
               <input
-                v-model="localSettings.cleaning_defaults.derived_data_cache"
+                v-model="localCleaning.derived_data_cache"
                 type="checkbox"
                 class="checkbox-input"
                 id="default-derived-data-cache"
-                @change="emitUpdate"
+                @change="handleUpdate"
               />
               <label for="default-derived-data-cache" class="checkbox-label">
                 DerivedDataCache
@@ -93,11 +93,11 @@
 
             <div class="checkbox-item">
               <input
-                v-model="localSettings.cleaning_defaults.saved"
+                v-model="localCleaning.saved"
                 type="checkbox"
                 class="checkbox-input"
                 id="default-saved"
-                @change="emitUpdate"
+                @change="handleUpdate"
               />
               <label for="default-saved" class="checkbox-label">
                 Saved
@@ -109,11 +109,11 @@
 
             <div class="checkbox-item">
               <input
-                v-model="localSettings.cleaning_defaults.analyze_plugins"
+                v-model="localCleaning.analyze_plugins"
                 type="checkbox"
                 class="checkbox-input"
                 id="default-analyze-plugins"
-                @change="emitUpdate"
+                @change="handleUpdate"
               />
               <label for="default-analyze-plugins" class="checkbox-label">
                 Analyze plugins
@@ -131,12 +131,12 @@
           <div class="checkbox-group">
             <div class="checkbox-item">
               <input
-                v-model="localSettings.cleaning_defaults.plugin_binaries"
+                v-model="localCleaning.plugin_binaries"
                 type="checkbox"
                 class="checkbox-input"
                 id="default-plugin-binaries"
-                :disabled="!localSettings.cleaning_defaults.analyze_plugins"
-                @change="emitUpdate"
+                :disabled="!localCleaning.analyze_plugins"
+                @change="handleUpdate"
               />
               <label for="default-plugin-binaries" class="checkbox-label">
                 Binaries
@@ -148,12 +148,12 @@
 
             <div class="checkbox-item">
               <input
-                v-model="localSettings.cleaning_defaults.plugin_intermediate"
+                v-model="localCleaning.plugin_intermediate"
                 type="checkbox"
                 class="checkbox-input"
                 id="default-plugin-intermediate"
-                :disabled="!localSettings.cleaning_defaults.analyze_plugins"
-                @change="emitUpdate"
+                :disabled="!localCleaning.analyze_plugins"
+                @change="handleUpdate"
               />
               <label for="default-plugin-intermediate" class="checkbox-label">
                 Intermediate
@@ -165,12 +165,12 @@
 
             <div class="checkbox-item">
               <input
-                v-model="localSettings.cleaning_defaults.plugin_node_size_cache"
+                v-model="localCleaning.plugin_node_size_cache"
                 type="checkbox"
                 class="checkbox-input"
                 id="default-plugin-node-size-cache"
-                :disabled="!localSettings.cleaning_defaults.analyze_plugins"
-                @change="emitUpdate"
+                :disabled="!localCleaning.analyze_plugins"
+                @change="handleUpdate"
               />
               <label for="default-plugin-node-size-cache" class="checkbox-label">
                 NodeSizeCache
@@ -181,7 +181,7 @@
             </div>
           </div>
 
-          <div v-if="!localSettings.cleaning_defaults.analyze_plugins" class="plugin-disabled-notice">
+          <div v-if="!localCleaning.analyze_plugins" class="plugin-disabled-notice">
             <div class="notice-icon">ℹ️</div>
             <div class="notice-text">
               Enable "Analyze plugins" to configure plugin cleaning options.
@@ -196,53 +196,27 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
 import InfoTooltip from '../../InfoTooltip.vue'
+import { useSettingsStore } from '../../../stores/settingsStore'
 
-interface Props {
-  settings: {
-    cleaning_defaults: {
-      ide_files: boolean
-      binaries: boolean
-      build: boolean
-      intermediate: boolean
-      derived_data_cache: boolean
-      saved: boolean
-      analyze_plugins: boolean
-      plugin_binaries: boolean
-      plugin_intermediate: boolean
-      plugin_node_size_cache: boolean
-    }
+const { getSettings, updateCleaningDefaults } = useSettingsStore()
+
+const localCleaning = reactive({ ...getSettings('cleaning_defaults') })
+
+const handleUpdate = () => {
+  // If analyze_plugins is disabled, also disable plugin options
+  if (!localCleaning.analyze_plugins) {
+    localCleaning.plugin_binaries = false
+    localCleaning.plugin_intermediate = false
+    localCleaning.plugin_node_size_cache = false
   }
+  
+  updateCleaningDefaults(localCleaning)
 }
 
-interface Emits {
-  (e: 'update', settings: any): void
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
-
-const localSettings = reactive({
-  cleaning_defaults: { ...props.settings.cleaning_defaults }
-})
-
-const emitUpdate = () => {
-  emit('update', { cleaning_defaults: localSettings.cleaning_defaults })
-}
-
-// Watch for external changes to props
-watch(() => props.settings.cleaning_defaults, (newCleaningDefaults) => {
-  Object.assign(localSettings.cleaning_defaults, newCleaningDefaults)
+// Watch for external changes to settings
+watch(() => getSettings('cleaning_defaults'), (newCleaning) => {
+  Object.assign(localCleaning, newCleaning)
 }, { deep: true })
-
-// Watch for analyze_plugins changes to disable plugin options
-watch(() => localSettings.cleaning_defaults.analyze_plugins, (newValue) => {
-  if (!newValue) {
-    localSettings.cleaning_defaults.plugin_binaries = false
-    localSettings.cleaning_defaults.plugin_intermediate = false
-    localSettings.cleaning_defaults.plugin_node_size_cache = false
-    emitUpdate()
-  }
-})
 </script>
 
 <style scoped>

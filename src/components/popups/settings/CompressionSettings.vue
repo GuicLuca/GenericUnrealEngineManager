@@ -23,7 +23,7 @@
             </option>
           </select>
           <input
-            v-model="localSettings.compression.filename_format"
+            v-model="localCompression.filename_format"
             type="text"
             class="format-input readonly"
             placeholder="Format will be set by preset selection..."
@@ -80,7 +80,7 @@
           </div>
         </div>
 
-        <div v-if="Object.keys(localSettings.compression.custom_presets).length === 0" class="no-presets">
+        <div v-if="Object.keys(localCompression.custom_presets).length === 0" class="no-presets">
           <div class="no-presets-icon">🗜️</div>
           <div class="no-presets-text">No custom presets</div>
           <div class="no-presets-subtext">Create presets for commonly used filename formats</div>
@@ -94,31 +94,19 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { usePopup } from '../../../composables/usePopup'
+import { useSettingsStore } from '../../../stores/settingsStore'
 
-interface Props {
-  settings: {
-    compression: {
-      filename_format: string
-      custom_presets: Record<string, string>
-    }
-  }
-}
-
-interface Emits {
-  (e: 'update', settings: any): void
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+const { 
+  getSettings, 
+  addCompressionPreset, 
+  removeCompressionPreset, 
+  updateCompressionPreset, 
+  setCompressionFormat 
+} = useSettingsStore()
 
 const { showPopup } = usePopup()
 
-const localSettings = reactive({
-  compression: {
-    filename_format: props.settings.compression.filename_format,
-    custom_presets: { ...props.settings.compression.custom_presets }
-  }
-})
+const localCompression = reactive({ ...getSettings('compression') })
 
 const selectedPreset = ref('Default')
 const systemInfo = ref({
@@ -128,20 +116,20 @@ const systemInfo = ref({
 
 // Sort available formats alphabetically by name
 const sortedAvailableFormats = computed(() => {
-  const entries = Object.entries(localSettings.compression.custom_presets)
+  const entries = Object.entries(localCompression.custom_presets)
   entries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
   return Object.fromEntries(entries)
 })
 
 // Sort custom presets alphabetically by name
 const sortedCustomPresets = computed(() => {
-  const entries = Object.entries(localSettings.compression.custom_presets)
+  const entries = Object.entries(localCompression.custom_presets)
   entries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
   return Object.fromEntries(entries)
 })
 
 const previewFilename = computed(() => {
-  return getPreviewForFormat(localSettings.compression.filename_format)
+  return getPreviewForFormat(localCompression.filename_format)
 })
 
 const getPreviewForFormat = (format: string): string => {
@@ -184,14 +172,10 @@ const getPreviewForFormat = (format: string): string => {
   return preview
 }
 
-const emitUpdate = () => {
-  emit('update', { compression: localSettings.compression })
-}
-
 const applyPreset = () => {
-  if (selectedPreset.value && localSettings.compression.custom_presets[selectedPreset.value]) {
-    localSettings.compression.filename_format = localSettings.compression.custom_presets[selectedPreset.value]
-    emitUpdate()
+  if (selectedPreset.value && localCompression.custom_presets[selectedPreset.value]) {
+    localCompression.filename_format = localCompression.custom_presets[selectedPreset.value]
+    setCompressionFormat(localCompression.filename_format)
   }
 }
 
@@ -222,33 +206,33 @@ const removePreset = (name: string) => {
   if (name === 'Default') return // Prevent removing the default preset
   
   if (confirm(`Are you sure you want to remove the preset "${name}"?`)) {
-    delete localSettings.compression.custom_presets[name]
+    removeCompressionPreset(name)
+    delete localCompression.custom_presets[name]
     
     // If the removed preset was selected, switch to Default
     if (selectedPreset.value === name) {
       selectedPreset.value = 'Default'
       applyPreset()
     }
-    
-    emitUpdate()
   }
 }
 
 const handlePresetSave = (data: { name: string; format: string; isEdit: boolean; originalName?: string }) => {
   if (data.isEdit && data.originalName) {
+    updateCompressionPreset(data.originalName, data.name, data.format)
     // Remove old entry if name changed
     if (data.originalName !== data.name) {
-      delete localSettings.compression.custom_presets[data.originalName]
+      delete localCompression.custom_presets[data.originalName]
     }
+  } else {
+    addCompressionPreset(data.name, data.format)
   }
 
-  localSettings.compression.custom_presets[data.name] = data.format
+  localCompression.custom_presets[data.name] = data.format
   
   // If this is a new preset or the name changed, select it
   selectedPreset.value = data.name
   applyPreset()
-  
-  emitUpdate()
 }
 
 const loadSystemInfo = async () => {
@@ -260,13 +244,12 @@ const loadSystemInfo = async () => {
   }
 }
 
-// Watch for external changes to props
-watch(() => props.settings.compression, (newCompression) => {
-  localSettings.compression.filename_format = newCompression.filename_format
-  localSettings.compression.custom_presets = { ...newCompression.custom_presets }
+// Watch for external changes to settings
+watch(() => getSettings('compression'), (newCompression) => {
+  Object.assign(localCompression, newCompression)
   
   // Ensure Default preset is selected if it exists
-  if (localSettings.compression.custom_presets['Default']) {
+  if (localCompression.custom_presets['Default']) {
     selectedPreset.value = 'Default'
   }
 }, { deep: true })
@@ -275,7 +258,7 @@ onMounted(async () => {
   await loadSystemInfo()
   
   // Set Default as selected preset if it exists
-  if (localSettings.compression.custom_presets['Default']) {
+  if (localCompression.custom_presets['Default']) {
     selectedPreset.value = 'Default'
   }
 })

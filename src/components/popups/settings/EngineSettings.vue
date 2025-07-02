@@ -8,7 +8,7 @@
       
       <div class="engines-list">
         <div 
-          v-for="(path, name) in localSettings.engine_programs.custom_engines"
+          v-for="(path, name) in localEngines"
           :key="name"
           class="engine-item"
         >
@@ -26,7 +26,7 @@
             </button>
             <button
               class="action-btn remove-btn"
-              @click="removeEngine(name as string)"
+              @click="handleRemoveEngine(name as string)"
               title="Remove engine"
             >
               🗑️
@@ -34,7 +34,7 @@
           </div>
         </div>
 
-        <div v-if="Object.keys(localSettings.engine_programs.custom_engines).length === 0" class="no-engines">
+        <div v-if="Object.keys(localEngines).length === 0" class="no-engines">
           <div class="no-engines-icon">⚙️</div>
           <div class="no-engines-text">No custom engines configured</div>
           <div class="no-engines-subtext">Add custom engine installations or source builds</div>
@@ -115,29 +115,18 @@
 import { ref, reactive, watch } from 'vue'
 import { open } from '@tauri-apps/plugin-dialog'
 import { usePopup } from '../../../composables/usePopup'
+import { useSettingsStore } from '../../../stores/settingsStore'
 
-interface Props {
-  settings: {
-    engine_programs: {
-      custom_engines: Record<string, string>
-    }
-  }
-}
-
-interface Emits {
-  (e: 'update', settings: any): void
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+const { 
+  getSettings, 
+  addEngineProgram, 
+  removeEngineProgram, 
+  updateEngineProgram 
+} = useSettingsStore()
 
 const { showPopup } = usePopup()
 
-const localSettings = reactive({
-  engine_programs: {
-    custom_engines: { ...props.settings.engine_programs.custom_engines }
-  }
-})
+const localEngines = reactive({ ...getSettings('engine_programs').custom_engines })
 
 const showAddEngine = ref(false)
 const editingEngine = ref<string | null>(null)
@@ -146,10 +135,6 @@ const engineForm = reactive({
   path: ''
 })
 
-const emitUpdate = () => {
-  emit('update', { engine_programs: localSettings.engine_programs })
-}
-
 const editEngine = (name: string, path: string) => {
   editingEngine.value = name
   engineForm.name = name
@@ -157,10 +142,10 @@ const editEngine = (name: string, path: string) => {
   showAddEngine.value = false
 }
 
-const removeEngine = (name: string) => {
+const handleRemoveEngine = (name: string) => {
   if (confirm(`Are you sure you want to remove "${name}"?`)) {
-    delete localSettings.engine_programs.custom_engines[name]
-    emitUpdate()
+    removeEngineProgram(name)
+    delete localEngines[name]
   }
 }
 
@@ -184,14 +169,15 @@ const saveEngine = () => {
   if (!engineForm.name.trim() || !engineForm.path.trim()) return
 
   if (editingEngine.value) {
-    // Remove old entry if name changed
+    updateEngineProgram(editingEngine.value, engineForm.name, engineForm.path)
     if (editingEngine.value !== engineForm.name) {
-      delete localSettings.engine_programs.custom_engines[editingEngine.value]
+      delete localEngines[editingEngine.value]
     }
+  } else {
+    addEngineProgram(engineForm.name, engineForm.path)
   }
 
-  localSettings.engine_programs.custom_engines[engineForm.name] = engineForm.path
-  emitUpdate()
+  localEngines[engineForm.name] = engineForm.path
   cancelForm()
 }
 
@@ -210,9 +196,9 @@ const autoDetectEngines = () => {
   })
 }
 
-// Watch for external changes to props
-watch(() => props.settings.engine_programs, (newEnginePrograms) => {
-  localSettings.engine_programs.custom_engines = { ...newEnginePrograms.custom_engines }
+// Watch for external changes to settings
+watch(() => getSettings('engine_programs').custom_engines, (newEngines) => {
+  Object.assign(localEngines, newEngines)
 }, { deep: true })
 </script>
 

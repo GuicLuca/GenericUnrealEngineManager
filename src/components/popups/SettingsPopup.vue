@@ -8,7 +8,7 @@
         </h2>
         <div class="settings-subtitle">Configure your application preferences</div>
       </div>
-      <button class="close-button" @click="$emit('close')" title="Close">
+      <button class="close-button" @click="handleClose" title="Close">
         ✕
       </button>
     </div>
@@ -33,46 +33,21 @@
 
         <!-- Right Content Area -->
         <div class="settings-content">
-<!--          <div class="content-header">-->
-<!--            <h3 class="content-title">{{ getCurrentTab()?.label }}</h3>-->
-<!--            <div class="content-description">{{ getCurrentTab()?.description }}</div>-->
-<!--          </div>-->
-
           <div class="content-body">
             <!-- General Settings -->
-            <GeneralSettings
-              v-if="activeTab === 'general'"
-              :settings="settings"
-              @update="handleSettingsUpdate"
-            />
+            <GeneralSettings v-if="activeTab === 'general'" />
 
             <!-- IDE Programs -->
-            <IdeSettings
-              v-if="activeTab === 'ide'"
-              :settings="settings"
-              @update="handleSettingsUpdate"
-            />
+            <IdeSettings v-if="activeTab === 'ide'" />
 
             <!-- Engine Programs -->
-            <EngineSettings
-              v-if="activeTab === 'engines'"
-              :settings="settings"
-              @update="handleSettingsUpdate"
-            />
+            <EngineSettings v-if="activeTab === 'engines'" />
 
             <!-- Cleaning Defaults -->
-            <CleaningSettings
-              v-if="activeTab === 'cleaning'"
-              :settings="settings"
-              @update="handleSettingsUpdate"
-            />
+            <CleaningSettings v-if="activeTab === 'cleaning'" />
 
             <!-- Compression Settings -->
-            <CompressionSettings
-              v-if="activeTab === 'compression'"
-              :settings="settings"
-              @update="handleSettingsUpdate"
-            />
+            <CompressionSettings v-if="activeTab === 'compression'" />
           </div>
         </div>
       </div>
@@ -83,7 +58,7 @@
         <button
           class="action-button secondary-button"
           @click="resetToDefaults"
-          :disabled="isSaving"
+          :disabled="isLoading"
         >
           <span class="button-icon">🔄</span>
           Reset to Defaults
@@ -91,13 +66,21 @@
       </div>
       
       <div class="right-actions">
+        <div class="save-status">
+          <span v-if="hasUnsavedChanges" class="unsaved-indicator">
+            • Unsaved changes
+          </span>
+          <span v-else-if="lastSaveTime" class="saved-indicator">
+            ✓ Saved {{ formatLastSaveTime() }}
+          </span>
+        </div>
         <button
           class="action-button primary-button"
-          @click="$emit('close')"
-          :disabled="isSaving"
+          @click="handleSave"
+          :disabled="isLoading || !hasUnsavedChanges"
         >
-          <span class="button-icon">{{ isSaving ? '⏳' : '💾' }}</span>
-          {{ isSaving ? 'Saving...' : 'Save Settings' }}
+          <span class="button-icon">{{ isLoading ? '⏳' : '💾' }}</span>
+          {{ isLoading ? 'Saving...' : 'Save Settings' }}
         </button>
       </div>
     </div>
@@ -105,198 +88,125 @@
 </template>
 
 <script setup lang="ts">
-import {ref, reactive, onMounted, onUnmounted} from 'vue'
-import { invoke } from '@tauri-apps/api/core'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useLogStore } from '../../stores/logStore'
+import { useSettingsStore } from '../../stores/settingsStore'
 import GeneralSettings from './settings/GeneralSettings.vue'
 import IdeSettings from './settings/IdeSettings.vue'
 import EngineSettings from './settings/EngineSettings.vue'
 import CleaningSettings from './settings/CleaningSettings.vue'
 import CompressionSettings from './settings/CompressionSettings.vue'
 
-interface AppSettings {
-  ide_programs: {
-    custom_programs: Record<string, string>
-  }
-  engine_programs: {
-    custom_engines: Record<string, string>
-  }
-  cleaning_defaults: {
-    ide_files: boolean
-    binaries: boolean
-    build: boolean
-    intermediate: boolean
-    derived_data_cache: boolean
-    saved: boolean
-    analyze_plugins: boolean
-    plugin_binaries: boolean
-    plugin_intermediate: boolean
-    plugin_node_size_cache: boolean
-  }
-  general: {
-    autostart_enabled: boolean
-    show_welcome_popup: boolean
-  }
-  compression: {
-    filename_format: string
-    custom_presets: Record<string, string>
-  }
-}
-
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
 const { addLog } = useLogStore()
+const { 
+  loadSettings, 
+  saveSettings, 
+  resetToDefaults: resetStoreToDefaults,
+  isLoading, 
+  hasUnsavedChanges, 
+  lastSaveTime 
+} = useSettingsStore()
 
 const activeTab = ref('general')
-const isSaving = ref(false)
 
 const tabs = [
   {
     id: 'general',
     label: 'General',
-    icon: '🏠',
-    description: 'General application settings and preferences'
+    icon: '🏠'
   },
   {
     id: 'ide',
     label: 'IDE Programs',
-    icon: '💻',
-    description: 'Configure IDE programs for opening projects'
+    icon: '💻'
   },
   {
     id: 'engines',
     label: 'Engine Programs',
-    icon: '⚙️',
-    description: 'Manage Unreal Engine installations'
+    icon: '⚙️'
   },
   {
     id: 'cleaning',
     label: 'Cleaning Defaults',
-    icon: '🧹',
-    description: 'Default settings for project cleaning operations'
+    icon: '🧹'
   },
   {
     id: 'compression',
     label: 'Compression',
-    icon: '🗜️',
-    description: 'Compression and archiving preferences'
+    icon: '🗜️'
   }
 ]
-
-const settings = reactive<AppSettings>({
-  ide_programs: {
-    custom_programs: {}
-  },
-  engine_programs: {
-    custom_engines: {}
-  },
-  cleaning_defaults: {
-    ide_files: true,
-    binaries: true,
-    build: true,
-    intermediate: true,
-    derived_data_cache: false,
-    saved: false,
-    analyze_plugins: false,
-    plugin_binaries: false,
-    plugin_intermediate: false,
-    plugin_node_size_cache: false
-  },
-  general: {
-    autostart_enabled: false,
-    show_welcome_popup: true
-  },
-  compression: {
-    filename_format: '[Project]_[YYYY][MM][DD][HH][mm]',
-    custom_presets: {}
-  }
-})
 
 const setActiveTab = (tabId: string) => {
   activeTab.value = tabId
 }
 
-// const getCurrentTab = () => {
-//   return tabs.find(tab => tab.id === activeTab.value)
-// }
-
-const handleSettingsUpdate = (updatedSettings: Partial<AppSettings>) => {
-  Object.assign(settings, updatedSettings)
-}
-
-const loadSettings = async () => {
+const handleSave = async () => {
   try {
-    const loadedSettings = await invoke('get_settings') as AppSettings
-    Object.assign(settings, loadedSettings)
-  } catch (error) {
-    console.error('Failed to load settings:', error)
-    addLog('Failed to load settings', 'error')
-  }
-}
-
-const saveSettings = async () => {
-  try {
-    isSaving.value = true
-    await invoke('save_settings', { settings })
+    await saveSettings()
     addLog('Settings saved successfully')
-    emit('close')
   } catch (error) {
     console.error('Failed to save settings:', error)
     addLog('Failed to save settings', 'error')
-  } finally {
-    isSaving.value = false
   }
 }
 
 const resetToDefaults = async () => {
   if (confirm('Are you sure you want to reset all settings to their default values? This action cannot be undone.')) {
-    // Reset to default values
-    Object.assign(settings, {
-      ide_programs: {
-        custom_programs: {}
-      },
-      engine_programs: {
-        custom_engines: {}
-      },
-      cleaning_defaults: {
-        ide_files: true,
-        binaries: true,
-        build: true,
-        intermediate: true,
-        derived_data_cache: false,
-        saved: false,
-        analyze_plugins: false,
-        plugin_binaries: false,
-        plugin_intermediate: false,
-        plugin_node_size_cache: false
-      },
-      general: {
-        autostart_enabled: false,
-        show_welcome_popup: true
-      },
-      compression: {
-        filename_format: '[Project]_[YYYY][MM][DD][HH][mm]',
-        custom_presets: {
-          'Default': '[Project]_[YYYY][MM][DD][HH][mm]',
-          'Default Extended': '[Project]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]',
-          'Simple': '[Project]_[Type]'
-        }
-      }
-    })
-    
+    resetStoreToDefaults()
     addLog('Settings reset to defaults')
   }
 }
 
-onMounted(() => {
-  loadSettings()
+const handleClose = async () => {
+  // Auto-save if there are unsaved changes
+  if (hasUnsavedChanges.value) {
+    try {
+      await saveSettings()
+      addLog('Settings auto-saved on close')
+    } catch (error) {
+      console.error('Failed to auto-save settings:', error)
+      addLog('Failed to auto-save settings', 'error')
+    }
+  }
+  
+  emit('close')
+}
+
+const formatLastSaveTime = (): string => {
+  if (!lastSaveTime.value) return ''
+  
+  const now = new Date()
+  const diff = now.getTime() - lastSaveTime.value.getTime()
+  const seconds = Math.floor(diff / 1000)
+  
+  if (seconds < 60) return 'just now'
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+  return lastSaveTime.value.toLocaleTimeString()
+}
+
+onMounted(async () => {
+  try {
+    await loadSettings()
+  } catch (error) {
+    console.error('Failed to load settings:', error)
+    addLog('Failed to load settings', 'error')
+  }
 })
 
+// Auto-save on unmount
 onUnmounted(async () => {
-  // Save settings when the component is unmounted
-  await saveSettings()
+  if (hasUnsavedChanges.value) {
+    try {
+      await saveSettings()
+    } catch (error) {
+      console.error('Failed to auto-save settings on unmount:', error)
+    }
+  }
 })
 </script>
 
@@ -439,25 +349,6 @@ onUnmounted(async () => {
   overflow: hidden;
 }
 
-.content-header {
-  padding: var(--spacing-lg);
-  border-bottom: var(--border-width) solid var(--border-color);
-  flex-shrink: 0;
-}
-
-.content-title {
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-  margin: 0 0 var(--spacing-xs) 0;
-}
-
-.content-description {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  margin: 0;
-}
-
 .content-body {
   flex-grow: 1;
   overflow-y: auto;
@@ -478,6 +369,22 @@ onUnmounted(async () => {
 .right-actions {
   display: flex;
   gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.save-status {
+  font-size: var(--font-size-xs);
+  margin-right: var(--spacing-sm);
+}
+
+.unsaved-indicator {
+  color: #d69e2e;
+  font-weight: var(--font-weight-medium);
+}
+
+.saved-indicator {
+  color: #38a169;
+  font-weight: var(--font-weight-medium);
 }
 
 .action-button {
