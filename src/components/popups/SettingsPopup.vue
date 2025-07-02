@@ -505,6 +505,7 @@ const tabs = [
 ]
 
 const availableTags = [
+]
 // Categorized tags for better organization
 const projectTags = [
   { name: 'Project', description: 'Project name' },
