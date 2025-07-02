@@ -15,7 +15,7 @@
             @change="applyPreset"
           >
             <option 
-              v-for="(format, name) in localSettings.compression.custom_presets"
+              v-for="(format, name) in sortedAvailableFormats"
               :key="name"
               :value="name"
             >
@@ -45,7 +45,7 @@
             Create and manage custom filename format presets for quick access.
           </div>
         </div>
-        <button class="add-preset-btn" @click="showAddPresetPopup = true">
+        <button class="add-preset-btn" @click="openAddPresetPopup">
           <span class="button-icon">➕</span>
           Add Custom Preset
         </button>
@@ -53,7 +53,7 @@
       
       <div class="presets-list">
         <div 
-          v-for="(format, name) in localSettings.compression.custom_presets"
+          v-for="(format, name) in sortedCustomPresets"
           :key="name"
           class="preset-item"
         >
@@ -87,135 +87,13 @@
         </div>
       </div>
     </div>
-
-    <!-- Add/Edit Preset Popup -->
-    <Teleport to="body">
-      <Transition name="popup-overlay">
-        <div 
-          v-if="showAddPresetPopup || editingPreset"
-          class="popup-overlay"
-          @click="cancelPresetForm"
-        >
-          <Transition name="popup-content">
-            <div 
-              class="preset-popup"
-              @click.stop
-            >
-              <div class="popup-header">
-                <h4 class="popup-title">{{ editingPreset ? 'Edit' : 'Add' }} Custom Preset</h4>
-                <button class="close-button" @click="cancelPresetForm" title="Close">
-                  ✕
-                </button>
-              </div>
-
-              <div class="popup-content">
-                <div class="form-group">
-                  <label class="form-label">Preset Name</label>
-                  <input
-                    v-model="presetForm.name"
-                    type="text"
-                    class="form-input"
-                    placeholder="e.g., My Custom Format"
-                    :disabled="!!editingPreset"
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label">Format Template</label>
-                  <input
-                    v-model="presetForm.format"
-                    type="text"
-                    class="form-input"
-                    placeholder="e.g., [Project]_[Type]_[YYYY][MM][DD]"
-                  />
-                  <div class="format-preview">
-                    <span class="preview-label">Preview:</span>
-                    <span class="preview-filename">{{ getPreviewForFormat(presetForm.format) }}</span>
-                  </div>
-                </div>
-
-                <div class="tags-section">
-                  <h5 class="tags-title">Available Tags</h5>
-                  <div class="tags-description">Click on any tag to add it to your format template</div>
-                  
-                  <div class="tags-grid">
-                    <div class="tag-group">
-                      <h6 class="tag-group-title">Project Info</h6>
-                      <div class="tag-list">
-                        <button 
-                          v-for="tag in projectTags"
-                          :key="tag.code"
-                          class="tag-button"
-                          @click="addTagToFormat(tag.code)"
-                          :title="tag.description"
-                        >
-                          <code>{{ tag.code }}</code>
-                          <span>{{ tag.label }}</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div class="tag-group">
-                      <h6 class="tag-group-title">Date & Time</h6>
-                      <div class="tag-list">
-                        <button 
-                          v-for="tag in dateTags"
-                          :key="tag.code"
-                          class="tag-button"
-                          @click="addTagToFormat(tag.code)"
-                          :title="tag.description"
-                        >
-                          <code>{{ tag.code }}</code>
-                          <span>{{ tag.label }}</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div class="tag-group">
-                      <h6 class="tag-group-title">System Info</h6>
-                      <div class="tag-list">
-                        <button 
-                          v-for="tag in systemTags"
-                          :key="tag.code"
-                          class="tag-button"
-                          @click="addTagToFormat(tag.code)"
-                          :title="tag.description"
-                        >
-                          <code>{{ tag.code }}</code>
-                          <span>{{ tag.label }}</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="popup-actions">
-                <button
-                  class="form-btn cancel-btn"
-                  @click="cancelPresetForm"
-                >
-                  Cancel
-                </button>
-                <button
-                  class="form-btn save-btn"
-                  @click="savePreset"
-                  :disabled="!presetForm.name.trim() || !presetForm.format.trim()"
-                >
-                  {{ editingPreset ? 'Update' : 'Add' }} Preset
-                </button>
-              </div>
-            </div>
-          </Transition>
-        </div>
-      </Transition>
-    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { usePopup } from '../../../composables/usePopup'
 
 interface Props {
   settings: {
@@ -230,14 +108,10 @@ interface Emits {
   (e: 'update', settings: any): void
 }
 
-interface Tag {
-  code: string
-  label: string
-  description: string
-}
-
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+const { showPopup } = usePopup()
 
 const localSettings = reactive({
   compression: {
@@ -247,48 +121,24 @@ const localSettings = reactive({
 })
 
 const selectedPreset = ref('Default')
-const showAddPresetPopup = ref(false)
-const editingPreset = ref<string | null>(null)
-const presetForm = reactive({
-  name: '',
-  format: ''
-})
-
 const systemInfo = ref({
   username: 'john_doe',
   hostname: 'DESKTOP-PC'
 })
 
-// Tag definitions
-const projectTags: Tag[] = [
-  { code: '[Project]', label: 'Project name', description: 'Name of the project' },
-  { code: '[Type]', label: 'Cpp or Bp', description: 'Project type (C++ or Blueprint)' },
-  { code: '[Engine]', label: 'Engine version', description: 'Unreal Engine version' },
-  { code: '[SizeMB]', label: 'Size in MB', description: 'Project size in megabytes' },
-  { code: '[SizeGB]', label: 'Size in GB', description: 'Project size in gigabytes' },
-  { code: '[PluginCount]', label: 'Plugin count', description: 'Number of plugins in the project' }
-]
+// Sort available formats alphabetically by name
+const sortedAvailableFormats = computed(() => {
+  const entries = Object.entries(localSettings.compression.custom_presets)
+  entries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
+  return Object.fromEntries(entries)
+})
 
-const dateTags: Tag[] = [
-  { code: '[YYYY]', label: 'Full year', description: 'Full year (e.g., 2024)' },
-  { code: '[YY]', label: 'Short year', description: 'Two-digit year (e.g., 24)' },
-  { code: '[MM]', label: 'Month', description: 'Month with leading zero (01-12)' },
-  { code: '[DD]', label: 'Day', description: 'Day with leading zero (01-31)' },
-  { code: '[HH]', label: 'Hour', description: 'Hour in 24-hour format (00-23)' },
-  { code: '[mm]', label: 'Minute', description: 'Minute with leading zero (00-59)' },
-  { code: '[ss]', label: 'Second', description: 'Second with leading zero (00-59)' },
-  { code: '[Month]', label: 'Full month', description: 'Full month name (e.g., January)' },
-  { code: '[Mon]', label: 'Short month', description: 'Short month name (e.g., Jan)' },
-  { code: '[Day]', label: 'Full day', description: 'Full day name (e.g., Monday)' },
-  { code: '[Weekday]', label: 'Short day', description: 'Short day name (e.g., Mon)' }
-]
-
-const systemTags: Tag[] = [
-  { code: '[User]', label: 'Username', description: 'Current system username' },
-  { code: '[Computer]', label: 'Computer name', description: 'Computer hostname' },
-  { code: '[Timestamp]', label: 'Unix timestamp', description: 'Unix timestamp in seconds' },
-  { code: '[Algorithm]', label: 'Compression type', description: 'Compression algorithm used' }
-]
+// Sort custom presets alphabetically by name
+const sortedCustomPresets = computed(() => {
+  const entries = Object.entries(localSettings.compression.custom_presets)
+  entries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
+  return Object.fromEntries(entries)
+})
 
 const previewFilename = computed(() => {
   return getPreviewForFormat(localSettings.compression.filename_format)
@@ -345,11 +195,24 @@ const applyPreset = () => {
   }
 }
 
+const openAddPresetPopup = () => {
+  showPopup({
+    id: 'preset-form',
+    component: 'PresetForm',
+    props: {}
+  })
+}
+
 const editPreset = (name: string, format: string) => {
-  editingPreset.value = name
-  presetForm.name = name
-  presetForm.format = format
-  showAddPresetPopup.value = true
+  showPopup({
+    id: 'preset-form',
+    component: 'PresetForm',
+    props: {
+      editingPreset: name,
+      initialName: name,
+      initialFormat: format
+    }
+  })
 }
 
 const removePreset = (name: string) => {
@@ -368,52 +231,21 @@ const removePreset = (name: string) => {
   }
 }
 
-const addTagToFormat = (tagCode: string) => {
-  // Add the tag at the cursor position or at the end
-  const input = document.querySelector('.form-input') as HTMLInputElement
-  if (input && input === document.activeElement) {
-    const start = input.selectionStart || 0
-    const end = input.selectionEnd || 0
-    const before = presetForm.format.substring(0, start)
-    const after = presetForm.format.substring(end)
-    presetForm.format = before + tagCode + after
-    
-    // Set cursor position after the inserted tag
-    setTimeout(() => {
-      input.setSelectionRange(start + tagCode.length, start + tagCode.length)
-      input.focus()
-    }, 0)
-  } else {
-    // Just append to the end if no cursor position
-    presetForm.format += tagCode
-  }
-}
-
-const savePreset = () => {
-  if (!presetForm.name.trim() || !presetForm.format.trim()) return
-
-  if (editingPreset.value) {
+const handlePresetSave = (data: { name: string; format: string; isEdit: boolean; originalName?: string }) => {
+  if (data.isEdit && data.originalName) {
     // Remove old entry if name changed
-    if (editingPreset.value !== presetForm.name) {
-      delete localSettings.compression.custom_presets[editingPreset.value]
+    if (data.originalName !== data.name) {
+      delete localSettings.compression.custom_presets[data.originalName]
     }
   }
 
-  localSettings.compression.custom_presets[presetForm.name] = presetForm.format
+  localSettings.compression.custom_presets[data.name] = data.format
   
   // If this is a new preset or the name changed, select it
-  selectedPreset.value = presetForm.name
+  selectedPreset.value = data.name
   applyPreset()
   
   emitUpdate()
-  cancelPresetForm()
-}
-
-const cancelPresetForm = () => {
-  showAddPresetPopup.value = false
-  editingPreset.value = null
-  presetForm.name = ''
-  presetForm.format = ''
 }
 
 const loadSystemInfo = async () => {
@@ -436,13 +268,18 @@ watch(() => props.settings.compression, (newCompression) => {
   }
 }, { deep: true })
 
-onMounted(() => {
-  loadSystemInfo()
+onMounted(async () => {
+  await loadSystemInfo()
   
   // Set Default as selected preset if it exists
   if (localSettings.compression.custom_presets['Default']) {
     selectedPreset.value = 'Default'
   }
+
+  // Listen for preset save events from the popup
+  window.addEventListener('preset-saved', ((event: CustomEvent) => {
+    handlePresetSave(event.detail)
+  }) as EventListener)
 })
 </script>
 
@@ -686,268 +523,8 @@ onMounted(() => {
   font-size: var(--font-size-sm);
 }
 
-/* Popup Styles */
-.popup-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(2px);
-  z-index: 10000;
-}
-
-.preset-popup {
-  background-color: var(--background-color);
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-lg);
-  width: 100%;
-  max-width: 42rem;
-  max-height: 85vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-.popup-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-lg);
-  background-color: var(--surface-color);
-  border-bottom: var(--border-width) solid var(--border-color);
-  flex-shrink: 0;
-}
-
-.popup-title {
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  font-size: var(--font-size-lg);
-  cursor: pointer;
-  padding: var(--spacing-xs);
-  border-radius: var(--border-radius-sm);
-  color: var(--text-secondary);
-  transition: all var(--transition-fast);
-  width: 2rem;
-  height: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.close-button:hover {
-  background-color: var(--hover-color);
-  color: var(--text-primary);
-}
-
-.popup-content {
-  flex-grow: 1;
-  overflow-y: auto;
-  padding: var(--spacing-lg);
-}
-
-.form-group {
-  margin-bottom: var(--spacing-lg);
-}
-
-.form-input {
-  width: 100%;
-  padding: var(--spacing-sm);
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-sm);
-  color: var(--text-primary);
-  background-color: var(--background-color);
-  transition: border-color var(--transition-fast);
-  font-family: var(--font-mono);
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px var(--accent-color-alpha);
-}
-
-.form-input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.tags-section {
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-md);
-  padding: var(--spacing-md);
-  background-color: var(--surface-color);
-}
-
-.tags-title {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-primary);
-  margin: 0 0 var(--spacing-xs) 0;
-}
-
-.tags-description {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  margin: 0 0 var(--spacing-md) 0;
-  line-height: var(--line-height-normal);
-}
-
-.tags-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-md);
-}
-
-.tag-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
-
-.tag-group-title {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-  margin: 0 0 var(--spacing-xs) 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.tag-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
-
-.tag-button {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-xs);
-  border: var(--border-width) solid var(--border-color);
-  background-color: var(--background-color);
-  border-radius: var(--border-radius-sm);
-  cursor: pointer;
-  font-size: var(--font-size-xs);
-  transition: all var(--transition-fast);
-  text-align: left;
-}
-
-.tag-button:hover {
-  background-color: var(--hover-color);
-  border-color: var(--accent-color);
-}
-
-.tag-button:active {
-  background-color: var(--active-color);
-}
-
-.tag-button code {
-  background-color: var(--surface-color);
-  padding: var(--spacing-xs);
-  border-radius: var(--border-radius-sm);
-  font-family: var(--font-mono);
-  color: var(--accent-color);
-  font-weight: var(--font-weight-medium);
-  flex-shrink: 0;
-  font-size: var(--font-size-xs);
-}
-
-.tag-button span {
-  color: var(--text-secondary);
-  flex-grow: 1;
-  min-width: 0;
-}
-
-.popup-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md) var(--spacing-lg);
-  border-top: var(--border-width) solid var(--border-color);
-  background-color: var(--surface-color);
-  flex-shrink: 0;
-}
-
-.form-btn {
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  border: var(--border-width) solid;
-}
-
-.cancel-btn {
-  background-color: transparent;
-  border-color: var(--border-color);
-  color: var(--text-secondary);
-}
-
-.cancel-btn:hover {
-  background-color: var(--hover-color);
-  color: var(--text-primary);
-}
-
-.save-btn {
-  background-color: var(--accent-color);
-  border-color: var(--accent-color);
-  color: white;
-}
-
-.save-btn:hover:not(:disabled) {
-  background-color: #2c5aa0;
-  border-color: #2c5aa0;
-}
-
-.save-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Transitions */
-.popup-overlay-enter-active,
-.popup-overlay-leave-active {
-  transition: opacity var(--transition-normal);
-}
-
-.popup-overlay-enter-from,
-.popup-overlay-leave-to {
-  opacity: 0;
-}
-
-.popup-content-enter-active,
-.popup-content-leave-active {
-  transition: all var(--transition-normal);
-}
-
-.popup-content-enter-from,
-.popup-content-leave-to {
-  opacity: 0;
-  transform: scale(0.95) translateY(-10px);
-}
-
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .tags-grid {
-    grid-template-columns: 1fr;
-  }
-  
   .format-input-group {
     flex-direction: column;
   }
@@ -956,11 +533,6 @@ onMounted(() => {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--spacing-sm);
-  }
-  
-  .preset-popup {
-    max-width: 90vw;
-    margin: var(--spacing-md);
   }
 }
 </style>
