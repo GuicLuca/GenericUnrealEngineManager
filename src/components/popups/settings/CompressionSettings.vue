@@ -3,7 +3,7 @@
     <div class="settings-section">
       <h4 class="section-title">Filename Format</h4>
       <div class="section-description">
-        Configure the default filename format for compressed project archives. Use placeholders to create dynamic filenames.
+        Configure the default filename format for compressed project archives. Select a preset to apply its format.
       </div>
       
       <div class="format-group">
@@ -14,9 +14,8 @@
             class="preset-dropdown"
             @change="applyPreset"
           >
-            <option value="">Select a preset...</option>
             <option 
-              v-for="(_format, name) in localSettings.compression.custom_presets"
+              v-for="(format, name) in localSettings.compression.custom_presets"
               :key="name"
               :value="name"
             >
@@ -26,9 +25,9 @@
           <input
             v-model="localSettings.compression.filename_format"
             type="text"
-            class="format-input"
-            placeholder="Enter filename format..."
-            @input="emitUpdate"
+            class="format-input readonly"
+            placeholder="Format will be set by preset selection..."
+            readonly
           />
         </div>
         <div class="format-preview">
@@ -36,89 +35,20 @@
           <span class="preview-filename">{{ previewFilename }}</span>
         </div>
       </div>
-
-      <div class="placeholders-info">
-        <h5 class="placeholders-title">Available Placeholders</h5>
-        <div class="placeholders-grid">
-          <div class="placeholder-group">
-            <h6 class="group-title">Project Info</h6>
-            <div class="placeholder-item">
-              <code>[Project]</code>
-              <span>Project name</span>
-            </div>
-            <div class="placeholder-item">
-              <code>[Type]</code>
-              <span>Cpp or Bp</span>
-            </div>
-            <div class="placeholder-item">
-              <code>[Engine]</code>
-              <span>Engine version</span>
-            </div>
-            <div class="placeholder-item">
-              <code>[SizeMB]</code>
-              <span>Size in MB</span>
-            </div>
-            <div class="placeholder-item">
-              <code>[PluginCount]</code>
-              <span>Number of plugins</span>
-            </div>
-          </div>
-
-          <div class="placeholder-group">
-            <h6 class="group-title">Date & Time</h6>
-            <div class="placeholder-item">
-              <code>[YYYY]</code>
-              <span>Full year (2024)</span>
-            </div>
-            <div class="placeholder-item">
-              <code>[MM]</code>
-              <span>Month (01-12)</span>
-            </div>
-            <div class="placeholder-item">
-              <code>[DD]</code>
-              <span>Day (01-31)</span>
-            </div>
-            <div class="placeholder-item">
-              <code>[HH]</code>
-              <span>Hour (00-23)</span>
-            </div>
-            <div class="placeholder-item">
-              <code>[mm]</code>
-              <span>Minute (00-59)</span>
-            </div>
-            <div class="placeholder-item">
-              <code>[Month]</code>
-              <span>Full month name</span>
-            </div>
-          </div>
-
-          <div class="placeholder-group">
-            <h6 class="group-title">System Info</h6>
-            <div class="placeholder-item">
-              <code>[User]</code>
-              <span>Username</span>
-            </div>
-            <div class="placeholder-item">
-              <code>[Computer]</code>
-              <span>Computer name</span>
-            </div>
-            <div class="placeholder-item">
-              <code>[Timestamp]</code>
-              <span>Unix timestamp</span>
-            </div>
-            <div class="placeholder-item">
-              <code>[Algorithm]</code>
-              <span>Compression type</span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <div class="settings-section">
-      <h4 class="section-title">Custom Presets</h4>
-      <div class="section-description">
-        Create and manage custom filename format presets for quick access.
+      <div class="section-header">
+        <div class="section-header-content">
+          <h4 class="section-title">Custom Presets</h4>
+          <div class="section-description">
+            Create and manage custom filename format presets for quick access.
+          </div>
+        </div>
+        <button class="add-preset-btn" @click="showAddPresetPopup = true">
+          <span class="button-icon">➕</span>
+          Add Custom Preset
+        </button>
       </div>
       
       <div class="presets-list">
@@ -143,6 +73,7 @@
               class="action-btn remove-btn"
               @click="removePreset(name as string)"
               title="Remove preset"
+              :disabled="name === 'Default'"
             >
               🗑️
             </button>
@@ -155,58 +86,130 @@
           <div class="no-presets-subtext">Create presets for commonly used filename formats</div>
         </div>
       </div>
-
-      <button class="add-preset-btn" @click="showAddPreset = true">
-        <span class="button-icon">➕</span>
-        Add Custom Preset
-      </button>
     </div>
 
-    <!-- Add/Edit Preset Form -->
-    <div v-if="showAddPreset || editingPreset" class="preset-form">
-      <h4 class="form-title">{{ editingPreset ? 'Edit' : 'Add' }} Custom Preset</h4>
-      
-      <div class="form-group">
-        <label class="form-label">Preset Name</label>
-        <input
-          v-model="presetForm.name"
-          type="text"
-          class="form-input"
-          placeholder="e.g., My Custom Format"
-          :disabled="!!editingPreset"
-        />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Format Template</label>
-        <input
-          v-model="presetForm.format"
-          type="text"
-          class="form-input"
-          placeholder="e.g., [Project]_[Type]_[YYYY][MM][DD]"
-        />
-        <div class="format-preview">
-          <span class="preview-label">Preview:</span>
-          <span class="preview-filename">{{ getPreviewForFormat(presetForm.format) }}</span>
-        </div>
-      </div>
-
-      <div class="form-actions">
-        <button
-          class="form-btn cancel-btn"
+    <!-- Add/Edit Preset Popup -->
+    <Teleport to="body">
+      <Transition name="popup-overlay">
+        <div 
+          v-if="showAddPresetPopup || editingPreset"
+          class="popup-overlay"
           @click="cancelPresetForm"
         >
-          Cancel
-        </button>
-        <button
-          class="form-btn save-btn"
-          @click="savePreset"
-          :disabled="!presetForm.name.trim() || !presetForm.format.trim()"
-        >
-          {{ editingPreset ? 'Update' : 'Add' }} Preset
-        </button>
-      </div>
-    </div>
+          <Transition name="popup-content">
+            <div 
+              class="preset-popup"
+              @click.stop
+            >
+              <div class="popup-header">
+                <h4 class="popup-title">{{ editingPreset ? 'Edit' : 'Add' }} Custom Preset</h4>
+                <button class="close-button" @click="cancelPresetForm" title="Close">
+                  ✕
+                </button>
+              </div>
+
+              <div class="popup-content">
+                <div class="form-group">
+                  <label class="form-label">Preset Name</label>
+                  <input
+                    v-model="presetForm.name"
+                    type="text"
+                    class="form-input"
+                    placeholder="e.g., My Custom Format"
+                    :disabled="!!editingPreset"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Format Template</label>
+                  <input
+                    v-model="presetForm.format"
+                    type="text"
+                    class="form-input"
+                    placeholder="e.g., [Project]_[Type]_[YYYY][MM][DD]"
+                  />
+                  <div class="format-preview">
+                    <span class="preview-label">Preview:</span>
+                    <span class="preview-filename">{{ getPreviewForFormat(presetForm.format) }}</span>
+                  </div>
+                </div>
+
+                <div class="tags-section">
+                  <h5 class="tags-title">Available Tags</h5>
+                  <div class="tags-description">Click on any tag to add it to your format template</div>
+                  
+                  <div class="tags-grid">
+                    <div class="tag-group">
+                      <h6 class="tag-group-title">Project Info</h6>
+                      <div class="tag-list">
+                        <button 
+                          v-for="tag in projectTags"
+                          :key="tag.code"
+                          class="tag-button"
+                          @click="addTagToFormat(tag.code)"
+                          :title="tag.description"
+                        >
+                          <code>{{ tag.code }}</code>
+                          <span>{{ tag.label }}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="tag-group">
+                      <h6 class="tag-group-title">Date & Time</h6>
+                      <div class="tag-list">
+                        <button 
+                          v-for="tag in dateTags"
+                          :key="tag.code"
+                          class="tag-button"
+                          @click="addTagToFormat(tag.code)"
+                          :title="tag.description"
+                        >
+                          <code>{{ tag.code }}</code>
+                          <span>{{ tag.label }}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="tag-group">
+                      <h6 class="tag-group-title">System Info</h6>
+                      <div class="tag-list">
+                        <button 
+                          v-for="tag in systemTags"
+                          :key="tag.code"
+                          class="tag-button"
+                          @click="addTagToFormat(tag.code)"
+                          :title="tag.description"
+                        >
+                          <code>{{ tag.code }}</code>
+                          <span>{{ tag.label }}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="popup-actions">
+                <button
+                  class="form-btn cancel-btn"
+                  @click="cancelPresetForm"
+                >
+                  Cancel
+                </button>
+                <button
+                  class="form-btn save-btn"
+                  @click="savePreset"
+                  :disabled="!presetForm.name.trim() || !presetForm.format.trim()"
+                >
+                  {{ editingPreset ? 'Update' : 'Add' }} Preset
+                </button>
+              </div>
+            </div>
+          </Transition>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -227,6 +230,12 @@ interface Emits {
   (e: 'update', settings: any): void
 }
 
+interface Tag {
+  code: string
+  label: string
+  description: string
+}
+
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
@@ -237,8 +246,8 @@ const localSettings = reactive({
   }
 })
 
-const selectedPreset = ref('')
-const showAddPreset = ref(false)
+const selectedPreset = ref('Default')
+const showAddPresetPopup = ref(false)
 const editingPreset = ref<string | null>(null)
 const presetForm = reactive({
   name: '',
@@ -249,6 +258,37 @@ const systemInfo = ref({
   username: 'john_doe',
   hostname: 'DESKTOP-PC'
 })
+
+// Tag definitions
+const projectTags: Tag[] = [
+  { code: '[Project]', label: 'Project name', description: 'Name of the project' },
+  { code: '[Type]', label: 'Cpp or Bp', description: 'Project type (C++ or Blueprint)' },
+  { code: '[Engine]', label: 'Engine version', description: 'Unreal Engine version' },
+  { code: '[SizeMB]', label: 'Size in MB', description: 'Project size in megabytes' },
+  { code: '[SizeGB]', label: 'Size in GB', description: 'Project size in gigabytes' },
+  { code: '[PluginCount]', label: 'Plugin count', description: 'Number of plugins in the project' }
+]
+
+const dateTags: Tag[] = [
+  { code: '[YYYY]', label: 'Full year', description: 'Full year (e.g., 2024)' },
+  { code: '[YY]', label: 'Short year', description: 'Two-digit year (e.g., 24)' },
+  { code: '[MM]', label: 'Month', description: 'Month with leading zero (01-12)' },
+  { code: '[DD]', label: 'Day', description: 'Day with leading zero (01-31)' },
+  { code: '[HH]', label: 'Hour', description: 'Hour in 24-hour format (00-23)' },
+  { code: '[mm]', label: 'Minute', description: 'Minute with leading zero (00-59)' },
+  { code: '[ss]', label: 'Second', description: 'Second with leading zero (00-59)' },
+  { code: '[Month]', label: 'Full month', description: 'Full month name (e.g., January)' },
+  { code: '[Mon]', label: 'Short month', description: 'Short month name (e.g., Jan)' },
+  { code: '[Day]', label: 'Full day', description: 'Full day name (e.g., Monday)' },
+  { code: '[Weekday]', label: 'Short day', description: 'Short day name (e.g., Mon)' }
+]
+
+const systemTags: Tag[] = [
+  { code: '[User]', label: 'Username', description: 'Current system username' },
+  { code: '[Computer]', label: 'Computer name', description: 'Computer hostname' },
+  { code: '[Timestamp]', label: 'Unix timestamp', description: 'Unix timestamp in seconds' },
+  { code: '[Algorithm]', label: 'Compression type', description: 'Compression algorithm used' }
+]
 
 const previewFilename = computed(() => {
   return getPreviewForFormat(localSettings.compression.filename_format)
@@ -309,13 +349,43 @@ const editPreset = (name: string, format: string) => {
   editingPreset.value = name
   presetForm.name = name
   presetForm.format = format
-  showAddPreset.value = false
+  showAddPresetPopup.value = true
 }
 
 const removePreset = (name: string) => {
+  if (name === 'Default') return // Prevent removing the default preset
+  
   if (confirm(`Are you sure you want to remove the preset "${name}"?`)) {
     delete localSettings.compression.custom_presets[name]
+    
+    // If the removed preset was selected, switch to Default
+    if (selectedPreset.value === name) {
+      selectedPreset.value = 'Default'
+      applyPreset()
+    }
+    
     emitUpdate()
+  }
+}
+
+const addTagToFormat = (tagCode: string) => {
+  // Add the tag at the cursor position or at the end
+  const input = document.querySelector('.form-input') as HTMLInputElement
+  if (input && input === document.activeElement) {
+    const start = input.selectionStart || 0
+    const end = input.selectionEnd || 0
+    const before = presetForm.format.substring(0, start)
+    const after = presetForm.format.substring(end)
+    presetForm.format = before + tagCode + after
+    
+    // Set cursor position after the inserted tag
+    setTimeout(() => {
+      input.setSelectionRange(start + tagCode.length, start + tagCode.length)
+      input.focus()
+    }, 0)
+  } else {
+    // Just append to the end if no cursor position
+    presetForm.format += tagCode
   }
 }
 
@@ -330,12 +400,17 @@ const savePreset = () => {
   }
 
   localSettings.compression.custom_presets[presetForm.name] = presetForm.format
+  
+  // If this is a new preset or the name changed, select it
+  selectedPreset.value = presetForm.name
+  applyPreset()
+  
   emitUpdate()
   cancelPresetForm()
 }
 
 const cancelPresetForm = () => {
-  showAddPreset.value = false
+  showAddPresetPopup.value = false
   editingPreset.value = null
   presetForm.name = ''
   presetForm.format = ''
@@ -354,10 +429,20 @@ const loadSystemInfo = async () => {
 watch(() => props.settings.compression, (newCompression) => {
   localSettings.compression.filename_format = newCompression.filename_format
   localSettings.compression.custom_presets = { ...newCompression.custom_presets }
+  
+  // Ensure Default preset is selected if it exists
+  if (localSettings.compression.custom_presets['Default']) {
+    selectedPreset.value = 'Default'
+  }
 }, { deep: true })
 
 onMounted(() => {
   loadSystemInfo()
+  
+  // Set Default as selected preset if it exists
+  if (localSettings.compression.custom_presets['Default']) {
+    selectedPreset.value = 'Default'
+  }
 })
 </script>
 
@@ -375,6 +460,17 @@ onMounted(() => {
   background-color: var(--surface-color);
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-md);
+}
+
+.section-header-content {
+  flex-grow: 1;
+}
+
 .section-title {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
@@ -385,7 +481,7 @@ onMounted(() => {
 .section-description {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
-  margin: 0 0 var(--spacing-md) 0;
+  margin: 0;
   line-height: var(--line-height-normal);
 }
 
@@ -429,7 +525,13 @@ onMounted(() => {
   font-family: var(--font-mono);
 }
 
-.format-input:focus {
+.format-input.readonly {
+  background-color: var(--surface-color);
+  cursor: not-allowed;
+  color: var(--text-secondary);
+}
+
+.format-input:focus:not(.readonly) {
   outline: none;
   border-color: var(--accent-color);
   box-shadow: 0 0 0 2px var(--accent-color-alpha);
@@ -460,70 +562,10 @@ onMounted(() => {
   flex-grow: 1;
 }
 
-.placeholders-info {
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  padding: var(--spacing-md);
-  background-color: var(--background-color);
-}
-
-.placeholders-title {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-primary);
-  margin: 0 0 var(--spacing-md) 0;
-}
-
-.placeholders-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-md);
-}
-
-.placeholder-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
-
-.group-title {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-  margin: 0 0 var(--spacing-xs) 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.placeholder-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: var(--font-size-xs);
-  gap: var(--spacing-xs);
-}
-
-.placeholder-item code {
-  background-color: var(--surface-color);
-  padding: var(--spacing-xs);
-  border-radius: var(--border-radius-sm);
-  font-family: var(--font-mono);
-  color: var(--accent-color);
-  font-weight: var(--font-weight-medium);
-  flex-shrink: 0;
-}
-
-.placeholder-item span {
-  color: var(--text-secondary);
-  text-align: right;
-  flex-grow: 1;
-}
-
 .presets-list {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-md);
 }
 
 .preset-item {
@@ -632,7 +674,7 @@ onMounted(() => {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   transition: all var(--transition-fast);
-  align-self: flex-start;
+  flex-shrink: 0;
 }
 
 .add-preset-btn:hover {
@@ -644,22 +686,80 @@ onMounted(() => {
   font-size: var(--font-size-sm);
 }
 
-.preset-form {
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-md);
-  padding: var(--spacing-md);
-  background-color: var(--surface-color);
+/* Popup Styles */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+  z-index: 10000;
 }
 
-.form-title {
-  font-size: var(--font-size-sm);
+.preset-popup {
+  background-color: var(--background-color);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  width: 100%;
+  max-width: 42rem;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-lg);
+  background-color: var(--surface-color);
+  border-bottom: var(--border-width) solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.popup-title {
+  font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
-  margin: 0 0 var(--spacing-md) 0;
+  margin: 0;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-button:hover {
+  background-color: var(--hover-color);
+  color: var(--text-primary);
+}
+
+.popup-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: var(--spacing-lg);
 }
 
 .form-group {
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
 }
 
 .form-input {
@@ -671,6 +771,7 @@ onMounted(() => {
   color: var(--text-primary);
   background-color: var(--background-color);
   transition: border-color var(--transition-fast);
+  font-family: var(--font-mono);
 }
 
 .form-input:focus {
@@ -684,13 +785,102 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
-.form-actions {
+.tags-section {
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-md);
+  background-color: var(--surface-color);
+}
+
+.tags-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-xs) 0;
+}
+
+.tags-description {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0 0 var(--spacing-md) 0;
+  line-height: var(--line-height-normal);
+}
+
+.tags-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-md);
+}
+
+.tag-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.tag-group-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-xs) 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tag-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.tag-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs);
+  border: var(--border-width) solid var(--border-color);
+  background-color: var(--background-color);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+
+.tag-button:hover {
+  background-color: var(--hover-color);
+  border-color: var(--accent-color);
+}
+
+.tag-button:active {
+  background-color: var(--active-color);
+}
+
+.tag-button code {
+  background-color: var(--surface-color);
+  padding: var(--spacing-xs);
+  border-radius: var(--border-radius-sm);
+  font-family: var(--font-mono);
+  color: var(--accent-color);
+  font-weight: var(--font-weight-medium);
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+}
+
+.tag-button span {
+  color: var(--text-secondary);
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.popup-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--spacing-sm);
-  margin-top: var(--spacing-lg);
-  padding-top: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
   border-top: var(--border-width) solid var(--border-color);
+  background-color: var(--surface-color);
+  flex-shrink: 0;
 }
 
 .form-btn {
@@ -730,14 +920,47 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
+/* Transitions */
+.popup-overlay-enter-active,
+.popup-overlay-leave-active {
+  transition: opacity var(--transition-normal);
+}
+
+.popup-overlay-enter-from,
+.popup-overlay-leave-to {
+  opacity: 0;
+}
+
+.popup-content-enter-active,
+.popup-content-leave-active {
+  transition: all var(--transition-normal);
+}
+
+.popup-content-enter-from,
+.popup-content-leave-to {
+  opacity: 0;
+  transform: scale(0.95) translateY(-10px);
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .placeholders-grid {
+  .tags-grid {
     grid-template-columns: 1fr;
   }
   
   .format-input-group {
     flex-direction: column;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+  
+  .preset-popup {
+    max-width: 90vw;
+    margin: var(--spacing-md);
   }
 }
 </style>
