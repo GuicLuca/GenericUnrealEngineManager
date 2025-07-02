@@ -28,6 +28,41 @@
 
         <!-- Content Area -->
         <div class="settings-content">
+          <!-- General Tab -->
+          <div v-if="activeTab === 'general'" class="tab-content">
+            <h3 class="section-title">General</h3>
+            
+            <div class="general-section">
+              <div class="setting-item">
+                <div class="setting-info">
+                  <div class="setting-label">Autostart</div>
+                  <div class="setting-description">Start UE Project Manager automatically when you log in</div>
+                </div>
+                <div class="setting-control">
+                  <input
+                    v-model="localSettings.general.autostart_enabled"
+                    type="checkbox"
+                    class="checkbox-input"
+                  />
+                </div>
+              </div>
+              
+              <div class="setting-item">
+                <div class="setting-info">
+                  <div class="setting-label">Show Welcome Popup</div>
+                  <div class="setting-description">Show the welcome message when the application starts</div>
+                </div>
+                <div class="setting-control">
+                  <input
+                    v-model="localSettings.general.show_welcome_popup"
+                    type="checkbox"
+                    class="checkbox-input"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Programs Tab -->
           <div v-if="activeTab === 'programs'" class="tab-content">
             <h3 class="section-title">Programs</h3>
@@ -118,6 +153,133 @@
                   >
                     🗑️
                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cleaning Tab -->
+          <div v-if="activeTab === 'cleaning'" class="tab-content">
+            <h3 class="section-title">Cleaning Defaults</h3>
+            
+            <div class="cleaning-section">
+              <div class="cleaning-subsection">
+                <h4 class="subsection-title">Project Scanning</h4>
+                <div class="checkbox-group">
+                  <div class="checkbox-item">
+                    <input
+                      v-model="localSettings.cleaning_defaults.ide_files"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label class="checkbox-label">
+                      IDE files (.vs and .idea)
+                    </label>
+                  </div>
+
+                  <div class="checkbox-item">
+                    <input
+                      v-model="localSettings.cleaning_defaults.binaries"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label class="checkbox-label">
+                      Binaries
+                    </label>
+                  </div>
+
+                  <div class="checkbox-item">
+                    <input
+                      v-model="localSettings.cleaning_defaults.build"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label class="checkbox-label">
+                      Build
+                    </label>
+                  </div>
+
+                  <div class="checkbox-item">
+                    <input
+                      v-model="localSettings.cleaning_defaults.intermediate"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label class="checkbox-label">
+                      Intermediate
+                    </label>
+                  </div>
+
+                  <div class="checkbox-item">
+                    <input
+                      v-model="localSettings.cleaning_defaults.derived_data_cache"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label class="checkbox-label">
+                      DerivedDataCache
+                    </label>
+                  </div>
+
+                  <div class="checkbox-item">
+                    <input
+                      v-model="localSettings.cleaning_defaults.saved"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label class="checkbox-label">
+                      Saved
+                    </label>
+                  </div>
+
+                  <div class="checkbox-item">
+                    <input
+                      v-model="localSettings.cleaning_defaults.analyze_plugins"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label class="checkbox-label">
+                      Analyze plugins
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="localSettings.cleaning_defaults.analyze_plugins" class="cleaning-subsection">
+                <h4 class="subsection-title">Plugins Scanning</h4>
+                <div class="checkbox-group">
+                  <div class="checkbox-item">
+                    <input
+                      v-model="localSettings.cleaning_defaults.plugin_binaries"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label class="checkbox-label">
+                      Binaries
+                    </label>
+                  </div>
+
+                  <div class="checkbox-item">
+                    <input
+                      v-model="localSettings.cleaning_defaults.plugin_intermediate"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label class="checkbox-label">
+                      Intermediate
+                    </label>
+                  </div>
+
+                  <div class="checkbox-item">
+                    <input
+                      v-model="localSettings.cleaning_defaults.plugin_node_size_cache"
+                      type="checkbox"
+                      class="checkbox-input"
+                    />
+                    <label class="checkbox-label">
+                      NodeSizeCache
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
@@ -217,41 +379,6 @@
               </div>
             </div>
           </div>
-
-          <!-- General Tab -->
-          <div v-if="activeTab === 'general'" class="tab-content">
-            <h3 class="section-title">General</h3>
-            
-            <div class="general-section">
-              <div class="setting-item">
-                <div class="setting-info">
-                  <div class="setting-label">Autostart</div>
-                  <div class="setting-description">Start UE Project Manager automatically when you log in</div>
-                </div>
-                <div class="setting-control">
-                  <input
-                    v-model="localSettings.general.autostart_enabled"
-                    type="checkbox"
-                    class="checkbox-input"
-                  />
-                </div>
-              </div>
-              
-              <div class="setting-item">
-                <div class="setting-info">
-                  <div class="setting-label">Show Welcome Popup</div>
-                  <div class="setting-description">Show the welcome message when the application starts</div>
-                </div>
-                <div class="setting-control">
-                  <input
-                    v-model="localSettings.general.show_welcome_popup"
-                    type="checkbox"
-                    class="checkbox-input"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -326,9 +453,10 @@ const isSaving = ref(false)
 const formatWarning = ref('')
 
 const tabs = [
+  { id: 'general', label: 'General', icon: '⚙️' },
   { id: 'programs', label: 'Programs', icon: '💻' },
-  { id: 'compression', label: 'Compression', icon: '🗜️' },
-  { id: 'general', label: 'General', icon: '⚙️' }
+  { id: 'cleaning', label: 'Cleaning', icon: '🧹' },
+  { id: 'compression', label: 'Compression', icon: '🗜️' }
 ]
 
 const availableTags = [
@@ -567,7 +695,8 @@ onMounted(() => {
   width: 100%;
   max-width: 56rem;
   min-width: 56rem;
-  max-height: 85vh;
+  height: 42rem;
+  max-height: 42rem;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -690,6 +819,41 @@ onMounted(() => {
 .compression-section,
 .general-section {
   margin-bottom: var(--spacing-lg);
+}
+
+.cleaning-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+}
+
+.cleaning-subsection {
+  display: flex;
+  flex-direction: column;
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-md);
+  background-color: var(--surface-color);
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+}
+
+.checkbox-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  line-height: var(--line-height-normal);
+  flex-grow: 1;
 }
 
 .section-header {
@@ -1107,6 +1271,8 @@ onMounted(() => {
   .settings-popup {
     min-width: 90vw;
     max-width: 90vw;
+    height: 90vh;
+    max-height: 90vh;
   }
   
   .settings-layout {
@@ -1121,6 +1287,10 @@ onMounted(() => {
   
   .tags-grid {
     grid-template-columns: repeat(auto-fill, minmax(4rem, 1fr));
+  }
+  
+  .cleaning-section {
+    grid-template-columns: 1fr;
   }
 }
 </style>
