@@ -92,15 +92,8 @@
       
       <div class="right-actions">
         <button
-          class="action-button secondary-button"
-          @click="$emit('close')"
-          :disabled="isSaving"
-        >
-          Cancel
-        </button>
-        <button
           class="action-button primary-button"
-          @click="saveSettings"
+          @click="$emit('close')"
           :disabled="isSaving"
         >
           <span class="button-icon">{{ isSaving ? '⏳' : '💾' }}</span>
@@ -112,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import {ref, reactive, onMounted, onUnmounted} from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useLogStore } from '../../stores/logStore'
 import GeneralSettings from './settings/GeneralSettings.vue'
@@ -299,6 +292,11 @@ const resetToDefaults = async () => {
 
 onMounted(() => {
   loadSettings()
+})
+
+onUnmounted(async () => {
+  // Save settings when the component is unmounted
+  await saveSettings()
 })
 </script>
 

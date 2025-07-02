@@ -15,7 +15,7 @@
             @change="applyPreset"
           >
             <option 
-              v-for="(format, name) in sortedAvailableFormats"
+              v-for="(_format, name) in sortedAvailableFormats"
               :key="name"
               :value="name"
             >
@@ -91,7 +91,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { usePopup } from '../../../composables/usePopup'
 
