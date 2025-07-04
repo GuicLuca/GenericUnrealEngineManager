@@ -147,11 +147,21 @@ fn get_system_drives() -> Result<Vec<PathBuf>> {
 
     #[cfg(target_os = "macos")]
     {
-        // On macOS, scan common locations
-        drives.push(PathBuf::from("/"));
-        drives.push(PathBuf::from("/Applications"));
-        drives.push(PathBuf::from("/Users"));
-        drives.push(PathBuf::from("/Volumes"));
+        // On macOS, scan common locations and mounted volumes
+        let common_paths = vec![
+            "/",
+            "/Applications",
+            "/Users",
+            "/opt",
+            "/usr/local",
+        ];
+        
+        for path_str in common_paths {
+            let path = PathBuf::from(path_str);
+            if path.exists() {
+                drives.push(path);
+            }
+        }
         
         // Also scan mounted volumes
         if let Ok(entries) = fs::read_dir("/Volumes") {
@@ -166,25 +176,30 @@ fn get_system_drives() -> Result<Vec<PathBuf>> {
     #[cfg(target_os = "linux")]
     {
         // On Linux, scan root and common mount points
-        drives.push(PathBuf::from("/"));
-        drives.push(PathBuf::from("/home"));
-        drives.push(PathBuf::from("/opt"));
-        drives.push(PathBuf::from("/usr"));
-        drives.push(PathBuf::from("/var"));
+        let common_paths = vec![
+            "/",
+            "/home",
+            "/opt",
+            "/usr",
+            "/usr/local",
+            "/var",
+        ];
         
-        // Also scan mounted filesystems
-        if let Ok(entries) = fs::read_dir("/mnt") {
-            for entry in entries.flatten() {
-                if entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
-                    drives.push(entry.path());
-                }
+        for path_str in common_paths {
+            let path = PathBuf::from(path_str);
+            if path.exists() {
+                drives.push(path);
             }
         }
         
-        if let Ok(entries) = fs::read_dir("/media") {
-            for entry in entries.flatten() {
-                if entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
-                    drives.push(entry.path());
+        // Also scan mounted filesystems
+        let mount_points = vec!["/mnt", "/media"];
+        for mount_point in mount_points {
+            if let Ok(entries) = fs::read_dir(mount_point) {
+                for entry in entries.flatten() {
+                    if entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
+                        drives.push(entry.path());
+                    }
                 }
             }
         }
@@ -209,14 +224,14 @@ async fn scan_drive_for_engines(
 
     // Use glob to find potential engine directories
     // Look for directories that contain an "Engine" subdirectory
-    let pattern: PathBuf = Path::new(drive.to_str().unwrap()).join( format!("{}/**/Engine", drive.display()));
+    let pattern = format!("{}/**/Engine", drive.display());
     
-    info!("Searching pattern: {}", pattern.display());
+    info!("Searching pattern: {}", pattern);
     
-    let glob_entries: Vec<_> = match glob::glob(&pattern.display().to_string()) {
+    let glob_entries: Vec<_> = match glob::glob(&pattern) {
         Ok(entries) => entries.collect(),
         Err(e) => {
-            error!("Glob pattern error for {}: {}", pattern.display(), e);
+            error!("Glob pattern error for {}: {}", pattern, e);
             return Ok(engines);
         }
     };
