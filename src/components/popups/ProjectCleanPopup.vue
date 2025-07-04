@@ -236,6 +236,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import InfoTooltip from '../InfoTooltip.vue'
 import { useLogStore } from '../../stores/logStore'
+import { useSettingsStore } from '../../stores/settingsStore'
 
 interface Props {
   projectName: string
@@ -256,27 +257,13 @@ interface CleaningSelection {
   save_as_default: boolean
 }
 
-interface AppSettings {
-  cleaning_defaults: {
-    ide_files: boolean
-    binaries: boolean
-    build: boolean
-    intermediate: boolean
-    derived_data_cache: boolean
-    saved: boolean
-    analyze_plugins: boolean
-    plugin_binaries: boolean
-    plugin_intermediate: boolean
-    plugin_node_size_cache: boolean
-  }
-}
-
 const props = defineProps<Props>()
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
 const { addLog } = useLogStore()
+const settingsStore = useSettingsStore()
 
 const isCleaning = ref(false)
 
@@ -295,24 +282,24 @@ const selection = reactive<CleaningSelection>({
 })
 
 const hasSelection = computed(() => {
-  return selection.ide_files || 
-         selection.binaries || 
-         selection.build || 
-         selection.intermediate || 
-         selection.derived_data_cache || 
-         selection.saved ||
-         (selection.analyze_plugins && (
-           selection.plugin_binaries || 
-           selection.plugin_intermediate || 
-           selection.plugin_node_size_cache
-         ))
+  return selection.ide_files ||
+      selection.binaries ||
+      selection.build ||
+      selection.intermediate ||
+      selection.derived_data_cache ||
+      selection.saved ||
+      (selection.analyze_plugins && (
+          selection.plugin_binaries ||
+          selection.plugin_intermediate ||
+          selection.plugin_node_size_cache
+      ))
 })
 
-const loadDefaults = async () => {
+const loadDefaults = () => {
   try {
-    const settings = await invoke('get_settings') as AppSettings
-    const defaults = settings.cleaning_defaults
-    
+    // Use settings from the store instead of making a direct backend call
+    const defaults = settingsStore.settings.cleaning_defaults
+
     selection.ide_files = defaults.ide_files
     selection.binaries = defaults.binaries
     selection.build = defaults.build
@@ -323,7 +310,6 @@ const loadDefaults = async () => {
     selection.plugin_binaries = defaults.plugin_binaries
     selection.plugin_intermediate = defaults.plugin_intermediate
     selection.plugin_node_size_cache = defaults.plugin_node_size_cache
-    
   } catch (error) {
     console.error('Failed to load cleaning defaults:', error)
     addLog('Failed to load cleaning defaults', 'error')
@@ -332,10 +318,29 @@ const loadDefaults = async () => {
 
 const startCleaning = async () => {
   if (!hasSelection.value || isCleaning.value) return
-  
+
   try {
     isCleaning.value = true
-    
+
+    // If the user wants to save as default, update via the store
+    if (selection.save_as_default) {
+      const cleaningDefaults = {
+        ide_files: selection.ide_files,
+        binaries: selection.binaries,
+        build: selection.build,
+        intermediate: selection.intermediate,
+        derived_data_cache: selection.derived_data_cache,
+        saved: selection.saved,
+        analyze_plugins: selection.analyze_plugins,
+        plugin_binaries: selection.plugin_binaries,
+        plugin_intermediate: selection.plugin_intermediate,
+        plugin_node_size_cache: selection.plugin_node_size_cache
+      };
+
+      settingsStore.updateCleaningDefaults(cleaningDefaults);
+      await settingsStore.saveSettings();
+    }
+
     await invoke('clean_project', {
       projectPath: props.projectPath,
       selection: {
@@ -352,9 +357,8 @@ const startCleaning = async () => {
         save_as_default: selection.save_as_default
       }
     })
-    
+
     emit('close')
-    
   } catch (error) {
     // Do nothing, the backend will handle the error
   } finally {
@@ -362,7 +366,11 @@ const startCleaning = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // Ensure settings are loaded in the store
+  if (settingsStore.isLoading.value || !settingsStore.settings.cleaning_defaults) {
+    await settingsStore.loadSettings()
+  }
   loadDefaults()
 })
 </script>

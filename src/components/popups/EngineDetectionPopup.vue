@@ -33,9 +33,6 @@
             <li>Custom engine builds from source code</li>
             <li>Engine installations in any location on your system</li>
           </ul>
-        </div>
-
-        <div class="scan-scope">
           <h4 class="scope-title">Scan scope:</h4>
           <div class="scope-description">
             All available drives and common installation directories will be scanned for engine installations.
@@ -309,8 +306,8 @@ const formatDuration = (ms: number): string => {
   display: flex;
   gap: var(--spacing-md);
   padding: var(--spacing-md);
-  background-color: #fef5e7;
-  border: var(--border-width) solid #f6e05e;
+  background-color: var(--accent-color-alpha);
+  border: var(--border-width) solid #a88a28;
   border-radius: var(--border-radius-md);
 }
 
@@ -336,8 +333,8 @@ const formatDuration = (ms: number): string => {
   line-height: var(--line-height-normal);
 }
 
-.detection-details,
-.scan-scope {
+/*.scan-scope,*/
+.detection-details {
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-sm);
   padding: var(--spacing-md);

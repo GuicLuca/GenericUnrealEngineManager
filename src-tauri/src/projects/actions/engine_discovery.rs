@@ -209,14 +209,14 @@ async fn scan_drive_for_engines(
 
     // Use glob to find potential engine directories
     // Look for directories that contain an "Engine" subdirectory
-    let pattern = format!("{}/*/Engine", drive.display());
+    let pattern: PathBuf = Path::new(drive.to_str().unwrap()).join( format!("{}/**/Engine", drive.display()));
     
-    info!("Searching pattern: {}", pattern);
+    info!("Searching pattern: {}", pattern.display());
     
-    let glob_entries: Vec<_> = match glob::glob(&pattern) {
+    let glob_entries: Vec<_> = match glob::glob(&pattern.display().to_string()) {
         Ok(entries) => entries.collect(),
         Err(e) => {
-            error!("Glob pattern error for {}: {}", pattern, e);
+            error!("Glob pattern error for {}: {}", pattern.display(), e);
             return Ok(engines);
         }
     };
