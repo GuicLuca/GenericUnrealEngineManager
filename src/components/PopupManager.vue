@@ -3,75 +3,81 @@
     <!-- Render all popups in the stack -->
     <div v-for="(popup, index) in popupState.stack" :key="popup.id">
       <Transition name="popup-overlay">
-        <div 
-          v-if="popup"
-          class="popup-overlay"
-          :style="{ zIndex: 1000 + index }"
-          @click="handleOverlayClick(popup)"
+        <div
+            v-if="popup"
+            class="popup-overlay"
+            :style="{ zIndex: 1000 + index }"
+            @click="handleOverlayClick(popup)"
         >
           <Transition name="popup-content">
-            <div 
-              v-if="popup"
-              class="popup-container"
-              @click.stop
+            <div
+                v-if="popup"
+                class="popup-container"
+                @click.stop
             >
               <!-- Welcome Popup -->
               <WelcomePopup
-                v-if="popup.component === 'Welcome'"
-                v-bind="popup.props"
-                @close="hidePopup(popup.id)"
+                  v-if="popup.component === 'Welcome'"
+                  v-bind="popup.props"
+                  @close="hidePopup(popup.id)"
               />
-              
+
               <!-- Project Discovery Popup -->
               <ProjectDiscoveryPopup
-                v-if="popup.component === 'ProjectDiscovery'"
-                v-bind="popup.props"
-                @close="hidePopup(popup.id)"
-                @submit="handleProjectDiscoverySubmit"
+                  v-if="popup.component === 'ProjectDiscovery'"
+                  v-bind="popup.props"
+                  @close="hidePopup(popup.id)"
+                  @submit="handleProjectDiscoverySubmit"
               />
-              
+
               <!-- Project Manager Popup -->
               <ProjectManagerPopup
-                v-if="popup.component === 'ProjectManager'"
-                v-bind="popup.props"
-                @close="hidePopup(popup.id)"
+                  v-if="popup.component === 'ProjectManager'"
+                  v-bind="popup.props"
+                  @close="hidePopup(popup.id)"
               />
-              
+
               <!-- Project Launch Choice Popup -->
               <ProjectLaunchChoicePopup
-                v-if="popup.component === 'ProjectLaunchChoice'"
-                v-bind="popup.props"
-                @close="hidePopup(popup.id)"
-              />
-              
+                  v-if="popup.component === 'ProjectLaunchChoice'"
+                  v-bind="popup.props"
+                  @close="hidePopup(popup.id)"/>
+
               <!-- Project Clean Popup -->
               <ProjectCleanPopup
-                v-if="popup.component === 'ProjectClean'"
-                v-bind="popup.props"
-                @close="hidePopup(popup.id)"
+                  v-if="popup.component === 'ProjectClean'"
+                  v-bind="popup.props"
+                  @close="hidePopup(popup.id)"
               />
-              
+
               <!-- Project Compress Popup -->
               <ProjectCompressPopup
-                v-if="popup.component === 'ProjectCompress'"
-                v-bind="popup.props"
-                @close="hidePopup(popup.id)"
+                  v-if="popup.component === 'ProjectCompress'"
+                  v-bind="popup.props"
+                  @close="hidePopup(popup.id)"
               />
-              
+
               <!-- Settings Popup -->
               <SettingsPopup
-                v-if="popup.component === 'Settings'"
-                v-bind="popup.props"
-                @close="hidePopup(popup.id)"
+                  v-if="popup.component === 'Settings'"
+                  v-bind="popup.props"
+                  @close="hidePopup(popup.id)"
               />
-              
+
               <!-- Engine Detection Popup -->
               <EngineDetectionPopup
-                v-if="popup.component === 'EngineDetection'"
-                v-bind="popup.props"
-                @close="hidePopup(popup.id)"
+                  v-if="popup.component === 'EngineDetection'"
+                  v-bind="popup.props"
+                  @close="hidePopup(popup.id)"
               />
-              
+
+              <!-- Compress format name presset popup -->
+              <PresetFormPopup
+                  v-if="popup.component === 'PresetForm'"
+                  v-bind="popup.props"
+                  @close="hidePopup(popup.id)"
+              />
+
               <!-- Add more popup components here as needed -->
             </div>
           </Transition>
@@ -82,10 +88,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { listen } from '@tauri-apps/api/event'
-import { usePopup } from '../composables/usePopup'
-import { useLogStore } from '../stores/logStore'
+import {onMounted} from 'vue'
+import {usePopup} from '../composables/usePopup'
+import {useLogStore} from '../stores/logStore'
+import {useSettingsStore} from "../stores/settingsStore.ts";
 import WelcomePopup from './popups/WelcomePopup.vue'
 import ProjectDiscoveryPopup from './popups/ProjectDiscoveryPopup.vue'
 import ProjectManagerPopup from './popups/ProjectManagerPopup.vue'
@@ -94,9 +100,11 @@ import ProjectCleanPopup from './popups/ProjectCleanPopup.vue'
 import ProjectCompressPopup from './popups/ProjectCompressPopup.vue'
 import SettingsPopup from './popups/SettingsPopup.vue'
 import EngineDetectionPopup from './popups/EngineDetectionPopup.vue'
+import PresetFormPopup from "./popups/PresetFormPopup.vue";
 
-const { popupState, hidePopup, initPopupListener, showPopup } = usePopup()
-const { addLog } = useLogStore()
+const {popupState, hidePopup, initPopupListener, showPopup} = usePopup()
+const {addLog} = useLogStore()
+const {getSettings, loadSettings} = useSettingsStore()
 
 const handleOverlayClick = (popup: any) => {
   if (!popup.persistent) {
@@ -113,19 +121,17 @@ const handleProjectDiscoverySubmit = (data: any) => {
 
 onMounted(async () => {
   initPopupListener()
-  
-  // Listen for welcome popup event from backend
-  try {
-    await listen('show_welcome_popup', () => {
+
+  await loadSettings().then(() => {
+    const generalSettings = getSettings('general')
+    if (generalSettings.show_welcome_popup) {
       showPopup({
         id: 'welcome',
         component: 'Welcome',
         props: {}
       })
-    })
-  } catch (error) {
-    console.error('Failed to listen for welcome popup event:', error)
-  }
+    }
+  })
 })
 </script>
 

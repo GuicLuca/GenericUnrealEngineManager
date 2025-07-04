@@ -205,34 +205,31 @@ const editPreset = (name: string, format: string) => {
 const removePreset = (name: string) => {
   if (name === 'Default') return // Prevent removing the default preset
   
-  if (confirm(`Are you sure you want to remove the preset "${name}"?`)) {
-    removeCompressionPreset(name)
-    delete localCompression.custom_presets[name]
-    
-    // If the removed preset was selected, switch to Default
-    if (selectedPreset.value === name) {
-      selectedPreset.value = 'Default'
-      applyPreset()
-    }
+  removeCompressionPreset(name)
+  delete localCompression.custom_presets[name]
+  
+  // If the removed preset was selected, switch to Default
+  if (selectedPreset.value === name) {
+    selectedPreset.value = 'Default'
+    applyPreset()
   }
+  
 }
 
 const handlePresetSave = (data: { name: string; format: string; isEdit: boolean; originalName?: string }) => {
   if (data.isEdit && data.originalName) {
+    // Update existing preset
     updateCompressionPreset(data.originalName, data.name, data.format)
     // Remove old entry if name changed
     if (data.originalName !== data.name) {
       delete localCompression.custom_presets[data.originalName]
     }
   } else {
+    // Add new preset
     addCompressionPreset(data.name, data.format)
   }
 
   localCompression.custom_presets[data.name] = data.format
-  
-  // If this is a new preset or the name changed, select it
-  selectedPreset.value = data.name
-  applyPreset()
 }
 
 const loadSystemInfo = async () => {
@@ -248,8 +245,18 @@ const loadSystemInfo = async () => {
 watch(() => getSettings('compression'), (newCompression) => {
   Object.assign(localCompression, newCompression)
   
-  // Ensure Default preset is selected if it exists
-  if (localCompression.custom_presets['Default']) {
+  // Ensure the selected preset is corresponding to filename_format
+  if (newCompression.filename_format) {
+    const presetName = Object.keys(newCompression.custom_presets).find(name => 
+      newCompression.custom_presets[name] === newCompression.filename_format
+    )
+    
+    if (presetName) {
+      selectedPreset.value = presetName
+    } else {
+      selectedPreset.value = 'Default'
+    }
+  } else {
     selectedPreset.value = 'Default'
   }
 }, { deep: true })
@@ -257,8 +264,14 @@ watch(() => getSettings('compression'), (newCompression) => {
 onMounted(async () => {
   await loadSystemInfo()
   
-  // Set Default as selected preset if it exists
-  if (localCompression.custom_presets['Default']) {
+  // Set the selected preset to correspond to the current filename format
+  if (localCompression.filename_format) {
+    const presetName = Object.keys(localCompression.custom_presets).find(name => 
+      localCompression.custom_presets[name] === localCompression.filename_format
+    )
+    
+    selectedPreset.value = presetName || 'Default'
+  } else {
     selectedPreset.value = 'Default'
   }
 })

@@ -35,6 +35,21 @@ pub fn save_settings(app_handle: AppHandle, settings: AppSettings) -> Result<(),
     }
 }
 
+/// Reset application settings to defaults
+#[command]
+pub fn reset_settings(app_handle: AppHandle) -> Result<AppSettings, String> {
+    match initialize_settings(&app_handle) {
+        Ok(_) => {
+            info!("Settings reset to defaults");
+            Ok(AppSettings::default())
+        }
+        Err(e) => {
+            error!("Failed to reset settings: {}", e);
+            Err(format!("Failed to reset settings: {}", e))
+        }
+    }
+}
+
 /// Load settings from the store
 pub fn load_settings(app_handle: &AppHandle) -> errors::Result<AppSettings> {
     let store: Arc<Store<Wry>> = app_handle.store(env::STORE_FILE_NAME)?;

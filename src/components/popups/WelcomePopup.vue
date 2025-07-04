@@ -50,30 +50,30 @@
       <div class="left-actions">
         <div class="checkbox-item">
           <input
-            id="dont-show-again"
-            v-model="dontShowAgain"
-            type="checkbox"
-            class="checkbox-input"
+              id="dont-show-again"
+              v-model="dontShowAgain"
+              type="checkbox"
+              class="checkbox-input"
           />
           <label for="dont-show-again" class="checkbox-label">
             Don't show this welcome message again
           </label>
         </div>
       </div>
-      
+
       <div class="right-actions">
-        <button 
-          class="action-button secondary-button" 
-          @click="handleDecline"
-          :disabled="isProcessing"
+        <button
+            class="action-button secondary-button"
+            @click="handleDecline"
+            :disabled="isProcessing"
         >
           <span class="button-icon">❌</span>
           No, Thanks
         </button>
-        <button 
-          class="action-button primary-button" 
-          @click="handleAccept"
-          :disabled="isProcessing"
+        <button
+            class="action-button primary-button"
+            @click="handleAccept"
+            :disabled="isProcessing"
         >
           <span class="button-icon">{{ isProcessing ? '⏳' : '✅' }}</span>
           {{ isProcessing ? 'Setting up...' : 'Yes, Enable Autostart' }}
@@ -84,15 +84,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import { useLogStore } from '../../stores/logStore'
+import {onUnmounted, ref} from 'vue'
+import {invoke} from '@tauri-apps/api/core'
+import {useLogStore} from '../../stores/logStore'
+import {useSettingsStore} from "../../stores/settingsStore.ts"
 
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
-const { addLog } = useLogStore()
+const {addLog} = useLogStore()
+const {updateGeneralSettings, saveSettings} = useSettingsStore()
 
 const dontShowAgain = ref(false)
 const isProcessing = ref(false)
@@ -100,17 +102,17 @@ const isProcessing = ref(false)
 const handleAccept = async () => {
   try {
     isProcessing.value = true
-    
+
     // Enable autostart
     await invoke('enable_autostart')
     addLog('Autostart enabled successfully')
-    
-    // Update settings to reflect autostart is enabled
-    await updateSettings(true)
-    
+
+    // Update the settings to reflect that autostart is enabled
+    await internal_updateSettings(true)
+
     // Close the popup
-    await handleClose()
-    
+    emit('close');
+
   } catch (error) {
     console.error('Failed to enable autostart:', error)
     addLog('Failed to enable autostart', 'error')
@@ -122,13 +124,13 @@ const handleAccept = async () => {
 const handleDecline = async () => {
   try {
     isProcessing.value = true
-    
-    // Update settings to reflect autostart is disabled
-    await updateSettings(false)
-    
+
+    // Update the settings to reflect that autostart is disabled
+    await internal_updateSettings(false)
+
     // Close the popup
-    await handleClose()
-    
+    emit('close');
+
   } catch (error) {
     console.error('Failed to update settings:', error)
     addLog('Failed to update settings', 'error')
@@ -137,42 +139,26 @@ const handleDecline = async () => {
   }
 }
 
-const updateSettings = async (autostartEnabled: boolean) => {
+const internal_updateSettings = async (autostartEnabled: boolean) => {
   try {
     // Get current settings
-    const settings = await invoke('get_settings') as any
-    
-    // Update autostart setting
-    settings.general.autostart_enabled = autostartEnabled
-    
-    // If "don't show again" is checked, disable welcome popup
-    if (dontShowAgain.value) {
-      settings.general.show_welcome_popup = false
-    }
-    
+    updateGeneralSettings({
+      autostart_enabled: autostartEnabled,
+      show_welcome_popup: !dontShowAgain.value
+    })
+
     // Save updated settings
-    await invoke('save_settings', { settings })
-    
+    await saveSettings()
+
   } catch (error) {
     console.error('Failed to update settings:', error)
     throw error
   }
 }
 
-const handleClose = async () => {
-  // If "don't show again" is checked but we haven't updated settings yet, do it now
-  if (dontShowAgain.value) {
-    try {
-      const settings = await invoke('get_settings') as any
-      settings.general.show_welcome_popup = false
-      await invoke('save_settings', { settings })
-    } catch (error) {
-      console.error('Failed to disable welcome popup:', error)
-    }
-  }
-  
-  emit('close')
-}
+onUnmounted(() => {
+  saveSettings().then();
+})
 </script>
 
 <style scoped>

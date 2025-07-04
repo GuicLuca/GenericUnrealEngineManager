@@ -2,21 +2,21 @@
   <div class="general-settings">
     <div class="settings-section">
       <h4 class="section-title">Application Behavior</h4>
-      
+
       <div class="setting-item">
         <div class="setting-header">
           <label class="setting-label">
             <input
-              v-model="localGeneral.autostart_enabled"
-              type="checkbox"
-              class="setting-checkbox"
-              @change="handleUpdate"
+                v-model="localGeneral.autostart_enabled"
+                type="checkbox"
+                class="setting-checkbox"
+                @change="handleUpdate('autostart_enabled')"
             />
-            <span class="setting-title">Start with system</span>
+            <span class="setting-title">Start with the system</span>
           </label>
         </div>
         <div class="setting-description">
-          Automatically start UE Project Manager when you log into your computer.
+          Automatically start this tool when you start your computer.
         </div>
       </div>
 
@@ -24,10 +24,10 @@
         <div class="setting-header">
           <label class="setting-label">
             <input
-              v-model="localGeneral.show_welcome_popup"
-              type="checkbox"
-              class="setting-checkbox"
-              @change="handleUpdate"
+                v-model="localGeneral.show_welcome_popup"
+                type="checkbox"
+                class="setting-checkbox"
+                @change="handleUpdate('show_welcome_popup')"
             />
             <span class="setting-title">Show welcome popup</span>
           </label>
@@ -40,7 +40,7 @@
 
     <div class="settings-section">
       <h4 class="section-title">System Information</h4>
-      
+
       <div class="info-grid">
         <div class="info-item">
           <span class="info-label">Platform:</span>
@@ -64,13 +64,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import { useSettingsStore } from '../../../stores/settingsStore'
+import {ref, reactive, onMounted, watch} from 'vue'
+import {invoke} from '@tauri-apps/api/core'
+import {useSettingsStore} from '../../../stores/settingsStore'
+import {usePopup} from "../../../composables/usePopup.ts";
+import {emit} from "@tauri-apps/api/event";
 
-const { getSettings, updateGeneralSettings } = useSettingsStore()
+const {getSettings, updateGeneralSettings} = useSettingsStore()
+const {showPopup, hidePopup} = usePopup()
 
-const localGeneral = reactive({ ...getSettings('general') })
+const localGeneral = reactive({...getSettings('general')})
 
 const systemInfo = ref({
   platform: 'Unknown',
@@ -79,7 +82,22 @@ const systemInfo = ref({
   hostname: 'Unknown'
 })
 
-const handleUpdate = () => {
+const handleUpdate = (source: string) => {
+  switch (source) {
+    case 'autostart_enabled':
+      break
+    case 'show_welcome_popup':
+      if (localGeneral.show_welcome_popup) {
+        showPopup({
+          id: 'welcome',
+          component: 'Welcome',
+          props: {}
+        })
+        // hide self popup after showing welcome
+        hidePopup('settings')
+      }
+      break
+  }
   updateGeneralSettings(localGeneral)
 }
 
@@ -96,7 +114,7 @@ const loadSystemInfo = async () => {
 // Watch for external changes to settings
 watch(() => getSettings('general'), (newGeneral) => {
   Object.assign(localGeneral, newGeneral)
-}, { deep: true })
+}, {deep: true})
 
 onMounted(() => {
   loadSystemInfo()

@@ -232,7 +232,7 @@ const addTagToFormat = (tagCode: string) => {
     const after = presetForm.format.substring(end)
     presetForm.format = before + tagCode + after
     
-    // Set cursor position after the inserted tag
+    // Set the cursor position after the inserted tag
     nextTick(() => {
       input.setSelectionRange(start + tagCode.length, start + tagCode.length)
       input.focus()
@@ -442,7 +442,7 @@ onMounted(async () => {
   color: var(--text-primary);
   margin: 0 0 var(--spacing-xs) 0;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
 }
 
 .tag-list {

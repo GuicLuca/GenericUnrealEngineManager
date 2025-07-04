@@ -319,7 +319,7 @@ const standardSortCompare = (a: Project, b: Project): number => {
   return sortOrder.value === 'asc' ? comparison : -comparison
 }
 
-// Helper function for tie-breaking comparison (Name > Version > Type > Size > Last Scan)
+// Helper function for the tiebreaking comparison (Name > Version > Type > Size > Last Scan)
 const tieBreakingCompare = (a: Project, b: Project): number => {
   // 1. Name
   let comparison = a.name.localeCompare(b.name)
@@ -358,7 +358,7 @@ const filteredAndSortedProjects = computed(() => {
   const hasSearchQuery = searchQuery.value.trim().length > 0
   
   if (hasSearchQuery) {
-    // When searching: prioritize by score, then use tie-breaking
+    // When searching: prioritize by score, then use the tiebreaking
     
     // Calculate scores for all projects
     const scoredProjects = projects.value.map(project => ({
@@ -376,14 +376,14 @@ const filteredAndSortedProjects = computed(() => {
     // Take the top 25% of results (minimum 1, maximum all results)
     const top25PercentCount = Math.max(1, Math.ceil(validProjects.length * 0.25))
     
-    // Sort by score first (highest first), then by tie-breaking for equal scores
+    // Sort by score first (highest first), then by the tiebreaking for equal scores
     validProjects.sort((a, b) => {
       // Primary sort: by score (descending)
       if (a.score !== b.score) {
         return b.score - a.score
       }
       
-      // Secondary sort: tie-breaking for equal scores
+      // Secondary sort: tiebreaking for equal scores
       return tieBreakingCompare(a.project, b.project)
     })
     
@@ -391,13 +391,13 @@ const filteredAndSortedProjects = computed(() => {
     return topResults.map(item => item.project)
     
   } else {
-    // When not searching: use standard sorting with tie-breaking
+    // When not searching: use standard sorting with the tiebreaking
     
     return [...projects.value].sort((a, b) => {
       // Primary sort: by selected criteria
       const primaryComparison = standardSortCompare(a, b)
       
-      // If primary comparison is equal, use tie-breaking
+      // If the primary comparison is equal, use the tiebreaking
       if (primaryComparison === 0) {
         return tieBreakingCompare(a, b)
       }

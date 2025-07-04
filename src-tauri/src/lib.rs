@@ -123,6 +123,7 @@ pub fn run() {
         projects::actions::engine_discovery::auto_detect_engines,
         settings::actions::settings_manager::get_settings,
         settings::actions::settings_manager::save_settings,
+        settings::actions::settings_manager::reset_settings,
         settings::actions::autostart_manager::enable_autostart,
         settings::actions::autostart_manager::disable_autostart,
         settings::actions::autostart_manager::is_autostart_enabled,

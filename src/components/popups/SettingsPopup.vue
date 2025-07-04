@@ -8,7 +8,7 @@
         </h2>
         <div class="settings-subtitle">Configure your application preferences</div>
       </div>
-      <button class="close-button" @click="handleClose" title="Close">
+      <button class="close-button" @click="$emit('close')" title="Close">
         ✕
       </button>
     </div>
@@ -66,21 +66,13 @@
       </div>
       
       <div class="right-actions">
-        <div class="save-status">
-          <span v-if="hasUnsavedChanges" class="unsaved-indicator">
-            • Unsaved changes
-          </span>
-          <span v-else-if="lastSaveTime" class="saved-indicator">
-            ✓ Saved {{ formatLastSaveTime() }}
-          </span>
-        </div>
         <button
           class="action-button primary-button"
-          @click="handleSave"
-          :disabled="isLoading || !hasUnsavedChanges"
+          @click="$emit('close')"
+          :disabled="isLoading"
         >
-          <span class="button-icon">{{ isLoading ? '⏳' : '💾' }}</span>
-          {{ isLoading ? 'Saving...' : 'Save Settings' }}
+          <span class="button-icon">💾</span>
+          Save Settings
         </button>
       </div>
     </div>
@@ -88,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import {onUnmounted, ref} from 'vue'
 import { useLogStore } from '../../stores/logStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import GeneralSettings from './settings/GeneralSettings.vue'
@@ -97,18 +89,16 @@ import EngineSettings from './settings/EngineSettings.vue'
 import CleaningSettings from './settings/CleaningSettings.vue'
 import CompressionSettings from './settings/CompressionSettings.vue'
 
-const emit = defineEmits<{
-  (e: 'close'): void
-}>()
+// const emit = defineEmits<{
+//   (e: 'close'): void
+// }>()
 
 const { addLog } = useLogStore()
 const { 
-  loadSettings, 
-  saveSettings, 
   resetToDefaults: resetStoreToDefaults,
-  isLoading, 
-  hasUnsavedChanges, 
-  lastSaveTime 
+  isLoading,
+  hasUnsavedChanges,
+  saveSettings
 } = useSettingsStore()
 
 const activeTab = ref('general')
@@ -145,67 +135,21 @@ const setActiveTab = (tabId: string) => {
   activeTab.value = tabId
 }
 
-const handleSave = async () => {
-  try {
-    await saveSettings()
-    addLog('Settings saved successfully')
-  } catch (error) {
-    console.error('Failed to save settings:', error)
-    addLog('Failed to save settings', 'error')
-  }
-}
-
 const resetToDefaults = async () => {
   if (confirm('Are you sure you want to reset all settings to their default values? This action cannot be undone.')) {
-    resetStoreToDefaults()
+    resetStoreToDefaults().then()
     addLog('Settings reset to defaults')
   }
 }
 
-const handleClose = async () => {
-  // Auto-save if there are unsaved changes
+onUnmounted(() => {
+  // save settings when the component is unmounted if it has unsaved changes
   if (hasUnsavedChanges.value) {
-    try {
-      await saveSettings()
-      addLog('Settings auto-saved on close')
-    } catch (error) {
-      console.error('Failed to auto-save settings:', error)
-      addLog('Failed to auto-save settings', 'error')
-    }
-  }
-  
-  emit('close')
-}
-
-const formatLastSaveTime = (): string => {
-  if (!lastSaveTime.value) return ''
-  
-  const now = new Date()
-  const diff = now.getTime() - lastSaveTime.value.getTime()
-  const seconds = Math.floor(diff / 1000)
-  
-  if (seconds < 60) return 'just now'
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-  return lastSaveTime.value.toLocaleTimeString()
-}
-
-onMounted(async () => {
-  try {
-    await loadSettings()
-  } catch (error) {
-    console.error('Failed to load settings:', error)
-    addLog('Failed to load settings', 'error')
-  }
-})
-
-// Auto-save on unmount
-onUnmounted(async () => {
-  if (hasUnsavedChanges.value) {
-    try {
-      await saveSettings()
-    } catch (error) {
-      console.error('Failed to auto-save settings on unmount:', error)
-    }
+    saveSettings().then(() => {
+      addLog('Settings saved on close')
+    }).catch(error => {
+      addLog(`Failed to save settings: ${error.message}`, 'error')
+    })
   }
 })
 </script>
@@ -215,7 +159,6 @@ onUnmounted(async () => {
   background-color: var(--background-color);
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-lg);
-  width: 100%;
   width: 56rem;
   height: 85vh;
   overflow: hidden;
@@ -370,21 +313,6 @@ onUnmounted(async () => {
   display: flex;
   gap: var(--spacing-sm);
   align-items: center;
-}
-
-.save-status {
-  font-size: var(--font-size-xs);
-  margin-right: var(--spacing-sm);
-}
-
-.unsaved-indicator {
-  color: #d69e2e;
-  font-weight: var(--font-weight-medium);
-}
-
-.saved-indicator {
-  color: #38a169;
-  font-weight: var(--font-weight-medium);
 }
 
 .action-button {
