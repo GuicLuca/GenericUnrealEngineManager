@@ -286,7 +286,7 @@ async fn scan_drive_for_engines(
 fn validate_engine_directory(engine_root: &Path) -> Result<Option<DetectedEngine>> {
     let engine_dir = engine_root.join("Engine");
     
-    // Check if Engine directory exists
+    // Check if the Engine directory exists
     if !engine_dir.exists() {
         return Ok(None);
     }
@@ -299,7 +299,7 @@ fn validate_engine_directory(engine_root: &Path) -> Result<Option<DetectedEngine
         }
     }
 
-    // Check for Build.version file
+    // Check for the Build.version file
     let build_version_path = engine_dir.join("Build").join("Build.version");
     if !build_version_path.exists() {
         return Ok(None);
@@ -315,7 +315,7 @@ fn validate_engine_directory(engine_root: &Path) -> Result<Option<DetectedEngine
         }
     };
 
-    // Create version string
+    // Create the version string
     let version = format!("{}.{}.{}", 
         build_version.major_version, 
         build_version.minor_version, 
@@ -325,7 +325,7 @@ fn validate_engine_directory(engine_root: &Path) -> Result<Option<DetectedEngine
     // Determine if it's a custom engine based on branch name
     let is_custom = !is_precompiled_branch(&build_version.branch_name);
 
-    // Create engine name
+    // Create the engine name
     let name = if is_custom {
         format!("Custom-{}", version)
     } else {
