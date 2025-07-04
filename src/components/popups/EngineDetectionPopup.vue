@@ -6,15 +6,15 @@
           <span class="title-icon">🔍</span>
           Auto-Detect Unreal Engine Installations
         </h2>
-        <div class="warning-subtitle">This process may take several minutes</div>
+        <div class="warning-subtitle">{{ getSubtitleText() }}</div>
       </div>
-      <button class="close-button" @click="$emit('close')" title="Close" :disabled="isDetecting">
+      <button class="close-button" @click="$emit('close')" title="Close">
         ✕
       </button>
     </div>
 
     <div class="popup-content">
-      <div v-if="!isDetecting && !detectionComplete" class="detection-info">
+      <div v-if="!isDetecting && !detectionComplete && !hasReconnected" class="detection-info">
         <div class="info-section">
           <div class="info-icon">⚠️</div>
           <div class="info-content">
@@ -40,19 +40,20 @@
         </div>
       </div>
 
-      <div v-else-if="isDetecting" class="detection-progress">
+      <div v-else-if="isDetecting || hasReconnected" class="detection-progress">
         <div class="progress-info">
           <div class="progress-icon">🔄</div>
           <div class="progress-text">
-            <div class="progress-title">Scanning for Unreal Engine installations...</div>
-            <div class="progress-subtitle">This may take several minutes. Please wait.</div>
+            <div class="progress-title">{{ hasReconnected ? 'Reconnected to scan in progress...' : 'Scanning for Unreal Engine installations...' }}</div>
+            <div class="progress-subtitle">{{ hasReconnected ? 'The scan was started earlier and is still running.' : 'This may take several minutes. Please wait.' }}</div>
           </div>
         </div>
         
         <div class="progress-note">
           <div class="note-icon">💡</div>
           <div class="note-text">
-            The scan is running in the background. You can monitor the progress in the task progress bar at the bottom of the application.
+            The scan is running in the background. You can close this popup and the scan will continue. 
+            You can reopen this popup to check the progress at any time.
           </div>
         </div>
       </div>
@@ -104,14 +105,14 @@
 
     <div class="popup-actions">
       <button 
-        v-if="!isDetecting && !detectionComplete"
+        v-if="!isDetecting && !detectionComplete && !hasReconnected"
         class="cancel-button" 
         @click="$emit('close')"
       >
         Cancel
       </button>
       <button 
-        v-if="!isDetecting && !detectionComplete"
+        v-if="!isDetecting && !detectionComplete && !hasReconnected"
         class="detect-button" 
         @click="startDetection"
       >
@@ -120,12 +121,12 @@
       </button>
 
       <button 
-        v-if="isDetecting"
+        v-if="isDetecting || hasReconnected"
         class="cancel-button" 
         @click="$emit('close')"
-        disabled
       >
-        Please Wait...
+        <span class="button-icon">🔙</span>
+        Close (Scan Continues)
       </button>
 
       <button 
@@ -141,8 +142,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { useLogStore } from '../../stores/logStore'
 
 interface DetectedEngine {
@@ -158,6 +160,14 @@ interface EngineDetectionResult {
   scan_duration_ms: number
 }
 
+interface TaskProgressPayload {
+  task_id: string
+  task_name: string
+  progress: number
+  status: 'Started' | 'InProgress' | 'Completed' | 'Failed'
+  message?: string
+}
+
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
@@ -166,16 +176,32 @@ const { addLog } = useLogStore()
 
 const isDetecting = ref(false)
 const detectionComplete = ref(false)
+const hasReconnected = ref(false)
+const currentTaskId = ref<string | null>(null)
 const detectionResult = ref<EngineDetectionResult>({
   engines: [],
   total_found: 0,
   scan_duration_ms: 0
 })
 
+// Task progress listener
+let unlistenTaskProgress: (() => void) | null = null
+
+const getSubtitleText = () => {
+  if (hasReconnected.value) {
+    return 'Reconnected to scan in progress'
+  } else if (isDetecting.value) {
+    return 'Scan in progress - you can close this popup'
+  } else {
+    return 'This process may take several minutes'
+  }
+}
+
 const startDetection = async () => {
   try {
     isDetecting.value = true
     detectionComplete.value = false
+    hasReconnected.value = false
     
     addLog('Starting auto-detection of Unreal Engine installations...')
     
@@ -183,12 +209,16 @@ const startDetection = async () => {
     
     detectionResult.value = result
     detectionComplete.value = true
+    isDetecting.value = false
     
     if (result.total_found > 0) {
       addLog(`Auto-detection completed successfully. Found ${result.total_found} engine(s).`)
     } else {
       addLog('Auto-detection completed. No engines were found.')
     }
+    
+    // Emit event to refresh engine settings
+    window.dispatchEvent(new CustomEvent('engines-updated'))
     
   } catch (error) {
     console.error('Engine auto-detection failed:', error)
@@ -199,8 +229,62 @@ const startDetection = async () => {
       total_found: 0,
       scan_duration_ms: 0
     }
-  } finally {
     isDetecting.value = false
+  }
+}
+
+const handleTaskProgress = (event: any) => {
+  const taskData: TaskProgressPayload = event.payload
+  
+  // Check if this is an engine detection task
+  if (taskData.task_name.includes('Auto-detecting Unreal Engine') || 
+      taskData.task_name.includes('auto-detection') ||
+      taskData.task_id.includes('auto_detect_engines')) {
+    
+    currentTaskId.value = taskData.task_id
+    
+    if (taskData.status === 'Started' || taskData.status === 'InProgress') {
+      isDetecting.value = true
+      detectionComplete.value = false
+    } else if (taskData.status === 'Completed') {
+      isDetecting.value = false
+      detectionComplete.value = true
+      
+      // Try to get the final result
+      setTimeout(async () => {
+        try {
+          // The backend should have saved the engines, emit refresh event
+          window.dispatchEvent(new CustomEvent('engines-updated'))
+          addLog('Engine detection completed in background.')
+        } catch (error) {
+          console.error('Failed to refresh engines after background completion:', error)
+        }
+      }, 1000)
+      
+    } else if (taskData.status === 'Failed') {
+      isDetecting.value = false
+      detectionComplete.value = true
+      addLog('Engine auto-detection failed.', 'error')
+    }
+  }
+}
+
+const checkForOngoingScan = async () => {
+  // Check if there's an ongoing engine detection task
+  // We'll listen for task progress events to detect this
+  try {
+    // Set a flag to indicate we might be reconnecting
+    const wasDetecting = isDetecting.value
+    
+    // Wait a bit to see if we receive any task progress events
+    setTimeout(() => {
+      if (currentTaskId.value && isDetecting.value && !wasDetecting) {
+        hasReconnected.value = true
+        addLog('Reconnected to ongoing engine detection scan.')
+      }
+    }, 500)
+  } catch (error) {
+    console.error('Failed to check for ongoing scan:', error)
   }
 }
 
@@ -215,6 +299,24 @@ const formatDuration = (ms: number): string => {
     return `${remainingSeconds}s`
   }
 }
+
+onMounted(async () => {
+  try {
+    // Listen for task progress events
+    unlistenTaskProgress = await listen('task_progress', handleTaskProgress)
+    
+    // Check if there's an ongoing scan
+    await checkForOngoingScan()
+  } catch (error) {
+    console.error('Failed to initialize engine detection popup:', error)
+  }
+})
+
+onUnmounted(() => {
+  if (unlistenTaskProgress) {
+    unlistenTaskProgress()
+  }
+})
 </script>
 
 <style scoped>
@@ -280,14 +382,9 @@ const formatDuration = (ms: number): string => {
   flex-shrink: 0;
 }
 
-.close-button:hover:not(:disabled) {
+.close-button:hover {
   background-color: var(--hover-color);
   color: var(--text-primary);
-}
-
-.close-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .popup-content {
@@ -333,7 +430,6 @@ const formatDuration = (ms: number): string => {
   line-height: var(--line-height-normal);
 }
 
-/*.scan-scope,*/
 .detection-details {
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-sm);
@@ -578,14 +674,9 @@ const formatDuration = (ms: number): string => {
   color: var(--text-secondary);
 }
 
-.cancel-button:hover:not(:disabled) {
+.cancel-button:hover {
   background-color: var(--hover-color);
   color: var(--text-primary);
-}
-
-.cancel-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .detect-button,

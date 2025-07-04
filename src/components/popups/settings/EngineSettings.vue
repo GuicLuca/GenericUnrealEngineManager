@@ -112,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, onMounted, onUnmounted } from 'vue'
 import { open } from '@tauri-apps/plugin-dialog'
 import { usePopup } from '../../../composables/usePopup'
 import { useSettingsStore } from '../../../stores/settingsStore'
@@ -196,10 +196,40 @@ const autoDetectEngines = () => {
   })
 }
 
+const refreshEngineList = () => {
+  // Refresh the local engines from the store
+  const currentEngines = getSettings('engine_programs').custom_engines
+  
+  // Clear current engines
+  Object.keys(localEngines).forEach(key => {
+    delete localEngines[key]
+  })
+  
+  // Add updated engines
+  Object.assign(localEngines, currentEngines)
+}
+
+const handleEnginesUpdated = () => {
+  // Force refresh the engine list when engines are updated
+  setTimeout(() => {
+    refreshEngineList()
+  }, 500) // Small delay to ensure backend has processed the changes
+}
+
 // Watch for external changes to settings
 watch(() => getSettings('engine_programs').custom_engines, (newEngines) => {
   Object.assign(localEngines, newEngines)
 }, { deep: true })
+
+onMounted(() => {
+  // Listen for engine updates from the detection popup
+  window.addEventListener('engines-updated', handleEnginesUpdated)
+})
+
+onUnmounted(() => {
+  // Clean up event listener
+  window.removeEventListener('engines-updated', handleEnginesUpdated)
+})
 </script>
 
 <style scoped>
