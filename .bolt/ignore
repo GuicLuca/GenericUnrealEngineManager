@@ -1,5 +1,5 @@
 public/*
-src-tauri/icons/*
+src-tauri/*
 .gitattributes
 .gitignore
 LICENSE
