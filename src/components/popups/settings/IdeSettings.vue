@@ -45,65 +45,18 @@
         <span class="button-icon">➕</span>
         Add IDE Program
       </button>
+      <button class="add-program-btn" @click="openAddProgramPopup">
+        <span class="button-icon">➕</span>
+        Add IDE Program
+      </button>
     </div>
 
-    <!-- Add/Edit Program Form -->
-    <div v-if="showAddProgram || editingProgram" class="program-form">
-      <h4 class="form-title">{{ editingProgram ? 'Edit' : 'Add' }} IDE Program</h4>
-      
-      <div class="form-group">
-        <label class="form-label">Program Name</label>
-        <input
-          v-model="programForm.name"
-          type="text"
-          class="form-input"
-          placeholder="e.g., Visual Studio 2022"
-          :disabled="!!editingProgram"
-        />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Executable Path</label>
-        <div class="path-input-group">
-          <input
-            v-model="programForm.path"
-            type="text"
-            class="form-input"
-            placeholder="Path to IDE executable..."
-          />
-          <button
-            type="button"
-            class="browse-button"
-            @click="browseForExecutable"
-            title="Browse for executable"
-          >
-            📂
-          </button>
-        </div>
-      </div>
-
-      <div class="form-actions">
-        <button
-          class="form-btn cancel-btn"
-          @click="cancelForm"
-        >
-          Cancel
-        </button>
-        <button
-          class="form-btn save-btn"
-          @click="saveProgram"
-          :disabled="!programForm.name.trim() || !programForm.path.trim()"
-        >
-          {{ editingProgram ? 'Update' : 'Add' }} Program
-        </button>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, watch } from 'vue'
-import { open } from '@tauri-apps/plugin-dialog'
+import { usePopup } from '../../../composables/usePopup'
 import { useSettingsStore } from '../../../stores/settingsStore'
 
 const { 
@@ -113,20 +66,21 @@ const {
   updateIdeProgram 
 } = useSettingsStore()
 
+const { showPopup } = usePopup()
+
 const localPrograms = reactive({ ...getSettings('ide_programs').custom_programs })
 
-const showAddProgram = ref(false)
-const editingProgram = ref<string | null>(null)
-const programForm = reactive({
-  name: '',
-  path: ''
-})
-
 const editProgram = (name: string, path: string) => {
-  editingProgram.value = name
-  programForm.name = name
-  programForm.path = path
-  showAddProgram.value = false
+  showPopup({
+    id: 'ide-form',
+    component: 'IdeForm',
+    props: {
+      editingProgram: name,
+      initialName: name,
+      initialPath: path,
+      onSave: handleProgramSave
+    }
+  })
 }
 
 const handleRemoveProgram = (name: string) => {
@@ -136,49 +90,27 @@ const handleRemoveProgram = (name: string) => {
   }
 }
 
-const browseForExecutable = async () => {
-  try {
-    const selected = await open({
-      directory: false,
-      multiple: false,
-      title: 'Select IDE Executable',
-      filters: [
-        {
-          name: 'Executable Files',
-          extensions: ['exe', 'app', 'AppImage']
-        }
-      ]
-    })
-    
-    if (selected && typeof selected === 'string') {
-      programForm.path = selected
+const openAddProgramPopup = () => {
+  showPopup({
+    id: 'ide-form',
+    component: 'IdeForm',
+    props: {
+      onSave: handleProgramSave
     }
-  } catch (error) {
-    console.error('Failed to open file dialog:', error)
-  }
+  })
 }
 
-const saveProgram = () => {
-  if (!programForm.name.trim() || !programForm.path.trim()) return
-
-  if (editingProgram.value) {
-    updateIdeProgram(editingProgram.value, programForm.name, programForm.path)
-    if (editingProgram.value !== programForm.name) {
-      delete localPrograms[editingProgram.value]
+const handleProgramSave = (data: { name: string; path: string; isEdit: boolean; originalName?: string }) => {
+  if (data.isEdit && data.originalName) {
+    updateIdeProgram(data.originalName, data.name, data.path)
+    if (data.originalName !== data.name) {
+      delete localPrograms[data.originalName]
     }
   } else {
-    addIdeProgram(programForm.name, programForm.path)
+    addIdeProgram(data.name, data.path)
   }
 
-  localPrograms[programForm.name] = programForm.path
-  cancelForm()
-}
-
-const cancelForm = () => {
-  showAddProgram.value = false
-  editingProgram.value = null
-  programForm.name = ''
-  programForm.path = ''
+  localPrograms[data.name] = data.path
 }
 
 // Watch for external changes to settings
@@ -333,127 +265,5 @@ watch(() => getSettings('ide_programs').custom_programs, (newPrograms) => {
 
 .button-icon {
   font-size: var(--font-size-sm);
-}
-
-.program-form {
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-md);
-  padding: var(--spacing-md);
-  background-color: var(--surface-color);
-}
-
-.form-title {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-  margin: 0 0 var(--spacing-md) 0;
-}
-
-.form-group {
-  margin-bottom: var(--spacing-md);
-}
-
-.form-label {
-  display: block;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-primary);
-  margin-bottom: var(--spacing-xs);
-}
-
-.form-input {
-  width: 100%;
-  padding: var(--spacing-sm);
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-sm);
-  color: var(--text-primary);
-  background-color: var(--background-color);
-  transition: border-color var(--transition-fast);
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px var(--accent-color-alpha);
-}
-
-.form-input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.path-input-group {
-  display: flex;
-  gap: var(--spacing-sm);
-}
-
-.path-input-group .form-input {
-  flex: 1;
-}
-
-.browse-button {
-  padding: var(--spacing-sm);
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  background-color: var(--surface-color);
-  cursor: pointer;
-  font-size: var(--font-size-md);
-  transition: all var(--transition-fast);
-  min-width: 2.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.browse-button:hover {
-  background-color: var(--hover-color);
-  border-color: var(--accent-color);
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-lg);
-  padding-top: var(--spacing-md);
-  border-top: var(--border-width) solid var(--border-color);
-}
-
-.form-btn {
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  border: var(--border-width) solid;
-}
-
-.cancel-btn {
-  background-color: transparent;
-  border-color: var(--border-color);
-  color: var(--text-secondary);
-}
-
-.cancel-btn:hover {
-  background-color: var(--hover-color);
-  color: var(--text-primary);
-}
-
-.save-btn {
-  background-color: var(--accent-color);
-  border-color: var(--accent-color);
-  color: white;
-}
-
-.save-btn:hover:not(:disabled) {
-  background-color: #2c5aa0;
-  border-color: #2c5aa0;
-}
-
-.save-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 </style>

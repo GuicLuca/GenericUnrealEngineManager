@@ -42,7 +42,7 @@
       </div>
 
       <div class="engine-actions-row">
-        <button class="add-engine-btn" @click="showAddEngine = true">
+        <button class="add-engine-btn" @click="openAddEnginePopup">
           <span class="button-icon">➕</span>
           Add Custom Engine
         </button>
@@ -53,67 +53,11 @@
         </button>
       </div>
     </div>
-
-    <!-- Add/Edit Engine Form -->
-    <div v-if="showAddEngine || editingEngine" class="engine-form">
-      <h4 class="form-title">{{ editingEngine ? 'Edit' : 'Add' }} Custom Engine</h4>
-      
-      <div class="form-group">
-        <label class="form-label">Engine Name</label>
-        <input
-          v-model="engineForm.name"
-          type="text"
-          class="form-input"
-          placeholder="e.g., UE5.3-Custom, MyCustomEngine"
-          :disabled="!!editingEngine"
-        />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Engine Directory Path</label>
-        <div class="path-input-group">
-          <input
-            v-model="engineForm.path"
-            type="text"
-            class="form-input"
-            placeholder="Path to engine root directory..."
-          />
-          <button
-            type="button"
-            class="browse-button"
-            @click="browseForEngineDirectory"
-            title="Browse for engine directory"
-          >
-            📂
-          </button>
-        </div>
-        <div class="form-hint">
-          Select the root directory of your Unreal Engine installation (contains Engine, Templates, etc.)
-        </div>
-      </div>
-
-      <div class="form-actions">
-        <button
-          class="form-btn cancel-btn"
-          @click="cancelForm"
-        >
-          Cancel
-        </button>
-        <button
-          class="form-btn save-btn"
-          @click="saveEngine"
-          :disabled="!engineForm.name.trim() || !engineForm.path.trim()"
-        >
-          {{ editingEngine ? 'Update' : 'Add' }} Engine
-        </button>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted, onUnmounted } from 'vue'
-import { open } from '@tauri-apps/plugin-dialog'
 import { usePopup } from '../../../composables/usePopup'
 import { useSettingsStore } from '../../../stores/settingsStore'
 
@@ -128,18 +72,16 @@ const { showPopup } = usePopup()
 
 const localEngines = reactive({ ...getSettings('engine_programs').custom_engines })
 
-const showAddEngine = ref(false)
-const editingEngine = ref<string | null>(null)
-const engineForm = reactive({
-  name: '',
-  path: ''
-})
-
 const editEngine = (name: string, path: string) => {
-  editingEngine.value = name
-  engineForm.name = name
-  engineForm.path = path
-  showAddEngine.value = false
+  showPopup({
+    id: 'engine-form',
+    component: 'EngineForm',
+    props: {
+      editingEngine: name,
+      initialPath: path,
+      onSave: handleEngineSave
+    }
+  })
 }
 
 const handleRemoveEngine = (name: string) => {
@@ -149,43 +91,27 @@ const handleRemoveEngine = (name: string) => {
   }
 }
 
-const browseForEngineDirectory = async () => {
-  try {
-    const selected = await open({
-      directory: true,
-      multiple: false,
-      title: 'Select Engine Root Directory'
-    })
-    
-    if (selected) {
-      engineForm.path = selected
+const openAddEnginePopup = () => {
+  showPopup({
+    id: 'engine-form',
+    component: 'EngineForm',
+    props: {
+      onSave: handleEngineSave
     }
-  } catch (error) {
-    console.error('Failed to open directory dialog:', error)
-  }
+  })
 }
 
-const saveEngine = () => {
-  if (!engineForm.name.trim() || !engineForm.path.trim()) return
-
-  if (editingEngine.value) {
-    updateEngineProgram(editingEngine.value, engineForm.name, engineForm.path)
-    if (editingEngine.value !== engineForm.name) {
-      delete localEngines[editingEngine.value]
+const handleEngineSave = (data: { name: string; path: string; isEdit: boolean; originalName?: string }) => {
+  if (data.isEdit && data.originalName) {
+    updateEngineProgram(data.originalName, data.name, data.path)
+    if (data.originalName !== data.name) {
+      delete localEngines[data.originalName]
     }
   } else {
-    addEngineProgram(engineForm.name, engineForm.path)
+    addEngineProgram(data.name, data.path)
   }
 
-  localEngines[engineForm.name] = engineForm.path
-  cancelForm()
-}
-
-const cancelForm = () => {
-  showAddEngine.value = false
-  editingEngine.value = null
-  engineForm.name = ''
-  engineForm.path = ''
+  localEngines[data.name] = data.path
 }
 
 const autoDetectEngines = () => {
@@ -400,134 +326,5 @@ onUnmounted(() => {
 
 .button-icon {
   font-size: var(--font-size-sm);
-}
-
-.engine-form {
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-md);
-  padding: var(--spacing-md);
-  background-color: var(--surface-color);
-}
-
-.form-title {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-  margin: 0 0 var(--spacing-md) 0;
-}
-
-.form-group {
-  margin-bottom: var(--spacing-md);
-}
-
-.form-label {
-  display: block;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-primary);
-  margin-bottom: var(--spacing-xs);
-}
-
-.form-input {
-  width: 100%;
-  padding: var(--spacing-sm);
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-sm);
-  color: var(--text-primary);
-  background-color: var(--background-color);
-  transition: border-color var(--transition-fast);
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px var(--accent-color-alpha);
-}
-
-.form-input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.path-input-group {
-  display: flex;
-  gap: var(--spacing-sm);
-}
-
-.path-input-group .form-input {
-  flex: 1;
-}
-
-.browse-button {
-  padding: var(--spacing-sm);
-  border: var(--border-width) solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  background-color: var(--surface-color);
-  cursor: pointer;
-  font-size: var(--font-size-md);
-  transition: all var(--transition-fast);
-  min-width: 2.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.browse-button:hover {
-  background-color: var(--hover-color);
-  border-color: var(--accent-color);
-}
-
-.form-hint {
-  font-size: var(--font-size-xs);
-  color: var(--text-secondary);
-  margin-top: var(--spacing-xs);
-  line-height: var(--line-height-normal);
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-lg);
-  padding-top: var(--spacing-md);
-  border-top: var(--border-width) solid var(--border-color);
-}
-
-.form-btn {
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  border: var(--border-width) solid;
-}
-
-.cancel-btn {
-  background-color: transparent;
-  border-color: var(--border-color);
-  color: var(--text-secondary);
-}
-
-.cancel-btn:hover {
-  background-color: var(--hover-color);
-  color: var(--text-primary);
-}
-
-.save-btn {
-  background-color: var(--accent-color);
-  border-color: var(--accent-color);
-  color: white;
-}
-
-.save-btn:hover:not(:disabled) {
-  background-color: #2c5aa0;
-  border-color: #2c5aa0;
-}
-
-.save-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 </style>
