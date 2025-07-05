@@ -168,6 +168,18 @@ interface TaskProgressPayload {
   message?: string
 }
 
+interface Props {
+  reconnectToRunningTask?: boolean
+  currentTask?: TaskProgressPayload | null
+  showResults?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  reconnectToRunningTask: false,
+  currentTask: null,
+  showResults: false
+})
+
 // const emit = defineEmits<{
 //   (e: 'close'): void
 // }>()
@@ -190,10 +202,11 @@ let unlistenTaskProgress: (() => void) | null = null
 const getSubtitleText = () => {
   if (hasReconnected.value) {
     return 'Reconnected to scan in progress'
+  } else if (props.showResults) {
+    return 'Engine detection completed'
   } else if (isDetecting.value) {
     return 'Scan in progress - you can close this popup'
   } else {
-    switch ()
     return 'This process may take several minutes'
   }
 }
@@ -272,20 +285,25 @@ const handleTaskProgress = (event: any) => {
 
 const checkForOngoingScan = async () => {
   // Check if there's an ongoing engine detection task
-  // We'll listen for task progress events to detect this
-  try {
-    // Set a flag to indicate we might be reconnecting
-    const wasDetecting = isDetecting.value
+  if (props.reconnectToRunningTask && props.currentTask) {
+    // Reconnect to running task
+    currentTaskId.value = props.currentTask.task_id
+    isDetecting.value = true
+    hasReconnected.value = true
+    addLog('Reconnected to ongoing engine detection scan.')
+  } else if (props.showResults) {
+    // Show results state
+    isDetecting.value = false
+    detectionComplete.value = true
+    hasReconnected.value = false
     
-    // Wait a bit to see if we receive any task progress events
-    setTimeout(() => {
-      if (currentTaskId.value && isDetecting.value && !wasDetecting) {
-        hasReconnected.value = true
-        addLog('Reconnected to ongoing engine detection scan.')
-      }
-    }, 500)
-  } catch (error) {
-    console.error('Failed to check for ongoing scan:', error)
+    // Try to get the latest detection results
+    try {
+      // Trigger engines refresh to get latest results
+      window.dispatchEvent(new CustomEvent('engines-updated'))
+    } catch (error) {
+      console.error('Failed to refresh engines:', error)
+    }
   }
 }
 
@@ -306,7 +324,7 @@ onMounted(async () => {
     // Listen for task progress events
     unlistenTaskProgress = await listen('task_progress', handleTaskProgress)
     
-    // Check if there's an ongoing scan
+    // Check if there's an ongoing scan or if we should show results
     await checkForOngoingScan()
   } catch (error) {
     console.error('Failed to initialize engine detection popup:', error)

@@ -60,6 +60,7 @@
 import {reactive, watch, onMounted, onUnmounted} from 'vue'
 import {usePopup} from '../../../composables/usePopup'
 import {useSettingsStore} from '../../../stores/settingsStore'
+import {useTaskStore} from '../../../stores/taskStore'
 
 const {
   getSettings,
@@ -70,6 +71,7 @@ const {
 } = useSettingsStore()
 
 const {showPopup} = usePopup()
+const {isEngineDetectionRunning, currentEngineDetectionTask} = useTaskStore()
 
 const localEngines = reactive({...getSettings('engine_programs').custom_engines})
 
@@ -117,10 +119,34 @@ const handleEngineSave = (data: { name: string; path: string; isEdit: boolean; o
 }
 
 const autoDetectEngines = () => {
+  // Check if engine detection is already running
+  if (isEngineDetectionRunning.value) {
+    // Show popup with current scan state
+    showPopup({
+      id: 'engine-detection',
+      component: 'EngineDetection',
+      props: {
+        reconnectToRunningTask: true,
+        currentTask: currentEngineDetectionTask.value
+      }
+    })
+  } else {
+    // Show popup to start new scan
+    showPopup({
+      id: 'engine-detection',
+      component: 'EngineDetection',
+      props: {}
+    })
+  }
+}
+
+const showEngineDetectionResults = () => {
   showPopup({
     id: 'engine-detection',
     component: 'EngineDetection',
-    props: {}
+    props: {
+      showResults: true
+    }
   })
 }
 
@@ -141,6 +167,12 @@ const handleEnginesUpdated = () => {
   // Force refresh the engine list when engines are updated
   setTimeout(() => {
     refreshEngineList()
+    
+    // Show results popup if user is not in settings anymore
+    const currentPopup = document.querySelector('.settings-popup')
+    if (!currentPopup) {
+      showEngineDetectionResults()
+    }
   }, 500) // Small delay to ensure backend has processed the changes
 }
 

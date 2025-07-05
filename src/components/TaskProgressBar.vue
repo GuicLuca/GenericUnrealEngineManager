@@ -56,6 +56,8 @@
           v-for="task in activeTasks" 
           :key="task.task_id"
           class="task-item"
+          @click="handleTaskClick(task)"
+          :class="{ 'clickable': isTaskClickable(task) }"
         >
           <div class="task-info">
             <span class="task-name">{{ task.task_name }}</span>
@@ -81,25 +83,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { listen } from '@tauri-apps/api/event'
+import { useTaskStore } from '../stores/taskStore'
+import { usePopup } from '../composables/usePopup'
 
-interface TaskProgress {
-  task_id: string
-  task_name: string
-  progress: number // 0.0 to 1.0
-  status: 'Started' | 'InProgress' | 'Completed' | 'Failed'
-  message?: string
-}
-
-const tasks = ref<Map<string, TaskProgress>>(new Map())
+const { activeTasks } = useTaskStore()
+const { showPopup } = usePopup()
 const showAllTasks = ref(false)
-
-// Computed properties
-const activeTasks = computed(() => {
-  return Array.from(tasks.value.values()).filter(task => 
-    task.status === 'Started' || task.status === 'InProgress'
-  )
-})
 
 const overallProgress = computed(() => {
   if (activeTasks.value.length === 0) return 0
@@ -126,41 +115,35 @@ const toggleExpanded = () => {
   showAllTasks.value = !showAllTasks.value
 }
 
-const handleTaskProgress = (event: any) => {
-  const taskData: TaskProgress = event.payload
-  
-  if (taskData.status === 'Completed' || taskData.status === 'Failed') {
-    // Remove completed/failed tasks after a short delay
-    setTimeout(() => {
-      tasks.value.delete(taskData.task_id)
-      
-      // Auto-collapse if no tasks remain
-      if (activeTasks.value.length <= 1) {
-        showAllTasks.value = false
-      }
-    }, 1000)
-  } else {
-    // Update or add a task
-    tasks.value.set(taskData.task_id, taskData)
+// Handle task completion for engine detection
+const handleTaskClick = (task: any) => {
+  // If it's an engine detection task that completed, show results
+  if (task.task_name.toLowerCase().includes('auto-detecting unreal engine') ||
+      task.task_name.toLowerCase().includes('engine detection')) {
+    if (task.status === 'Completed') {
+      showPopup({
+        id: 'engine-detection',
+        component: 'EngineDetection',
+        props: {
+          showResults: true
+        }
+      })
+    }
   }
 }
 
-// Lifecycle
-let unlistenTaskProgress: (() => void) | null = null
+const isTaskClickable = (task: any) => {
+  return (task.task_name.toLowerCase().includes('auto-detecting unreal engine') ||
+          task.task_name.toLowerCase().includes('engine detection')) &&
+         task.status === 'Completed'
+}
 
-onMounted(async () => {
-  try {
-    unlistenTaskProgress = await listen('task_progress', handleTaskProgress)
-  } catch (error) {
-    console.error('Failed to listen for task progress events:', error)
+// Auto-collapse when no tasks remain
+const checkAutoCollapse = () => {
+  if (activeTasks.value.length <= 1) {
+    showAllTasks.value = false
   }
-})
-
-onUnmounted(() => {
-  if (unlistenTaskProgress) {
-    unlistenTaskProgress()
-  }
-})
+}
 </script>
 
 <style scoped>
@@ -371,6 +354,14 @@ onUnmounted(() => {
 
 .task-item:last-child {
   border-bottom: none;
+}
+
+.task-item.clickable {
+  cursor: pointer;
+}
+
+.task-item.clickable:hover {
+  background-color: var(--hover-color);
 }
 
 /* Keep task items in single line even in expanded view */
