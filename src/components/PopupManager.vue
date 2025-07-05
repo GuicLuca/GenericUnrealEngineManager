@@ -78,6 +78,20 @@
                   @close="hidePopup(popup.id)"
               />
 
+              <!-- Engine Form Popup -->
+              <EngineFormPopup
+                  v-if="popup.component === 'EngineForm'"
+                  v-bind="popup.props"
+                  @close="hidePopup(popup.id)"
+              />
+              
+              <!-- IDE Form Popup -->
+              <IdeFormPopup
+                v-if="popup.component === 'IdeForm'"
+                v-bind="popup.props"
+                @close="hidePopup(popup.id)"
+              />
+
               <!-- Add more popup components here as needed -->
             </div>
           </Transition>
@@ -100,7 +114,9 @@ import ProjectCleanPopup from './popups/ProjectCleanPopup.vue'
 import ProjectCompressPopup from './popups/ProjectCompressPopup.vue'
 import SettingsPopup from './popups/SettingsPopup.vue'
 import EngineDetectionPopup from './popups/EngineDetectionPopup.vue'
-import PresetFormPopup from "./popups/PresetFormPopup.vue";
+import PresetFormPopup from "./popups/settings/PresetFormPopup.vue";
+import IdeFormPopup from "./popups/settings/IdeFormPopup.vue";
+import EngineFormPopup from "./popups/settings/EngineFormPopup.vue";
 
 const {popupState, hidePopup, initPopupListener, showPopup} = usePopup()
 const {addLog} = useLogStore()

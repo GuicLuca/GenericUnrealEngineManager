@@ -168,9 +168,9 @@ interface TaskProgressPayload {
   message?: string
 }
 
-const emit = defineEmits<{
-  (e: 'close'): void
-}>()
+// const emit = defineEmits<{
+//   (e: 'close'): void
+// }>()
 
 const { addLog } = useLogStore()
 
@@ -193,6 +193,7 @@ const getSubtitleText = () => {
   } else if (isDetecting.value) {
     return 'Scan in progress - you can close this popup'
   } else {
+    switch ()
     return 'This process may take several minutes'
   }
 }
@@ -482,8 +483,8 @@ onUnmounted(() => {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
 }
 
 .progress-title {

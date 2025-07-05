@@ -37,10 +37,6 @@
         <h4 class="detected-title">Detected Engine Information</h4>
         <div class="engine-info">
           <div class="info-item">
-            <span class="info-label">Name:</span>
-            <span class="info-value">{{ detectedEngine.name }}</span>
-          </div>
-          <div class="info-item">
             <span class="info-label">Version:</span>
             <span class="info-value">{{ detectedEngine.version }}</span>
           </div>
@@ -76,7 +72,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { open } from '@tauri-apps/plugin-dialog'
 import { invoke } from '@tauri-apps/api/core'
-import { useLogStore } from '../../stores/logStore'
+import { useLogStore } from '../../../stores/logStore.ts'
 
 interface Props {
   editingEngine?: string | null
@@ -149,7 +145,6 @@ const detectEngine = async () => {
     }) as DetectedEngine
     
     detectedEngine.value = result
-    addLog(`Detected engine: ${result.name} (${result.version})`)
     
   } catch (error) {
     console.error('Failed to detect engine:', error)

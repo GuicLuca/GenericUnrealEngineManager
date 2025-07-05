@@ -121,6 +121,7 @@ pub fn run() {
         projects::actions::plugin_manager::scan_plugins,
         projects::actions::plugin_manager::refresh_all_plugins,
         projects::actions::engine_discovery::auto_detect_engines,
+        projects::actions::engine_discovery::detect_engine_at_path,
         settings::actions::settings_manager::get_settings,
         settings::actions::settings_manager::save_settings,
         settings::actions::settings_manager::reset_settings,

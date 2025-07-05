@@ -40,11 +40,7 @@
           <div class="no-programs-subtext">Add IDE programs to launch C++ projects</div>
         </div>
       </div>
-
-      <button class="add-program-btn" @click="showAddProgram = true">
-        <span class="button-icon">➕</span>
-        Add IDE Program
-      </button>
+      
       <button class="add-program-btn" @click="openAddProgramPopup">
         <span class="button-icon">➕</span>
         Add IDE Program
@@ -55,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { reactive, watch } from 'vue'
 import { usePopup } from '../../../composables/usePopup'
 import { useSettingsStore } from '../../../stores/settingsStore'
 

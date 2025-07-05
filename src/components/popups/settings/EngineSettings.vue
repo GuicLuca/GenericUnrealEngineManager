@@ -5,12 +5,12 @@
       <div class="section-description">
         Manage custom Unreal Engine installations. These can be source builds or custom engine versions.
       </div>
-      
+
       <div class="engines-list">
-        <div 
-          v-for="(path, name) in localEngines"
-          :key="name"
-          class="engine-item"
+        <div
+            v-for="(path, name) in localEngines"
+            :key="name"
+            class="engine-item"
         >
           <div class="engine-info">
             <div class="engine-name">{{ name }}</div>
@@ -18,16 +18,16 @@
           </div>
           <div class="engine-actions">
             <button
-              class="action-btn edit-btn"
-              @click="editEngine(name as string, path)"
-              title="Edit engine"
+                class="action-btn edit-btn"
+                @click="editEngine(name as string, path)"
+                title="Edit engine"
             >
               ✏️
             </button>
             <button
-              class="action-btn remove-btn"
-              @click="handleRemoveEngine(name as string)"
-              title="Remove engine"
+                class="action-btn remove-btn"
+                @click="handleRemoveEngine(name as string)"
+                title="Remove engine"
             >
               🗑️
             </button>
@@ -46,7 +46,7 @@
           <span class="button-icon">➕</span>
           Add Custom Engine
         </button>
-        
+
         <button class="auto-detect-btn" @click="autoDetectEngines">
           <span class="button-icon">🔍</span>
           Auto-Detect Engines
@@ -57,20 +57,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted, onUnmounted } from 'vue'
-import { usePopup } from '../../../composables/usePopup'
-import { useSettingsStore } from '../../../stores/settingsStore'
+import {reactive, watch, onMounted, onUnmounted} from 'vue'
+import {usePopup} from '../../../composables/usePopup'
+import {useSettingsStore} from '../../../stores/settingsStore'
 
-const { 
-  getSettings, 
-  addEngineProgram, 
-  removeEngineProgram, 
-  updateEngineProgram 
+const {
+  getSettings,
+  addEngineProgram,
+  removeEngineProgram,
+  updateEngineProgram,
+  saveSettings
 } = useSettingsStore()
 
-const { showPopup } = usePopup()
+const {showPopup} = usePopup()
 
-const localEngines = reactive({ ...getSettings('engine_programs').custom_engines })
+const localEngines = reactive({...getSettings('engine_programs').custom_engines})
 
 const editEngine = (name: string, path: string) => {
   showPopup({
@@ -85,10 +86,9 @@ const editEngine = (name: string, path: string) => {
 }
 
 const handleRemoveEngine = (name: string) => {
-  if (confirm(`Are you sure you want to remove "${name}"?`)) {
-    removeEngineProgram(name)
-    delete localEngines[name]
-  }
+  removeEngineProgram(name)
+  delete localEngines[name]
+  saveSettings()
 }
 
 const openAddEnginePopup = () => {
@@ -112,6 +112,8 @@ const handleEngineSave = (data: { name: string; path: string; isEdit: boolean; o
   }
 
   localEngines[data.name] = data.path
+
+  saveSettings()
 }
 
 const autoDetectEngines = () => {
@@ -125,12 +127,12 @@ const autoDetectEngines = () => {
 const refreshEngineList = () => {
   // Refresh the local engines from the store
   const currentEngines = getSettings('engine_programs').custom_engines
-  
+
   // Clear current engines
   Object.keys(localEngines).forEach(key => {
     delete localEngines[key]
   })
-  
+
   // Add updated engines
   Object.assign(localEngines, currentEngines)
 }
@@ -145,7 +147,7 @@ const handleEnginesUpdated = () => {
 // Watch for external changes to settings
 watch(() => getSettings('engine_programs').custom_engines, (newEngines) => {
   Object.assign(localEngines, newEngines)
-}, { deep: true })
+}, {deep: true})
 
 onMounted(() => {
   // Listen for engine updates from the detection popup
@@ -153,7 +155,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  // Clean up event listener
+  // Cleanup event listener
   window.removeEventListener('engines-updated', handleEnginesUpdated)
 })
 </script>

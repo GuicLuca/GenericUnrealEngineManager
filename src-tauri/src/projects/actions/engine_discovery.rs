@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::{command, AppHandle};
+use crate::misc::errors::Verror::MessageError;
 
 #[derive(Debug, Deserialize)]
 struct BuildVersion {
@@ -128,6 +129,69 @@ pub async fn auto_detect_engines(app_handle: AppHandle) -> Result<EngineDiscover
         scan_duration_ms: duration.as_millis(),
     })
 }
+
+#[tauri::command]
+pub async fn detect_engine_at_path(app_handle: AppHandle, engine_path: String) -> Result<DetectedEngine> {
+    let task_id = format!("auto_detect_engines_{}", chrono::Utc::now().timestamp_millis());
+    let progress = TaskProgress::new(
+        app_handle.clone(),
+        task_id,
+        "Auto-detecting Unreal Engine installations".to_string()
+    );
+    
+    progress.update(0.1, Some("Validating specified path...".to_string()));
+    
+    info!("Detecting engine at path: {}", engine_path);
+    log(&app_handle, ErrorLevel::Info, &format!("Checking for engine at: {}", engine_path));
+
+    let path = PathBuf::from(&engine_path);
+    if !path.exists() {
+        return Err(MessageError("Path does not exist".to_string()));
+    }
+    
+    progress.update(0.4, Some("Detecting engine at location...".to_string()));
+
+    // First, check if the provided path itself is an engine root (containing "Engine" folder)
+    let engine_root = path.clone();
+    match validate_engine_directory(&engine_root) {
+        Ok(Some(engine)) => {
+            log(&app_handle, ErrorLevel::Info, &format!("Found valid engine: {} at {}", engine.name, engine.path));
+            
+            save_detected_engines(&app_handle, &[engine.clone()])?;
+            progress.complete(Some(format!("Found valid engine: {}", engine.name)));
+            return Ok(engine);
+        }
+        Ok(None) => {
+            // Not a valid engine at root level, check if it's the Engine folder itself
+            if path.file_name().map_or(false, |name| name == "Engine") {
+                if let Some(parent) = path.parent() {
+                    match validate_engine_directory(parent) {
+                        Ok(Some(engine)) => {
+                            log(&app_handle, ErrorLevel::Info, &format!("Found valid engine: {} at {}", engine.name, engine.path));
+
+                            save_detected_engines(&app_handle, &[engine.clone()])?;
+                            progress.complete(Some(format!("Found valid engine: {}", engine.name)));
+                            return Ok(engine);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            error!("Error validating engine directory: {}", e);
+            log(&app_handle, ErrorLevel::Error, &format!("Error validating engine: {}", e));
+            progress.complete(Some("Error validating engine directory".to_string()));
+            return Err(e);
+        }
+    }
+
+    // If we got here, no valid engine was found
+    progress.complete(Some("No valid Unreal Engine installation found at the specified path".to_string()));
+    log(&app_handle, ErrorLevel::Warning, &format!("No valid Unreal Engine found at: {}", engine_path));
+    Err(MessageError("No valid Unreal Engine installation found at the specified path".to_string()))
+}
+
 
 /// Get all system drives/mount points
 fn get_system_drives() -> Result<Vec<PathBuf>> {
@@ -364,6 +428,10 @@ fn save_detected_engines(app_handle: &AppHandle, engines: &[DetectedEngine]) -> 
                 engine.name.clone(),
                 engine.path.clone()
             );
+        } 
+        else { 
+            info!("Engine {} at {} is already registered, skipping", engine.name, engine.path);
+            log(&app_handle, ErrorLevel::Warning, &format!("Engine {} at {} is already registered, skipping", engine.name, engine.path));
         }
     }
 

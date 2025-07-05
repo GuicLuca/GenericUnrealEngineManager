@@ -119,7 +119,7 @@ onUpdated(() => {
   color: #3182ce;
 }
 
-.log-warn .log-level {
+.log-warning .log-level {
   color: #d69e2e;
 }
 
