@@ -8,7 +8,7 @@
 
       <div class="engines-list">
         <div
-            v-for="(path, name) in localEngines"
+            v-for="(path, name) in sortedEngineInstances"
             :key="name"
             class="engine-item"
         >
@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import {reactive, watch} from 'vue'
+import {computed, reactive, watch} from 'vue'
 import {usePopup} from '../../../composables/usePopup'
 import {useSettingsStore} from '../../../stores/settingsStore'
 import {useTaskStore} from '../../../stores/taskStore'
@@ -74,6 +74,13 @@ const {showPopup} = usePopup()
 const {isEngineDetectionRunning, currentEngineDetectionTask} = useTaskStore()
 
 const localEngines = reactive({... getSettings('engine_programs').custom_engines})
+
+// Sort custom presets alphabetically by name
+const sortedEngineInstances = computed(() => {
+  const entries = Object.entries(localEngines)
+  entries.sort(([nameA], [nameB]) => nameB.localeCompare(nameA))
+  return Object.fromEntries(entries)
+})
 
 const editEngine = (name: string, path: string) => {
   showPopup({
