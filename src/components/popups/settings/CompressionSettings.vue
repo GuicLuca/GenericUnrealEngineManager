@@ -106,7 +106,7 @@ const {
 
 const { showPopup } = usePopup()
 
-const localCompression = reactive({ ...getSettings('compression') })
+const localCompression = reactive({ ... getSettings('compression') })
 
 const selectedPreset = ref('Default')
 const systemInfo = ref({
@@ -242,7 +242,7 @@ const loadSystemInfo = async () => {
 }
 
 // Watch for external changes to settings
-watch(() => getSettings('compression'), (newCompression) => {
+watch( () => getSettings('compression'), (newCompression) => {
   Object.assign(localCompression, newCompression)
   
   // Ensure the selected preset is corresponding to filename_format

@@ -101,3 +101,6 @@ pub(crate) const EVENT_PROJECTS_UPDATED: &str = "projects_updated";
 
 /// Background task progress events
 pub(crate) const EVENT_TASK_PROGRESS: &str = "task_progress";
+
+/// Settings value updated event
+pub(crate) const EVENT_SETTINGS_UPDATED: &str = "settings_updated";

@@ -64,7 +64,7 @@ const {
 
 const { showPopup } = usePopup()
 
-const localPrograms = reactive({ ...getSettings('ide_programs').custom_programs })
+const localPrograms = reactive({ ... getSettings('ide_programs').custom_programs })
 
 const editProgram = (name: string, path: string) => {
   showPopup({
@@ -110,7 +110,7 @@ const handleProgramSave = (data: { name: string; path: string; isEdit: boolean; 
 }
 
 // Watch for external changes to settings
-watch(() => getSettings('ide_programs').custom_programs, (newPrograms) => {
+watch( () => getSettings('ide_programs').custom_programs, (newPrograms) => {
   Object.assign(localPrograms, newPrograms)
 }, { deep: true })
 </script>

@@ -201,7 +201,7 @@ let unlistenTaskProgress: (() => void) | null = null
 
 const getSubtitleText = () => {
   if (hasReconnected.value) {
-    return 'Reconnected to scan in progress'
+    return 'Scan in progress - you can close this popup'
   } else if (props.showResults) {
     return 'Engine detection completed'
   } else if (isDetecting.value) {
@@ -269,7 +269,6 @@ const handleTaskProgress = (event: any) => {
         try {
           // The backend should have saved the engines, emit refresh event
           window.dispatchEvent(new CustomEvent('engines-updated'))
-          addLog('Engine detection completed in background.')
         } catch (error) {
           console.error('Failed to refresh engines after background completion:', error)
         }
@@ -286,7 +285,7 @@ const handleTaskProgress = (event: any) => {
 const checkForOngoingScan = async () => {
   // Check if there's an ongoing engine detection task
   if (props.reconnectToRunningTask && props.currentTask) {
-    // Reconnect to running task
+    // Reconnect to the running task
     currentTaskId.value = props.currentTask.task_id
     isDetecting.value = true
     hasReconnected.value = true
@@ -343,8 +342,7 @@ onUnmounted(() => {
   background-color: var(--background-color);
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius-lg);
-  width: 100%;
-  max-width: 36rem;
+  width: 36rem;
   overflow: hidden;
   display: flex;
   flex-direction: column;

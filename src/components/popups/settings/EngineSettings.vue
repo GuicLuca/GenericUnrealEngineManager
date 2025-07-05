@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import {reactive, watch, onMounted, onUnmounted} from 'vue'
+import {reactive, watch} from 'vue'
 import {usePopup} from '../../../composables/usePopup'
 import {useSettingsStore} from '../../../stores/settingsStore'
 import {useTaskStore} from '../../../stores/taskStore'
@@ -73,7 +73,7 @@ const {
 const {showPopup} = usePopup()
 const {isEngineDetectionRunning, currentEngineDetectionTask} = useTaskStore()
 
-const localEngines = reactive({...getSettings('engine_programs').custom_engines})
+const localEngines = reactive({... getSettings('engine_programs').custom_engines})
 
 const editEngine = (name: string, path: string) => {
   showPopup({
@@ -140,56 +140,10 @@ const autoDetectEngines = () => {
   }
 }
 
-const showEngineDetectionResults = () => {
-  showPopup({
-    id: 'engine-detection',
-    component: 'EngineDetection',
-    props: {
-      showResults: true
-    }
-  })
-}
-
-const refreshEngineList = () => {
-  // Refresh the local engines from the store
-  const currentEngines = getSettings('engine_programs').custom_engines
-
-  // Clear current engines
-  Object.keys(localEngines).forEach(key => {
-    delete localEngines[key]
-  })
-
-  // Add updated engines
-  Object.assign(localEngines, currentEngines)
-}
-
-const handleEnginesUpdated = () => {
-  // Force refresh the engine list when engines are updated
-  setTimeout(() => {
-    refreshEngineList()
-    
-    // Show results popup if user is not in settings anymore
-    const currentPopup = document.querySelector('.settings-popup')
-    if (!currentPopup) {
-      showEngineDetectionResults()
-    }
-  }, 500) // Small delay to ensure backend has processed the changes
-}
-
 // Watch for external changes to settings
-watch(() => getSettings('engine_programs').custom_engines, (newEngines) => {
+watch( () => getSettings('engine_programs').custom_engines, (newEngines) => {
   Object.assign(localEngines, newEngines)
 }, {deep: true})
-
-onMounted(() => {
-  // Listen for engine updates from the detection popup
-  window.addEventListener('engines-updated', handleEnginesUpdated)
-})
-
-onUnmounted(() => {
-  // Cleanup event listener
-  window.removeEventListener('engines-updated', handleEnginesUpdated)
-})
 </script>
 
 <style scoped>

@@ -138,7 +138,7 @@ const handleProjectDiscoverySubmit = (data: any) => {
 onMounted(async () => {
   initPopupListener()
 
-  await loadSettings().then(() => {
+  await loadSettings().then(async () => {
     const generalSettings = getSettings('general')
     if (generalSettings.show_welcome_popup) {
       showPopup({

@@ -4,6 +4,7 @@ import "./styles/variables.css";
 import { useLogStore } from './stores/logStore'
 import { useProjectStore } from './stores/projectStore'
 import { useTaskStore } from './stores/taskStore'
+import { useSettingsStore } from './stores/settingsStore'
 
 createApp(App).mount("#app");
 
@@ -11,10 +12,14 @@ createApp(App).mount("#app");
 const { addLog, initLogListener } = useLogStore()
 const { initializeStore } = useProjectStore()
 const { initTaskListener } = useTaskStore()
+const { initSettingsListener, loadSettings } = useSettingsStore()
 
 try {
     // Initialize log system
     await initLogListener()
+    // Initialize settings store
+    await initSettingsListener()
+    await loadSettings()
     // Initialize task system
     await initTaskListener()
     // Initialize the project store and listen for backend events

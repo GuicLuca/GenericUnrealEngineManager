@@ -28,7 +28,7 @@ export const useTaskStore = () => {
             tasks.value.delete(taskData.task_id)
           }, 2000)
         } else {
-          // Update or add active task
+          // Update or add the active task
           tasks.value.set(taskData.task_id, taskData)
         }
       })
@@ -45,7 +45,7 @@ export const useTaskStore = () => {
     )
   }
 
-  // Get running task by name pattern
+  // Get running the task by its name pattern
   const getRunningTask = (taskNamePattern: string): TaskProgress | null => {
     return Array.from(tasks.value.values()).find(task => 
       (task.status === 'Started' || task.status === 'InProgress') &&

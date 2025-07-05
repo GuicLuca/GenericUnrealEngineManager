@@ -73,7 +73,7 @@ import {emit} from "@tauri-apps/api/event";
 const {getSettings, updateGeneralSettings} = useSettingsStore()
 const {showPopup, hidePopup} = usePopup()
 
-const localGeneral = reactive({...getSettings('general')})
+const localGeneral = reactive({... getSettings('general')})
 
 const systemInfo = ref({
   platform: 'Unknown',
@@ -112,7 +112,7 @@ const loadSystemInfo = async () => {
 }
 
 // Watch for external changes to settings
-watch(() => getSettings('general'), (newGeneral) => {
+watch( () => getSettings('general'), (newGeneral) => {
   Object.assign(localGeneral, newGeneral)
 }, {deep: true})
 

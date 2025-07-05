@@ -1,5 +1,6 @@
 import {ref, reactive} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
+import {listen} from "@tauri-apps/api/event";
 import {useLogStore} from '../stores/logStore'
 
 export interface AppSettings {
@@ -74,6 +75,25 @@ const lastSaveTime = ref<Date | null>(null)
 const {addLog} = useLogStore()
 
 export const useSettingsStore = () => {
+    // Initialize event listener for settings updates from backend
+    const initSettingsListener = async (): Promise<void> => {
+        try {
+            // Listen for settings updates from the backend
+            await listen<AppSettings>('settings_updated', (event) => {
+                // Update the local settings with the new data
+                Object.assign(settings, event.payload);
+                hasUnsavedChanges.value = false;
+                lastSaveTime.value = new Date();
+                addLog('Settings updated from backend', 'info');
+            });
+            addLog('Settings listener initialized', 'info');
+        } catch (error) {
+            addLog('Failed to initialize settings listener', 'error');
+            console.error('Error setting up settings listener:', error);
+            throw error;
+        }
+    };
+    
     // Load settings from backend
     const loadSettings = async (): Promise<void> => {
         try {
@@ -235,6 +255,7 @@ export const useSettingsStore = () => {
         getAllSettings,
         resetToDefaults,
         resetSectionToDefaults,
+        initSettingsListener,
 
         // IDE Programs
         addIdeProgram,

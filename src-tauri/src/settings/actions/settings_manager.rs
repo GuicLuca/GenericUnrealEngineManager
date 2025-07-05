@@ -3,7 +3,7 @@ use crate::misc::errors;
 use crate::settings::models::settings::AppSettings;
 use log::{error, info};
 use std::sync::Arc;
-use tauri::{command, AppHandle, Wry};
+use tauri::{command, AppHandle, Emitter, Wry};
 use tauri_plugin_store::{Store, StoreExt};
 
 
@@ -73,8 +73,13 @@ pub fn store_settings(app_handle: &AppHandle, settings: &AppSettings) -> errors:
     let store: Arc<Store<Wry>> = app_handle.store(env::STORE_FILE_NAME)?;
     
     let settings_json = serde_json::to_value(settings)?;
-    store.set(env::STORE_SETTINGS_KEY, settings_json);
+    store.set(env::STORE_SETTINGS_KEY, settings_json.clone());
     store.save()?;
+
+    // fire an event to notify other parts of the app
+    if let Err(e) = app_handle.emit(env::EVENT_SETTINGS_UPDATED, settings_json) {
+        error!("Failed to emit task progress event: {}", e);
+    }
     
     Ok(())
 }
