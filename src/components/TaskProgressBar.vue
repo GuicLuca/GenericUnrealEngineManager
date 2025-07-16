@@ -152,23 +152,19 @@ const checkAutoCollapse = () => {
   border-top: var(--border-width) solid var(--border-color);
   position: relative;
   z-index: 100;
-  min-height: 2.5rem;
-  display: flex;
-  flex-direction: column;
-  max-height: 50vh;
-  overflow: hidden;
+  height: 2.5rem;
+  flex-shrink: 0;
 }
 
 .progress-container {
   padding: var(--spacing-xs) var(--spacing-md);
   display: flex;
   align-items: center;
-  min-height: 2rem;
-  flex-shrink: 0;
+  height: 100%;
 }
 
 .progress-container.has-multiple-tasks {
-  min-height: 2.5rem;
+  /* No additional height changes needed */
 }
 
 .single-task,
@@ -305,7 +301,6 @@ const checkAutoCollapse = () => {
   border-radius: var(--border-radius-sm);
   transition: background-color var(--transition-fast);
   flex: 1;
-  min-width: 0;
   min-height: 1.5rem;
 }
 
@@ -348,13 +343,25 @@ const checkAutoCollapse = () => {
 .expand-button.expanded {
   transform: rotate(180deg);
 }
+.expanded-tasks-overlay {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background-color: var(--background-color);
+  border: var(--border-width) solid var(--border-color);
+  border-bottom: none;
+  border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06);
+  max-height: 60vh;
+  overflow: hidden;
+}
 
 .expanded-tasks {
-  border-top: var(--border-width) solid var(--border-color);
   background-color: var(--background-color);
-  max-height: calc(50vh - 4rem);
+  max-height: 60vh;
   overflow-y: auto;
-  flex-grow: 1;
 }
 
 .task-item {
@@ -363,7 +370,7 @@ const checkAutoCollapse = () => {
   gap: var(--spacing-md);
   padding: var(--spacing-sm) var(--spacing-md);
   border-bottom: var(--border-width) solid var(--border-color);
-  min-height: 2.5rem;
+  min-height: 2.25rem;
 }
 
 .task-item:last-child {
@@ -408,24 +415,26 @@ const checkAutoCollapse = () => {
 .task-list-leave-to {
   max-height: 0;
   opacity: 0;
+  transform: translateY(10px);
 }
 
 .task-list-enter-to,
 .task-list-leave-from {
-  max-height: calc(50vh - 4rem);
+  max-height: 60vh;
   opacity: 1;
+  transform: translateY(0);
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .task-progress-bar {
-    max-height: 40vh;
+  .expanded-tasks-overlay {
+    max-height: 50vh;
   }
   
   .expanded-tasks {
-    max-height: calc(40vh - 3rem);
+    max-height: 50vh;
   }
-  
+
   .task-name {
     max-width: 8rem;
   }
@@ -444,7 +453,7 @@ const checkAutoCollapse = () => {
   
   .task-list-enter-to,
   .task-list-leave-from {
-    max-height: calc(40vh - 3rem);
+    max-height: 50vh;
   }
 }
 </style>
