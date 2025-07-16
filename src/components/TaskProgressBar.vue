@@ -152,7 +152,7 @@ const isTaskClickable = (task: any) => {
   border-top: var(--border-width) solid var(--border-color);
   position: relative;
   z-index: 100;
-  height: 2.5rem;
+  height: 1.5rem;
   flex-shrink: 0;
 }
 
@@ -301,7 +301,7 @@ const isTaskClickable = (task: any) => {
   border-radius: var(--border-radius-sm);
   transition: background-color var(--transition-fast);
   flex: 1;
-  min-height: 1.5rem;
+  min-height: 1rem;
 }
 
 .task-summary.expanded {
@@ -364,13 +364,28 @@ const isTaskClickable = (task: any) => {
   overflow-y: auto;
 }
 
+.expanded-tasks {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background-color: var(--background-color);
+  border: var(--border-width) solid var(--border-color);
+  border-bottom: none;
+  border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
 .task-item {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
   padding: var(--spacing-sm) var(--spacing-md);
   border-bottom: var(--border-width) solid var(--border-color);
-  min-height: 2.25rem;
+  min-height: 2rem;
 }
 
 .task-item:last-child {
@@ -427,10 +442,6 @@ const isTaskClickable = (task: any) => {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .expanded-tasks-overlay {
-    max-height: 50vh;
-  }
-  
   .expanded-tasks {
     max-height: 50vh;
   }
