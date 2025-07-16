@@ -1,5 +1,5 @@
 <template>
-  <div class="task-progress-bar">
+  <div class="task-progress-bar" ref="taskBarRef">
     <!-- Always visible compact progress bar -->
     <div class="progress-container" :class="{ 'has-multiple-tasks': activeTasks.length > 1 }">
       <!-- Single Task Display -->
@@ -85,10 +85,12 @@
 import { ref, computed } from 'vue'
 import { useTaskStore } from '../stores/taskStore'
 import { usePopup } from '../composables/usePopup'
+import {onClickOutside} from "@vueuse/core";
 
 const { activeTasks } = useTaskStore()
 const { showPopup } = usePopup()
 const showAllTasks = ref(false)
+const taskBarRef = ref(null) // Liked to the TaskbarRef element
 
 const overallProgress = computed(() => {
   if (activeTasks.value.length === 0) return 0
@@ -138,6 +140,13 @@ const isTaskClickable = (task: any) => {
          task.status === 'Completed'
 }
 
+// On click outside to collapse expanded tasks
+onClickOutside(taskBarRef, () => {
+  if (showAllTasks.value) {
+    showAllTasks.value = false
+  }
+})
+
 // Auto-collapse when no tasks remain
 // const checkAutoCollapse = () => {
 //   if (activeTasks.value.length <= 1) {
@@ -157,7 +166,7 @@ const isTaskClickable = (task: any) => {
 }
 
 .progress-container {
-  padding: var(--spacing-xs) var(--spacing-md);
+  padding: 0 var(--spacing-md);
   display: flex;
   align-items: center;
   height: 100%;
@@ -385,7 +394,7 @@ const isTaskClickable = (task: any) => {
   gap: var(--spacing-md);
   padding: var(--spacing-sm) var(--spacing-md);
   border-bottom: var(--border-width) solid var(--border-color);
-  min-height: 2rem;
+  min-height: 1rem;
 }
 
 .task-item:last-child {
