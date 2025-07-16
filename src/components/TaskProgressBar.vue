@@ -82,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useTaskStore } from '../stores/taskStore'
 import { usePopup } from '../composables/usePopup'
 
@@ -139,11 +139,11 @@ const isTaskClickable = (task: any) => {
 }
 
 // Auto-collapse when no tasks remain
-const checkAutoCollapse = () => {
-  if (activeTasks.value.length <= 1) {
-    showAllTasks.value = false
-  }
-}
+// const checkAutoCollapse = () => {
+//   if (activeTasks.value.length <= 1) {
+//     showAllTasks.value = false
+//   }
+// }
 </script>
 
 <style scoped>
@@ -155,7 +155,7 @@ const checkAutoCollapse = () => {
   min-height: 2.5rem;
   display: flex;
   flex-direction: column;
-  max-height: 50vh;
+  //max-height: 50vh;
   overflow: hidden;
 }
 
