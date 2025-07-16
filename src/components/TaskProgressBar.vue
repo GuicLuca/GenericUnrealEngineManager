@@ -1,7 +1,7 @@
 <template>
   <div class="task-progress-bar">
     <!-- Always visible compact progress bar -->
-    <div class="progress-container">
+    <div class="progress-container" :class="{ 'has-multiple-tasks': activeTasks.length > 1 }">
       <!-- Single Task Display -->
       <div v-if="activeTasks.length === 1" class="single-task">
         <div class="task-info">
@@ -24,7 +24,7 @@
 
       <!-- Multiple Tasks Display -->
       <div v-else-if="activeTasks.length > 1" class="multiple-tasks">
-        <div class="task-summary" @click="toggleExpanded">
+        <div class="task-summary" @click="toggleExpanded" :class="{ 'expanded': showAllTasks }">
           <span class="task-count">{{ activeTasks.length }} tasks running</span>
           <button class="expand-button" :class="{ 'expanded': showAllTasks }">
             {{ showAllTasks ? '▼' : '▲' }}
@@ -152,16 +152,23 @@ const checkAutoCollapse = () => {
   border-top: var(--border-width) solid var(--border-color);
   position: relative;
   z-index: 100;
-  min-height: 1rem;
+  min-height: 2.5rem;
   display: flex;
   flex-direction: column;
+  max-height: 50vh;
+  overflow: hidden;
 }
 
 .progress-container {
   padding: var(--spacing-xs) var(--spacing-md);
   display: flex;
   align-items: center;
-  min-height: 1rem;
+  min-height: 2rem;
+  flex-shrink: 0;
+}
+
+.progress-container.has-multiple-tasks {
+  min-height: 2.5rem;
 }
 
 .single-task,
@@ -299,6 +306,11 @@ const checkAutoCollapse = () => {
   transition: background-color var(--transition-fast);
   flex: 1;
   min-width: 0;
+  min-height: 1.5rem;
+}
+
+.task-summary.expanded {
+  background-color: var(--accent-color-alpha);
 }
 
 .task-summary:hover {
@@ -340,16 +352,18 @@ const checkAutoCollapse = () => {
 .expanded-tasks {
   border-top: var(--border-width) solid var(--border-color);
   background-color: var(--background-color);
-  max-height: 8rem;
+  max-height: calc(50vh - 4rem);
   overflow-y: auto;
+  flex-grow: 1;
 }
 
 .task-item {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
-  padding: var(--spacing-xs) var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
   border-bottom: var(--border-width) solid var(--border-color);
+  min-height: 2.5rem;
 }
 
 .task-item:last-child {
@@ -398,12 +412,20 @@ const checkAutoCollapse = () => {
 
 .task-list-enter-to,
 .task-list-leave-from {
-  max-height: 8rem;
+  max-height: calc(50vh - 4rem);
   opacity: 1;
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+  .task-progress-bar {
+    max-height: 40vh;
+  }
+  
+  .expanded-tasks {
+    max-height: calc(40vh - 3rem);
+  }
+  
   .task-name {
     max-width: 8rem;
   }
@@ -418,6 +440,11 @@ const checkAutoCollapse = () => {
   
   .task-message {
     display: none; /* Hide messages on mobile to save space */
+  }
+  
+  .task-list-enter-to,
+  .task-list-leave-from {
+    max-height: calc(40vh - 3rem);
   }
 }
 </style>
