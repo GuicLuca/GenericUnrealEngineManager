@@ -47,3 +47,14 @@ pub enum TaskStatus {
     Completed,
     Failed,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PackageProjectRequest {
+    pub project_path: String,
+    pub build_type: String,
+    pub target_platform: String,
+    pub output_directory: String,
+    pub create_archive: bool,
+    pub archive_format: Option<String>,
+    pub archive_filename_format: Option<String>,
+}

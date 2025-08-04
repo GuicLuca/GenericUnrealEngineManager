@@ -13,12 +13,6 @@ pub struct PackageRequest {
     pub build_type: String,
     pub target_platform: String,
     pub output_directory: String,
-    pub for_distribution: bool,
-    pub include_prerequisites: bool,
-    pub include_app_local_prerequisites: bool,
-    pub include_crash_reporter: bool,
-    pub use_pak_file: bool,
-    pub compress_content: bool,
     pub create_archive: bool,
     pub archive_format: Option<String>,
     pub archive_filename_format: Option<String>,
@@ -300,31 +294,6 @@ impl ProjectPackager {
         command.arg("-archive");
         command.arg("-unattended");
         command.arg("-nop4");
-
-        // Conditional flags
-        if request.for_distribution {
-            command.arg("-distribution");
-        }
-
-        if request.include_prerequisites {
-            command.arg("-prereqs");
-        }
-
-        if request.include_app_local_prerequisites {
-            command.arg("-applocaldirectory");
-        }
-
-        if request.include_crash_reporter {
-            command.arg("-crashreporter");
-        }
-
-        if request.use_pak_file {
-            command.arg("-pak");
-        }
-
-        if request.compress_content {
-            command.arg("-compressed");
-        }
 
         // Platform-specific optimizations
         match request.target_platform.as_str() {
