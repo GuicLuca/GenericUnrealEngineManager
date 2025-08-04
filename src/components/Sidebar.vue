@@ -17,6 +17,7 @@ import { useProjectStore} from '../stores/projectStore'
 import { useLogStore } from '../stores/logStore'
 import { usePopup } from '../composables/usePopup'
 import { invoke } from "@tauri-apps/api/core"
+import { ref, watch } from 'vue'
 
 export interface SidebarItem {
   name: string
@@ -34,6 +35,9 @@ const props = defineProps<Props>()
 const { selectedProject, hasSelectedProject, removeProjects } = useProjectStore()
 const { addLog } = useLogStore()
 const { showPopup } = usePopup()
+
+const isPackagingAvailable = ref(true)
+const packagingUnavailableReason = ref('')
 
 const handleItemClick = async (item: SidebarItem) => {
   if (item.requiresProject && !hasSelectedProject.value) {
@@ -135,6 +139,11 @@ const handleCompress = () => {
 
 const handlePackage = () => {
   if (!selectedProject.value) return
+  
+  if (!isPackagingAvailable.value) {
+    addLog(`Packaging unavailable: ${packagingUnavailableReason.value}`, 'warn')
+    return
+  }
 
   showPopup({
     id: 'project-package',
@@ -145,6 +154,39 @@ const handlePackage = () => {
     }
   })
 }
+
+// Check packaging availability when project changes
+const checkPackagingAvailability = async () => {
+  if (!selectedProject.value) {
+    isPackagingAvailable.value = true
+    packagingUnavailableReason.value = ''
+    return
+  }
+
+  try {
+    const available = await invoke('is_packaging_available', {
+      projectPath: selectedProject.value.path
+    }) as boolean
+    
+    isPackagingAvailable.value = available
+    
+    if (!available) {
+      const reason = await invoke('get_packaging_unavailable_reason', {
+        projectPath: selectedProject.value.path
+      }) as string
+      packagingUnavailableReason.value = reason
+    } else {
+      packagingUnavailableReason.value = ''
+    }
+  } catch (error) {
+    console.error('Failed to check packaging availability:', error)
+    isPackagingAvailable.value = false
+    packagingUnavailableReason.value = 'Failed to check engine availability'
+  }
+}
+
+// Watch for project changes
+watch(selectedProject, checkPackagingAvailability, { immediate: true })
 </script>
 
 <style scoped>
@@ -160,6 +202,11 @@ const handlePackage = () => {
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* Disabled package button styling */
+.sidebar :deep(.sidebar-item.disabled) {
+  opacity: 0.5;
 }
 
 .sidebar::-webkit-scrollbar {
