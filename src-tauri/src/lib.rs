@@ -118,6 +118,8 @@ pub fn run() {
         projects::actions::project_compressor::get_available_compression_algorithms,
         projects::actions::project_compressor::get_system_username,
         projects::actions::project_compressor::get_system_hostname,
+        projects::actions::project_packager::package_project_command,
+        projects::actions::project_packager::get_current_platform,
         projects::actions::plugin_manager::scan_plugins,
         projects::actions::plugin_manager::refresh_all_plugins,
         projects::actions::engine_discovery::auto_detect_engines,
