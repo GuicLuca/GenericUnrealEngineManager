@@ -18,11 +18,9 @@
       <div v-if="!engineAvailable" class="engine-warning">
         <div class="warning-icon">⚠️</div>
         <div class="warning-content">
-          <div class="warning-title">Engine Not Available</div>
+          <div class="warning-title">Engine Not Registered</div>
           <div class="warning-message">{{ engineError }}</div>
-          <div class="warning-suggestion">
-            Please register the required Unreal Engine version in Settings > Engine Programs.
-          </div>
+          <div class="warning-suggestion">Please register the required Unreal Engine version in Settings > Engine Programs.</div>
         </div>
       </div>
 
@@ -97,109 +95,6 @@
         </div>
         <div class="config-hint">
           Directory where the packaged build will be saved
-        </div>
-      </div>
-
-      <!-- Advanced Options Section -->
-      <div class="package-section">
-        <h3 class="section-title">Advanced Options</h3>
-        
-        <div class="checkbox-group">
-          <div class="checkbox-item">
-            <input
-              id="package-for-distribution"
-              v-model="packageConfig.forDistribution"
-              type="checkbox"
-              class="checkbox-input"
-              :disabled="isPackaging"
-            />
-            <label for="package-for-distribution" class="checkbox-label">
-              Package for distribution
-              <InfoTooltip 
-                content="Creates a build optimized for distribution. Enables additional optimizations and removes development-only content."
-              />
-            </label>
-          </div>
-
-          <div class="checkbox-item">
-            <input
-              id="include-prerequisites"
-              v-model="packageConfig.includePrerequisites"
-              type="checkbox"
-              class="checkbox-input"
-              :disabled="isPackaging"
-            />
-            <label for="include-prerequisites" class="checkbox-label">
-              Include prerequisites installer
-              <InfoTooltip 
-                content="Includes the Visual C++ Redistributable and other required components with the build."
-              />
-            </label>
-          </div>
-
-          <div class="checkbox-item">
-            <input
-              id="include-app-local-prerequisites"
-              v-model="packageConfig.includeAppLocalPrerequisites"
-              type="checkbox"
-              class="checkbox-input"
-              :disabled="isPackaging"
-            />
-            <label for="include-app-local-prerequisites" class="checkbox-label">
-              Include app-local prerequisites
-              <InfoTooltip 
-                content="Includes prerequisites in the application directory instead of system-wide installation."
-              />
-            </label>
-          </div>
-
-          <div class="checkbox-item">
-            <input
-              id="include-crash-reporter"
-              v-model="packageConfig.includeCrashReporter"
-              type="checkbox"
-              class="checkbox-input"
-              :disabled="isPackaging"
-            />
-            <label for="include-crash-reporter" class="checkbox-label">
-              Include crash reporter
-              <InfoTooltip 
-                content="Includes the Unreal Engine crash reporter for collecting crash data."
-              />
-            </label>
-          </div>
-
-          <div class="checkbox-item">
-            <input
-              id="use-pak-file"
-              v-model="packageConfig.usePakFile"
-              type="checkbox"
-              class="checkbox-input"
-              :disabled="isPackaging"
-            />
-            <label for="use-pak-file" class="checkbox-label">
-              Use PAK file
-              <InfoTooltip 
-                content="Packages game content into PAK files for better loading performance and content protection."
-              />
-            </label>
-          </div>
-
-          <div class="checkbox-item">
-            <input
-              id="compress-content"
-              v-model="packageConfig.compressContent"
-              type="checkbox"
-              class="checkbox-input"
-              :disabled="isPackaging"
-            />
-            <label for="compress-content" class="checkbox-label">
-              Compress content
-              <InfoTooltip 
-                content="Compresses packaged content to reduce file size. May increase loading times on slower devices."
-              />
-            </label>
-          </div>
         </div>
       </div>
 
@@ -322,12 +217,6 @@ const packageConfig = reactive<PackageConfig>({
   buildType: 'Development',
   targetPlatform: 'Win64',
   outputDirectory: '',
-  forDistribution: false,
-  includePrerequisites: true,
-  includeAppLocalPrerequisites: false,
-  includeCrashReporter: true,
-  usePakFile: true,
-  compressContent: false,
   createArchive: false,
   archiveFormat: 'Zip',
   archiveFilenameFormat: '[Project]_[Platform]_[BuildType]_[YYYY][MM][DD][HH][mm]'
@@ -477,12 +366,6 @@ const startPackaging = async () => {
       build_type: packageConfig.buildType,
       target_platform: packageConfig.targetPlatform,
       output_directory: packageConfig.outputDirectory,
-      for_distribution: packageConfig.forDistribution,
-      include_prerequisites: packageConfig.includePrerequisites,
-      include_app_local_prerequisites: packageConfig.includeAppLocalPrerequisites,
-      include_crash_reporter: packageConfig.includeCrashReporter,
-      use_pak_file: packageConfig.usePakFile,
-      compress_content: packageConfig.compressContent,
       create_archive: packageConfig.createArchive,
       archive_format: packageConfig.createArchive ? packageConfig.archiveFormat : null,
       archive_filename_format: packageConfig.createArchive ? packageConfig.archiveFilenameFormat : null
@@ -845,10 +728,11 @@ onMounted(() => {
   display: flex;
   gap: var(--spacing-md);
   padding: var(--spacing-md);
-  background-color: #fef5e7;
-  border: var(--border-width) solid #d69e2e;
+  background-color: #fff4e6;
+  border: var(--border-width) solid #ff8c00;
   border-radius: var(--border-radius-md);
   margin-bottom: var(--spacing-lg);
+  border-left: 4px solid #ff8c00;
 }
 
 .warning-icon {
@@ -863,20 +747,20 @@ onMounted(() => {
 .warning-title {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  color: #d69e2e;
+  color: #cc5500;
   margin-bottom: var(--spacing-xs);
 }
 
 .warning-message {
   font-size: var(--font-size-sm);
-  color: var(--text-primary);
+  color: #8b4513;
   margin-bottom: var(--spacing-xs);
   line-height: var(--line-height-normal);
 }
 
 .warning-suggestion {
   font-size: var(--font-size-xs);
-  color: var(--text-secondary);
+  color: #a0522d;
   line-height: var(--line-height-normal);
 }
 
