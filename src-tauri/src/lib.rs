@@ -120,8 +120,6 @@ pub fn run() {
         projects::actions::project_compressor::get_system_hostname,
         projects::actions::project_packager::package_project_command,
         projects::actions::project_packager::get_current_platform,
-        projects::actions::project_packager::is_packaging_available,
-        projects::actions::project_packager::get_packaging_unavailable_reason,
         projects::actions::plugin_manager::scan_plugins,
         projects::actions::plugin_manager::refresh_all_plugins,
         projects::actions::engine_discovery::auto_detect_engines,

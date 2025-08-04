@@ -2,7 +2,6 @@
   <div 
     class="sidebar-item" 
     :class="{ disabled }"
-    :title="disabled ? 'This action is currently unavailable' : ''"
     @click="handleClick"
   >
     <div class="sidebar-icon">{{ icon }}</div>
