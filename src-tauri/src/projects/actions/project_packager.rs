@@ -1,5 +1,6 @@
 use crate::misc::prelude::*;
 use crate::misc::progress::TaskProgress;
+use crate::settings::actions::settings_manager::SettingsManager;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -424,4 +425,77 @@ impl ProjectPackager {
 
         Ok(filename)
     }
+}
+
+/// Check if the engine for a project is available in app settings
+pub async fn check_engine_availability(project_path: &str) -> Result<bool, String> {
+    let project = crate::projects::actions::behavior::load_project_from_path(project_path)
+        .map_err(|e| format!("Failed to load project: {}", e))?;
+    
+    let settings = SettingsManager::load_settings()
+        .map_err(|e| format!("Failed to load settings: {}", e))?;
+    
+    match &project.engine_association {
+        crate::projects::models::project::EngineAssociation::Standard(version) => {
+            // Check if we have a registered engine for this version
+            for (name, _path) in &settings.engine_programs.custom_engines {
+                if name.contains(version) {
+                    return Ok(true);
+                }
+            }
+            Ok(false)
+        }
+        crate::projects::models::project::EngineAssociation::Custom => {
+            // For custom engines, check if we have any registered custom engines
+            Ok(!settings.engine_programs.custom_engines.is_empty())
+        }
+    }
+}
+
+/// Find the RunUAT script for the given project
+fn find_runuat_script(project_path: &str) -> Result<PathBuf, String> {
+    let project = crate::projects::actions::behavior::load_project_from_path(project_path)
+        .map_err(|e| format!("Failed to load project: {}", e))?;
+    
+    let settings = SettingsManager::load_settings()
+        .map_err(|e| format!("Failed to load settings: {}", e))?;
+
+    let engine_path = match &project.engine_association {
+        crate::projects::models::project::EngineAssociation::Standard(version) => {
+            // Find registered engine for this version
+            let mut found_engine_path = None;
+            for (name, path) in &settings.engine_programs.custom_engines {
+                if name.contains(version) {
+                    found_engine_path = Some(PathBuf::from(path));
+                    break;
+                }
+            }
+            
+            found_engine_path.ok_or_else(|| {
+                format!("Unreal Engine {} is not registered in the application settings", version)
+            })?
+        }
+        crate::projects::models::project::EngineAssociation::Custom => {
+            // For custom engines, use the first registered custom engine
+            // or try to find one that might be related to this project
+            if let Some((name, path)) = settings.engine_programs.custom_engines.iter().next() {
+                PathBuf::from(path)
+            } else {
+                return Err("No custom Unreal Engine installations are registered in the application settings".to_string());
+            }
+        }
+    };
+
+    // Construct the RunUAT path
+    let runuat_path = if cfg!(target_os = "windows") {
+        engine_path.join("Engine").join("Build").join("BatchFiles").join("RunUAT.bat")
+    } else {
+        engine_path.join("Engine").join("Build").join("BatchFiles").join("RunUAT.sh")
+    };
+
+    if !runuat_path.exists() {
+        return Err(format!("RunUAT script not found at: {}", runuat_path.display()));
+    }
+
+    Ok(runuat_path)
 }

@@ -14,6 +14,18 @@
     </div>
 
     <div class="popup-content">
+      <!-- Engine Availability Warning -->
+      <div v-if="!engineAvailable" class="engine-warning">
+        <div class="warning-icon">⚠️</div>
+        <div class="warning-content">
+          <div class="warning-title">Engine Not Available</div>
+          <div class="warning-message">{{ engineError }}</div>
+          <div class="warning-suggestion">
+            Please register the required Unreal Engine version in Settings > Engine Programs.
+          </div>
+        </div>
+      </div>
+
       <!-- Build Configuration Section -->
       <div class="package-section">
         <h3 class="section-title">Build Configuration</h3>
@@ -827,6 +839,45 @@ onMounted(() => {
 
 .button-icon {
   font-size: var(--font-size-sm);
+}
+
+.engine-warning {
+  display: flex;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background-color: #fef5e7;
+  border: var(--border-width) solid #d69e2e;
+  border-radius: var(--border-radius-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.warning-icon {
+  font-size: var(--icon-size-lg);
+  flex-shrink: 0;
+}
+
+.warning-content {
+  flex-grow: 1;
+}
+
+.warning-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: #d69e2e;
+  margin-bottom: var(--spacing-xs);
+}
+
+.warning-message {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-xs);
+  line-height: var(--line-height-normal);
+}
+
+.warning-suggestion {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: var(--line-height-normal);
 }
 
 /* Responsive adjustments */
