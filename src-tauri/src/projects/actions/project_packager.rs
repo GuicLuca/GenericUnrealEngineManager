@@ -1,5 +1,5 @@
 use crate::misc::prelude::*;
-use crate::misc::progress::ProgressManager;
+use crate::misc::progress::TaskProgress;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -34,13 +34,13 @@ pub struct PackageResult {
 
 pub struct ProjectPackager {
     app_handle: AppHandle,
-    progress_manager: ProgressManager,
+    progress_manager: TaskProgress,
 }
 
 impl ProjectPackager {
     pub fn new(app_handle: AppHandle) -> Self {
         Self {
-            progress_manager: ProgressManager::new(app_handle.clone()),
+            progress_manager: TaskProgress::new(app_handle.clone()),
             app_handle,
         }
     }
@@ -58,7 +58,7 @@ impl ProjectPackager {
 
         // Start progress tracking
         self.progress_manager
-            .start_task(&task_id, &task_name, "Initializing packaging process...")
+            .start_task(&task_id, &task_name, Some("Initializing packaging process..."))
             .await?;
 
         let result = self.package_project_internal(request.clone(), &task_id).await;
@@ -66,13 +66,13 @@ impl ProjectPackager {
         match result {
             Ok(package_result) => {
                 self.progress_manager
-                    .complete_task(&task_id, "Packaging completed successfully")
+                    .complete_task(&task_id, Some("Packaging completed successfully"))
                     .await?;
                 Ok(package_result)
             }
             Err(e) => {
                 self.progress_manager
-                    .fail_task(&task_id, &format!("Packaging failed: {}", e))
+                    .fail_task(&task_id, Some(&format!("Packaging failed: {}", e)))
                     .await?;
                 Err(e)
             }
@@ -94,14 +94,14 @@ impl ProjectPackager {
 
         // Find engine installation
         self.progress_manager
-            .update_task(task_id, 0.1, "Finding Unreal Engine installation...")
+            .update_task(task_id, 0.1, Some("Finding Unreal Engine installation..."))
             .await?;
 
         let engine_path = self.find_engine_for_project(project_path).await?;
 
         // Prepare output directory
         self.progress_manager
-            .update_task(task_id, 0.2, "Preparing output directory...")
+            .update_task(task_id, 0.2, Some("Preparing output directory..."))
             .await?;
 
         let output_dir = Path::new(&request.output_directory);
@@ -109,7 +109,7 @@ impl ProjectPackager {
 
         // Build RunUAT command
         self.progress_manager
-            .update_task(task_id, 0.3, "Building packaging command...")
+            .update_task(task_id, 0.3, Some("Building packaging command..."))
             .await?;
 
         let runuat_path = self.get_runuat_path(&engine_path)?;
@@ -117,7 +117,7 @@ impl ProjectPackager {
 
         // Execute packaging
         self.progress_manager
-            .update_task(task_id, 0.4, "Starting Unreal Engine packaging...")
+            .update_task(task_id, 0.4, Some("Starting Unreal Engine packaging..."))
             .await?;
 
         let package_start = std::time::Instant::now();
@@ -135,7 +135,7 @@ impl ProjectPackager {
         }
 
         self.progress_manager
-            .update_task(task_id, 0.8, "Packaging completed, finalizing...")
+            .update_task(task_id, 0.8, Some("Packaging completed, finalizing..."))
             .await?;
 
         // Determine the actual output path
@@ -146,7 +146,7 @@ impl ProjectPackager {
         // Create archive if requested
         if request.create_archive {
             self.progress_manager
-                .update_task(task_id, 0.9, "Creating archive...")
+                .update_task(task_id, 0.9, Some("Creating archive..."))
                 .await?;
 
             archive_path = Some(self.create_archive(&request, &output_path).await?);
