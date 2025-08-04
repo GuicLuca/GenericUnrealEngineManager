@@ -1,6 +1,11 @@
 use serde::{Deserialize, Serialize};
 use crate::projects::models::project::Project;
 
+pub use crate::projects::actions::project_cleaner::CleaningRequest;
+pub use crate::projects::actions::project_compressor::CompressionRequest;
+pub use crate::projects::actions::project_discovery::DiscoveryRequest;
+pub use crate::projects::actions::project_packager::PackageRequest;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppInitializedPayload {
     pub projects: Vec<Project>,
