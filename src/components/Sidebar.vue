@@ -1,16 +1,3 @@
-<template>
-  <div class="sidebar">
-    <SidebarItem
-      v-for="item in items"
-      :key="item.name"
-      :icon="item.icon"
-      :label="item.name"
-      :disabled="!hasSelectedProject && item.requiresProject"
-      @click="handleItemClick(item)"
-    />
-  </div>
-</template>
-
 <script setup lang="ts">
 import SidebarItem from './SidebarItem.vue'
 import { useProjectStore} from '../stores/projectStore'
@@ -40,7 +27,7 @@ const handleItemClick = async (item: SidebarItem) => {
     addLog(`Action "${item.name}" requires a project to be selected`, 'warn')
     return
   }
-  
+
   // Handle specific actions
   switch (item.action) {
     case 'rescan':
@@ -62,7 +49,7 @@ const handleItemClick = async (item: SidebarItem) => {
     case 'package':
       handlePackage()
       break
-    // Add more action handlers as needed
+      // Add more action handlers as needed
     default:
       console.log(`Action ${item.action} not implemented yet`)
   }
@@ -82,7 +69,7 @@ const handleOpen = async () => {
   try {
     // Check if the selected project has C++ code
     const hasCpp = selectedProject.value.has_cpp
-    
+
     if (!hasCpp) {
       // Blueprint project - launch directly with Unreal Engine
       addLog(`Launching Blueprint project: ${selectedProject.value.name}`)
@@ -146,6 +133,19 @@ const handlePackage = () => {
   })
 }
 </script>
+
+<template>
+  <div class="sidebar">
+    <SidebarItem
+      v-for="item in items"
+      :key="item.name"
+      :icon="item.icon"
+      :label="item.name"
+      :disabled="!hasSelectedProject && item.requiresProject"
+      @click="handleItemClick(item)"
+    />
+  </div>
+</template>
 
 <style scoped>
 .sidebar {

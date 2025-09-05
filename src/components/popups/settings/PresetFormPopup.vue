@@ -1,3 +1,178 @@
+<script setup lang="ts">
+import { ref, reactive, onMounted, nextTick } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+
+interface Props {
+  editingPreset?: string | null
+  initialName?: string
+  initialFormat?: string
+  onSave?: (data: { name: string; format: string; isEdit: boolean; originalName?: string }) => void
+}
+
+interface Emits {
+  (e: 'close'): void
+}
+
+interface Tag {
+  code: string
+  label: string
+  description: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  editingPreset: null,
+  initialName: '',
+  initialFormat: ''
+})
+
+const emit = defineEmits<Emits>()
+
+const nameInput = ref<HTMLInputElement>()
+const formatInput = ref<HTMLInputElement>()
+
+const presetForm = reactive({
+  name: props.initialName || '',
+  format: props.initialFormat || ''
+})
+
+const systemInfo = ref({
+  username: 'john_doe',
+  hostname: 'DESKTOP-PC'
+})
+
+// Tag definitions
+const projectTags: Tag[] = [
+  { code: '[Project]', label: 'Project name', description: 'Name of the project' },
+  { code: '[Type]', label: 'Cpp or Bp', description: 'Project type (C++ or Blueprint)' },
+  { code: '[Engine]', label: 'Engine version', description: 'Unreal Engine version' },
+  { code: '[SizeMB]', label: 'Size in MB', description: 'Project size in megabytes' },
+  { code: '[SizeGB]', label: 'Size in GB', description: 'Project size in gigabytes' },
+  { code: '[PluginCount]', label: 'Plugin count', description: 'Number of plugins in the project' }
+]
+
+const dateTags: Tag[] = [
+  { code: '[YYYY]', label: 'Full year', description: 'Full year (e.g., 2024)' },
+  { code: '[YY]', label: 'Short year', description: 'Two-digit year (e.g., 24)' },
+  { code: '[MM]', label: 'Month', description: 'Month with leading zero (01-12)' },
+  { code: '[DD]', label: 'Day', description: 'Day with leading zero (01-31)' },
+  { code: '[HH]', label: 'Hour', description: 'Hour in 24-hour format (00-23)' },
+  { code: '[mm]', label: 'Minute', description: 'Minute with leading zero (00-59)' },
+  { code: '[ss]', label: 'Second', description: 'Second with leading zero (00-59)' },
+  { code: '[Month]', label: 'Full month', description: 'Full month name (e.g., January)' },
+  { code: '[Mon]', label: 'Short month', description: 'Short month name (e.g., Jan)' },
+  { code: '[Day]', label: 'Full day', description: 'Full day name (e.g., Monday)' },
+  { code: '[Weekday]', label: 'Short day', description: 'Short day name (e.g., Mon)' }
+]
+
+const systemTags: Tag[] = [
+  { code: '[User]', label: 'Username', description: 'Current system username' },
+  { code: '[Computer]', label: 'Computer name', description: 'Computer hostname' },
+  { code: '[Timestamp]', label: 'Unix timestamp', description: 'Unix timestamp in seconds' },
+  { code: '[Algorithm]', label: 'Compression type', description: 'Compression algorithm used' }
+]
+
+const getPreviewForFormat = (format: string): string => {
+  const now = new Date()
+  let preview = format
+
+  // Replace common tags with example values
+  const replacements: Record<string, string> = {
+    'Project': 'MyAwesomeProject',
+    'Type': 'Cpp',
+    'Engine': '5-3',
+    'SizeMB': '1024',
+    'SizeGB': '1',
+    'PluginCount': '5',
+    'Algorithm': 'ZIP',
+    'YYYY': now.getFullYear().toString(),
+    'YY': now.getFullYear().toString().slice(-2),
+    'MM': (now.getMonth() + 1).toString().padStart(2, '0'),
+    'DD': now.getDate().toString().padStart(2, '0'),
+    'HH': now.getHours().toString().padStart(2, '0'),
+    'mm': now.getMinutes().toString().padStart(2, '0'),
+    'ss': now.getSeconds().toString().padStart(2, '0'),
+    'Month': now.toLocaleDateString('en-US', { month: 'long' }),
+    'Mon': now.toLocaleDateString('en-US', { month: 'short' }),
+    'Day': now.toLocaleDateString('en-US', { weekday: 'long' }),
+    'Weekday': now.toLocaleDateString('en-US', { weekday: 'short' }),
+    'User': systemInfo.value.username,
+    'Computer': systemInfo.value.hostname,
+    'Timestamp': Math.floor(now.getTime() / 1000).toString()
+  }
+
+  for (const [key, value] of Object.entries(replacements)) {
+    preview = preview.replace(new RegExp(`\\[${key}\\]`, 'g'), value)
+  }
+
+  if (!preview.includes('.')) {
+    preview += '.zip'
+  }
+
+  return preview
+}
+
+const addTagToFormat = (tagCode: string) => {
+  // Add the tag at the cursor position or at the end
+  const input = formatInput.value
+  if (input && input === document.activeElement) {
+    const start = input.selectionStart || 0
+    const end = input.selectionEnd || 0
+    const before = presetForm.format.substring(0, start)
+    const after = presetForm.format.substring(end)
+    presetForm.format = before + tagCode + after
+
+    // Set the cursor position after the inserted tag
+    nextTick(() => {
+      input.setSelectionRange(start + tagCode.length, start + tagCode.length)
+      input.focus()
+    })
+  } else {
+    // Just append to the end if no cursor position
+    presetForm.format += tagCode
+  }
+}
+
+const savePreset = () => {
+  if (!presetForm.name.trim() || !presetForm.format.trim()) return
+
+  const data = {
+    name: presetForm.name,
+    format: presetForm.format,
+    isEdit: !!props.editingPreset,
+    originalName: props.editingPreset || undefined
+  }
+
+  // Call the onSave callback if provided
+  if (props.onSave) {
+    props.onSave(data)
+  }
+
+  // Close the popup
+  emit('close')
+}
+
+const loadSystemInfo = async () => {
+  try {
+    systemInfo.value.username = await invoke('get_system_username') as string
+    systemInfo.value.hostname = await invoke('get_system_hostname') as string
+  } catch (error) {
+    console.error('Failed to load system info:', error)
+  }
+}
+
+onMounted(async () => {
+  await loadSystemInfo()
+
+  // Focus the appropriate input
+  await nextTick()
+  if (!props.editingPreset && nameInput.value) {
+    nameInput.value.focus()
+  } else if (formatInput.value) {
+    formatInput.value.focus()
+  }
+})
+</script>
+
 <template>
   <div class="preset-form-popup">
     <div class="popup-header">
@@ -108,181 +283,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, reactive, onMounted, nextTick } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-
-interface Props {
-  editingPreset?: string | null
-  initialName?: string
-  initialFormat?: string
-  onSave?: (data: { name: string; format: string; isEdit: boolean; originalName?: string }) => void
-}
-
-interface Emits {
-  (e: 'close'): void
-}
-
-interface Tag {
-  code: string
-  label: string
-  description: string
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  editingPreset: null,
-  initialName: '',
-  initialFormat: ''
-})
-
-const emit = defineEmits<Emits>()
-
-const nameInput = ref<HTMLInputElement>()
-const formatInput = ref<HTMLInputElement>()
-
-const presetForm = reactive({
-  name: props.initialName || '',
-  format: props.initialFormat || ''
-})
-
-const systemInfo = ref({
-  username: 'john_doe',
-  hostname: 'DESKTOP-PC'
-})
-
-// Tag definitions
-const projectTags: Tag[] = [
-  { code: '[Project]', label: 'Project name', description: 'Name of the project' },
-  { code: '[Type]', label: 'Cpp or Bp', description: 'Project type (C++ or Blueprint)' },
-  { code: '[Engine]', label: 'Engine version', description: 'Unreal Engine version' },
-  { code: '[SizeMB]', label: 'Size in MB', description: 'Project size in megabytes' },
-  { code: '[SizeGB]', label: 'Size in GB', description: 'Project size in gigabytes' },
-  { code: '[PluginCount]', label: 'Plugin count', description: 'Number of plugins in the project' }
-]
-
-const dateTags: Tag[] = [
-  { code: '[YYYY]', label: 'Full year', description: 'Full year (e.g., 2024)' },
-  { code: '[YY]', label: 'Short year', description: 'Two-digit year (e.g., 24)' },
-  { code: '[MM]', label: 'Month', description: 'Month with leading zero (01-12)' },
-  { code: '[DD]', label: 'Day', description: 'Day with leading zero (01-31)' },
-  { code: '[HH]', label: 'Hour', description: 'Hour in 24-hour format (00-23)' },
-  { code: '[mm]', label: 'Minute', description: 'Minute with leading zero (00-59)' },
-  { code: '[ss]', label: 'Second', description: 'Second with leading zero (00-59)' },
-  { code: '[Month]', label: 'Full month', description: 'Full month name (e.g., January)' },
-  { code: '[Mon]', label: 'Short month', description: 'Short month name (e.g., Jan)' },
-  { code: '[Day]', label: 'Full day', description: 'Full day name (e.g., Monday)' },
-  { code: '[Weekday]', label: 'Short day', description: 'Short day name (e.g., Mon)' }
-]
-
-const systemTags: Tag[] = [
-  { code: '[User]', label: 'Username', description: 'Current system username' },
-  { code: '[Computer]', label: 'Computer name', description: 'Computer hostname' },
-  { code: '[Timestamp]', label: 'Unix timestamp', description: 'Unix timestamp in seconds' },
-  { code: '[Algorithm]', label: 'Compression type', description: 'Compression algorithm used' }
-]
-
-const getPreviewForFormat = (format: string): string => {
-  const now = new Date()
-  let preview = format
-  
-  // Replace common tags with example values
-  const replacements: Record<string, string> = {
-    'Project': 'MyAwesomeProject',
-    'Type': 'Cpp',
-    'Engine': '5-3',
-    'SizeMB': '1024',
-    'SizeGB': '1',
-    'PluginCount': '5',
-    'Algorithm': 'ZIP',
-    'YYYY': now.getFullYear().toString(),
-    'YY': now.getFullYear().toString().slice(-2),
-    'MM': (now.getMonth() + 1).toString().padStart(2, '0'),
-    'DD': now.getDate().toString().padStart(2, '0'),
-    'HH': now.getHours().toString().padStart(2, '0'),
-    'mm': now.getMinutes().toString().padStart(2, '0'),
-    'ss': now.getSeconds().toString().padStart(2, '0'),
-    'Month': now.toLocaleDateString('en-US', { month: 'long' }),
-    'Mon': now.toLocaleDateString('en-US', { month: 'short' }),
-    'Day': now.toLocaleDateString('en-US', { weekday: 'long' }),
-    'Weekday': now.toLocaleDateString('en-US', { weekday: 'short' }),
-    'User': systemInfo.value.username,
-    'Computer': systemInfo.value.hostname,
-    'Timestamp': Math.floor(now.getTime() / 1000).toString()
-  }
-  
-  for (const [key, value] of Object.entries(replacements)) {
-    preview = preview.replace(new RegExp(`\\[${key}\\]`, 'g'), value)
-  }
-  
-  if (!preview.includes('.')) {
-    preview += '.zip'
-  }
-  
-  return preview
-}
-
-const addTagToFormat = (tagCode: string) => {
-  // Add the tag at the cursor position or at the end
-  const input = formatInput.value
-  if (input && input === document.activeElement) {
-    const start = input.selectionStart || 0
-    const end = input.selectionEnd || 0
-    const before = presetForm.format.substring(0, start)
-    const after = presetForm.format.substring(end)
-    presetForm.format = before + tagCode + after
-    
-    // Set the cursor position after the inserted tag
-    nextTick(() => {
-      input.setSelectionRange(start + tagCode.length, start + tagCode.length)
-      input.focus()
-    })
-  } else {
-    // Just append to the end if no cursor position
-    presetForm.format += tagCode
-  }
-}
-
-const savePreset = () => {
-  if (!presetForm.name.trim() || !presetForm.format.trim()) return
-
-  const data = {
-    name: presetForm.name,
-    format: presetForm.format,
-    isEdit: !!props.editingPreset,
-    originalName: props.editingPreset || undefined
-  }
-
-  // Call the onSave callback if provided
-  if (props.onSave) {
-    props.onSave(data)
-  }
-
-  // Close the popup
-  emit('close')
-}
-
-const loadSystemInfo = async () => {
-  try {
-    systemInfo.value.username = await invoke('get_system_username') as string
-    systemInfo.value.hostname = await invoke('get_system_hostname') as string
-  } catch (error) {
-    console.error('Failed to load system info:', error)
-  }
-}
-
-onMounted(async () => {
-  await loadSystemInfo()
-  
-  // Focus the appropriate input
-  await nextTick()
-  if (!props.editingPreset && nameInput.value) {
-    nameInput.value.focus()
-  } else if (formatInput.value) {
-    formatInput.value.focus()
-  }
-})
-</script>
 
 <style scoped>
 .preset-form-popup {

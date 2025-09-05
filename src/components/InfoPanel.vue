@@ -1,3 +1,120 @@
+<script setup lang="ts">
+import {ref, computed, onMounted, onUnmounted} from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import InfoItem from './InfoItem.vue'
+import FileExplorerButton from './FileExplorerButton.vue'
+import { useProjectStore, type EngineAssociation } from '../stores/projectStore'
+import {formatSize, timeSince} from '../utils.ts'
+
+interface Props {
+  width: number
+  minWidth: number
+  maxWidth: number
+}
+
+interface Emits {
+  (e: 'resize', width: number): void
+}
+
+interface AppSettings {
+  engine_programs?: {
+    custom_engines?: Record<string, string>
+  }
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
+
+const { selectedProject, getEngineVersionString } = useProjectStore()
+const isResizing = ref(false)
+const settings = ref<AppSettings | null>(null)
+
+// Timer for updating time-based fields
+let timeUpdateInterval: number | null = null
+let forceUpdate = ref(0)
+
+// Computed property that updates every minute
+const currentTimeSince = computed(() => {
+  if (!selectedProject.value) return ''
+  forceUpdate.value
+  return timeSince(selectedProject.value.last_scan_date)
+})
+
+const getEngineFolder = (engineAssociation: EngineAssociation): string | null => {
+  if (typeof engineAssociation === 'string' && engineAssociation === 'Custom') {
+    // For custom engines, try to find a matching registered engine
+    if (settings.value?.engine_programs?.custom_engines) {
+      // Return the first custom engine path (could be improved to match by name)
+      const enginePaths = Object.values(settings.value.engine_programs.custom_engines)
+      if (enginePaths.length > 0 && enginePaths[0].trim()) {
+        return enginePaths[0]
+      }
+    }
+  } else if (typeof engineAssociation === 'object' && engineAssociation.Standard) {
+    // For standard engines, check if there's a registered engine with matching version
+    if (settings.value?.engine_programs?.custom_engines) {
+      const engineVersion = engineAssociation.Standard
+      for (const [name, path] of Object.entries(settings.value.engine_programs.custom_engines)) {
+        if (name.includes(engineVersion) && path.trim()) {
+          return path
+        }
+      }
+    }
+  }
+
+  return null
+}
+
+const loadSettings = async () => {
+  try {
+    settings.value = await invoke('get_settings') as AppSettings
+  } catch (error) {
+    console.error('Failed to load settings:', error)
+  }
+}
+
+const startResize = (event: MouseEvent) => {
+  isResizing.value = true
+  document.addEventListener('mousemove', handleResize)
+  document.addEventListener('mouseup', stopResize)
+  event.preventDefault()
+}
+
+const handleResize = (event: MouseEvent) => {
+  if (!isResizing.value) return
+
+  const containerRect = document.querySelector('.app-container')?.getBoundingClientRect()
+  if (!containerRect) return
+
+  const newWidth = containerRect.right - event.clientX
+  const clampedWidth = Math.min(Math.max(newWidth, props.minWidth), props.maxWidth)
+  emit('resize', clampedWidth)
+}
+
+const stopResize = () => {
+  isResizing.value = false
+  document.removeEventListener('mousemove', handleResize)
+  document.removeEventListener('mouseup', stopResize)
+}
+
+// Setup timer for updating time-based fields
+onMounted(() => {
+  loadSettings()
+
+  // Update every minute (60 000 ms)
+  timeUpdateInterval = window.setInterval(async () => {
+    forceUpdate.value = (forceUpdate.value + 1) % 60
+  }, 60000)
+})
+
+onUnmounted(() => {
+  if (timeUpdateInterval) {
+    clearInterval(timeUpdateInterval)
+    timeUpdateInterval = null
+  }
+})
+</script>
+
 <template>
   <div class="info-panel" :style="{ width: width + 'px' }">
     <div 
@@ -65,123 +182,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import {ref, computed, onMounted, onUnmounted} from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import InfoItem from './InfoItem.vue'
-import FileExplorerButton from './FileExplorerButton.vue'
-import { useProjectStore, type EngineAssociation } from '../stores/projectStore'
-import {formatSize, timeSince} from '../utils.ts'
-
-interface Props {
-  width: number
-  minWidth: number
-  maxWidth: number
-}
-
-interface Emits {
-  (e: 'resize', width: number): void
-}
-
-interface AppSettings {
-  engine_programs?: {
-    custom_engines?: Record<string, string>
-  }
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
-
-const { selectedProject, getEngineVersionString } = useProjectStore()
-const isResizing = ref(false)
-const settings = ref<AppSettings | null>(null)
-
-// Timer for updating time-based fields
-let timeUpdateInterval: number | null = null
-let forceUpdate = ref(0)
-
-// Computed property that updates every minute
-const currentTimeSince = computed(() => {
-  if (!selectedProject.value) return ''
-  forceUpdate.value
-  return timeSince(selectedProject.value.last_scan_date)
-})
-
-const getEngineFolder = (engineAssociation: EngineAssociation): string | null => {
-  if (typeof engineAssociation === 'string' && engineAssociation === 'Custom') {
-    // For custom engines, try to find a matching registered engine
-    if (settings.value?.engine_programs?.custom_engines) {
-      // Return the first custom engine path (could be improved to match by name)
-      const enginePaths = Object.values(settings.value.engine_programs.custom_engines)
-      if (enginePaths.length > 0 && enginePaths[0].trim()) {
-        return enginePaths[0]
-      }
-    }
-  } else if (typeof engineAssociation === 'object' && engineAssociation.Standard) {
-    // For standard engines, check if there's a registered engine with matching version
-    if (settings.value?.engine_programs?.custom_engines) {
-      const engineVersion = engineAssociation.Standard
-      for (const [name, path] of Object.entries(settings.value.engine_programs.custom_engines)) {
-        if (name.includes(engineVersion) && path.trim()) {
-          return path
-        }
-      }
-    }
-  }
-  
-  return null
-}
-
-const loadSettings = async () => {
-  try {
-    settings.value = await invoke('get_settings') as AppSettings
-  } catch (error) {
-    console.error('Failed to load settings:', error)
-  }
-}
-
-const startResize = (event: MouseEvent) => {
-  isResizing.value = true
-  document.addEventListener('mousemove', handleResize)
-  document.addEventListener('mouseup', stopResize)
-  event.preventDefault()
-}
-
-const handleResize = (event: MouseEvent) => {
-  if (!isResizing.value) return
-  
-  const containerRect = document.querySelector('.app-container')?.getBoundingClientRect()
-  if (!containerRect) return
-  
-  const newWidth = containerRect.right - event.clientX
-  const clampedWidth = Math.min(Math.max(newWidth, props.minWidth), props.maxWidth)
-  emit('resize', clampedWidth)
-}
-
-const stopResize = () => {
-  isResizing.value = false
-  document.removeEventListener('mousemove', handleResize)
-  document.removeEventListener('mouseup', stopResize)
-}
-
-// Setup timer for updating time-based fields
-onMounted(() => {
-  loadSettings()
-  
-  // Update every minute (60 000 ms)
-  timeUpdateInterval = window.setInterval(async () => {
-    forceUpdate.value = (forceUpdate.value + 1) % 60
-  }, 60000)
-})
-
-onUnmounted(() => {
-  if (timeUpdateInterval) {
-    clearInterval(timeUpdateInterval)
-    timeUpdateInterval = null
-  }
-})
-</script>
 
 <style scoped>
 .info-panel {

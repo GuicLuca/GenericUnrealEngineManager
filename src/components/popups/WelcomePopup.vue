@@ -1,3 +1,81 @@
+<script setup lang="ts">
+import {onUnmounted, ref} from 'vue'
+import {invoke} from '@tauri-apps/api/core'
+import {useLogStore} from '../../stores/logStore'
+import {useSettingsStore} from "../../stores/settingsStore.ts"
+
+const emit = defineEmits<{
+  (e: 'close'): void
+}>()
+
+const {addLog} = useLogStore()
+const {updateGeneralSettings, saveSettings} = useSettingsStore()
+
+const dontShowAgain = ref(false)
+const isProcessing = ref(false)
+
+const handleAccept = async () => {
+  try {
+    isProcessing.value = true
+
+    // Enable autostart
+    await invoke('enable_autostart')
+    addLog('Autostart enabled successfully')
+
+    // Update the settings to reflect that autostart is enabled
+    await internal_updateSettings(true)
+
+    // Close the popup
+    emit('close');
+
+  } catch (error) {
+    console.error('Failed to enable autostart:', error)
+    addLog('Failed to enable autostart', 'error')
+  } finally {
+    isProcessing.value = false
+  }
+}
+
+const handleDecline = async () => {
+  try {
+    isProcessing.value = true
+
+    // Update the settings to reflect that autostart is disabled
+    await internal_updateSettings(false)
+
+    // Close the popup
+    emit('close');
+
+  } catch (error) {
+    console.error('Failed to update settings:', error)
+    addLog('Failed to update settings', 'error')
+  } finally {
+    isProcessing.value = false
+  }
+}
+
+const internal_updateSettings = async (autostartEnabled: boolean) => {
+  try {
+    // Get current settings
+    updateGeneralSettings({
+      autostart_enabled: autostartEnabled,
+      show_welcome_popup: !dontShowAgain.value
+    })
+
+    // Save updated settings
+    await saveSettings()
+
+  } catch (error) {
+    console.error('Failed to update settings:', error)
+    throw error
+  }
+}
+
+onUnmounted(() => {
+  saveSettings().then();
+})
+</script>
+
 <template>
   <div class="welcome-popup">
     <div class="popup-header">
@@ -82,84 +160,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import {onUnmounted, ref} from 'vue'
-import {invoke} from '@tauri-apps/api/core'
-import {useLogStore} from '../../stores/logStore'
-import {useSettingsStore} from "../../stores/settingsStore.ts"
-
-const emit = defineEmits<{
-  (e: 'close'): void
-}>()
-
-const {addLog} = useLogStore()
-const {updateGeneralSettings, saveSettings} = useSettingsStore()
-
-const dontShowAgain = ref(false)
-const isProcessing = ref(false)
-
-const handleAccept = async () => {
-  try {
-    isProcessing.value = true
-
-    // Enable autostart
-    await invoke('enable_autostart')
-    addLog('Autostart enabled successfully')
-
-    // Update the settings to reflect that autostart is enabled
-    await internal_updateSettings(true)
-
-    // Close the popup
-    emit('close');
-
-  } catch (error) {
-    console.error('Failed to enable autostart:', error)
-    addLog('Failed to enable autostart', 'error')
-  } finally {
-    isProcessing.value = false
-  }
-}
-
-const handleDecline = async () => {
-  try {
-    isProcessing.value = true
-
-    // Update the settings to reflect that autostart is disabled
-    await internal_updateSettings(false)
-
-    // Close the popup
-    emit('close');
-
-  } catch (error) {
-    console.error('Failed to update settings:', error)
-    addLog('Failed to update settings', 'error')
-  } finally {
-    isProcessing.value = false
-  }
-}
-
-const internal_updateSettings = async (autostartEnabled: boolean) => {
-  try {
-    // Get current settings
-    updateGeneralSettings({
-      autostart_enabled: autostartEnabled,
-      show_welcome_popup: !dontShowAgain.value
-    })
-
-    // Save updated settings
-    await saveSettings()
-
-  } catch (error) {
-    console.error('Failed to update settings:', error)
-    throw error
-  }
-}
-
-onUnmounted(() => {
-  saveSettings().then();
-})
-</script>
 
 <style scoped>
 .welcome-popup {

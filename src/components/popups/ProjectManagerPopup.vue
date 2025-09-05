@@ -1,3 +1,312 @@
+<script setup lang="ts">
+import {ref, computed, onMounted, onUnmounted} from 'vue'
+import {onClickOutside} from '@vueuse/core'
+import {useProjectStore, type Project} from '../../stores/projectStore'
+import { useLogStore } from '../../stores/logStore'
+import { usePopup } from '../../composables/usePopup'
+import FileExplorerButton from '../FileExplorerButton.vue'
+import {formatSize, timeSince} from "../../utils.ts";
+
+const {
+  projects,
+  selectedProject,
+  projectCount,
+  isLoading,
+  setSelectedProject,
+  removeProjects,
+  refreshProjects,
+  getEngineVersionString
+} = useProjectStore()
+
+const { addLog } = useLogStore()
+const { showPopup } = usePopup()
+
+// Search and sorting state
+const searchQuery = ref('')
+const sortBy = ref<'name' | 'type' | 'size' | 'lastScan' | 'version'>('name')
+const sortOrder = ref<'asc' | 'desc'>('asc')
+const showSortDropdown = ref(false)
+
+// Timer for updating time-based fields
+let timeUpdateInterval: number | null = null
+let forceUpdate = ref(0)
+
+// Function to get time since with forced reactivity
+const getTimeSince = (date: number) => {
+  forceUpdate.value // Add forceUpdate to ensure reactivity
+  return timeSince(date)
+}
+
+// Optimized scoring algorithm for search
+const calculateProjectScore = (searchTerm: string, projectName: string): number => {
+  if (!searchTerm.trim()) return 1
+
+  const search = searchTerm.toLowerCase().trim()
+  const name = projectName.toLowerCase()
+
+  let score = 0
+
+  // Count individual letter occurrences (+1 point each)
+  const letterCounts = new Map<string, number>()
+  for (const char of search) {
+    if (char !== ' ') {
+      letterCounts.set(char, (letterCounts.get(char) || 0) + 1)
+    }
+  }
+
+  for (const char of name) {
+    if (letterCounts.has(char) && letterCounts.get(char)! > 0) {
+      score += 1
+      letterCounts.set(char, letterCounts.get(char)! - 1)
+    }
+  }
+
+  // Find substring matches and add 2*length points
+  const words = search.split(/\s+/).filter(word => word.length > 0)
+
+  for (const word of words) {
+    let startIndex = 0
+    while (true) {
+      const index = name.indexOf(word, startIndex)
+      if (index === -1) break
+
+      score += 2 * word.length
+      startIndex = index + 1
+    }
+  }
+
+  // Also check for the full search term as a substring
+  if (search.includes(' ')) {
+    let startIndex = 0
+    while (true) {
+      const index = name.indexOf(search, startIndex)
+      if (index === -1) break
+
+      score += 2 * search.length
+      startIndex = index + 1
+    }
+  }
+
+  return score
+}
+
+// Helper function for standard sorting comparison
+const standardSortCompare = (a: Project, b: Project): number => {
+  let comparison = 0
+
+  switch (sortBy.value) {
+    case 'name':
+      comparison = a.name.localeCompare(b.name)
+      break
+    case 'type':
+      // C++ projects first when ascending, Blueprint first when descending
+      if (a.has_cpp === b.has_cpp) {
+        comparison = a.name.localeCompare(b.name) // Fallback to name
+      } else {
+        comparison = a.has_cpp ? -1 : 1
+      }
+      break
+    case 'size':
+      comparison = a.size_on_disk - b.size_on_disk
+      break
+    case 'lastScan':
+      comparison = a.last_scan_date - b.last_scan_date
+      break
+    case 'version':
+      // Custom engines are the highest version (last in ascending, first in descending)
+      const aIsCustom = typeof a.engine_association === 'string' && a.engine_association === 'Custom'
+      const bIsCustom = typeof b.engine_association === 'string' && b.engine_association === 'Custom'
+
+      if (aIsCustom && !bIsCustom) {
+        comparison = 1 // Custom is the higher version
+      } else if (!aIsCustom && bIsCustom) {
+        comparison = -1
+      } else {
+        // Both custom or both standard - compare versions
+        const aVersion = getEngineVersionString(a.engine_association)
+        const bVersion = getEngineVersionString(b.engine_association)
+        comparison = aVersion.localeCompare(bVersion, undefined, { numeric: true })
+      }
+      break
+  }
+
+  return sortOrder.value === 'asc' ? comparison : -comparison
+}
+
+// Helper function for the tiebreaking comparison (Name > Version > Type > Size > Last Scan)
+const tieBreakingCompare = (a: Project, b: Project): number => {
+  // 1. Name
+  let comparison = a.name.localeCompare(b.name)
+  if (comparison !== 0) return comparison
+
+  // 2. Version
+  const aIsCustom = typeof a.engine_association === 'string' && a.engine_association === 'Custom'
+  const bIsCustom = typeof b.engine_association === 'string' && b.engine_association === 'Custom'
+
+  if (aIsCustom && !bIsCustom) {
+    comparison = 1 // Custom is the higher version
+  } else if (!aIsCustom && bIsCustom) {
+    comparison = -1
+  } else {
+    const aVersion = getEngineVersionString(a.engine_association)
+    const bVersion = getEngineVersionString(b.engine_association)
+    comparison = aVersion.localeCompare(bVersion, undefined, { numeric: true })
+  }
+  if (comparison !== 0) return comparison
+
+  // 3. Type (C++ vs Blueprint)
+  if (a.has_cpp !== b.has_cpp) {
+    return a.has_cpp ? -1 : 1 // C++ first
+  }
+
+  // 4. Size
+  comparison = a.size_on_disk - b.size_on_disk
+  if (comparison !== 0) return comparison
+
+  // 5. Last Scan
+  return a.last_scan_date - b.last_scan_date
+}
+
+// Filtered and sorted projects with optimized search and sorting
+const filteredAndSortedProjects = computed(() => {
+  const hasSearchQuery = searchQuery.value.trim().length > 0
+
+  if (hasSearchQuery) {
+    // When searching: prioritize by score, then use the tiebreaking
+
+    // Calculate scores for all projects
+    const scoredProjects = projects.value.map(project => ({
+      project,
+      score: calculateProjectScore(searchQuery.value, project.name)
+    }))
+
+    // Filter out projects with score 0
+    const validProjects = scoredProjects.filter(item => item.score > 0)
+
+    if (validProjects.length === 0) {
+      return []
+    }
+
+    // Take the top 25% of results (minimum 1, maximum all results)
+    const top25PercentCount = Math.max(1, Math.ceil(validProjects.length * 0.25))
+
+    // Sort by score first (highest first), then by the tiebreaking for equal scores
+    validProjects.sort((a, b) => {
+      // Primary sort: by score (descending)
+      if (a.score !== b.score) {
+        return b.score - a.score
+      }
+
+      // Secondary sort: tiebreaking for equal scores
+      return tieBreakingCompare(a.project, b.project)
+    })
+
+    const topResults = validProjects.slice(0, top25PercentCount)
+    return topResults.map(item => item.project)
+
+  } else {
+    // When not searching: use standard sorting with the tiebreaking
+
+    return [...projects.value].sort((a, b) => {
+      // Primary sort: by selected criteria
+      const primaryComparison = standardSortCompare(a, b)
+
+      // If the primary comparison is equal, use the tiebreaking
+      if (primaryComparison === 0) {
+        return tieBreakingCompare(a, b)
+      }
+
+      return primaryComparison
+    })
+  }
+})
+
+const selectProject = (project: Project) => {
+  setSelectedProject(project)
+  addLog(`Selected project: ${project.name}`)
+}
+
+const confirmRemoveProject = async (project: Project) => {
+  await removeProjects([project.path])
+}
+
+const handleRefresh = async () => {
+  try {
+    await refreshProjects()
+  } catch (error) {
+    // Ignore errors, the backend will handle it.
+  }
+}
+
+const openProjectDiscovery = () => {
+  showPopup({
+    id: 'project-discovery',
+    component: 'ProjectDiscovery',
+    props: {}
+  })
+}
+
+const clearSearch = () => {
+  searchQuery.value = ''
+}
+
+const toggleSortDropdown = () => {
+  showSortDropdown.value = !showSortDropdown.value
+}
+
+const setSortBy = (newSortBy: typeof sortBy.value) => {
+  sortBy.value = newSortBy
+  showSortDropdown.value = false
+}
+
+const toggleSortDirection = () => {
+  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+}
+
+const getSortIcon = () => {
+  switch (sortBy.value) {
+    case 'name': return '📝'
+    case 'type': return '💻'
+    case 'size': return '📦'
+    case 'lastScan': return '🕒'
+    case 'version': return '⚙️'
+    default: return '📝'
+  }
+}
+
+const getSortText = () => {
+  switch (sortBy.value) {
+    case 'name': return 'Name'
+    case 'type': return 'Type'
+    case 'size': return 'Size'
+    case 'lastScan': return 'Last Scan'
+    case 'version': return 'Version'
+    default: return 'Name'
+  }
+}
+
+// Close dropdown when clicking outside
+const sortDropdownRef = ref()
+onClickOutside(sortDropdownRef, () => {
+  showSortDropdown.value = false
+})
+
+// Setup timer for updating time-based fields
+onMounted(() => {
+  // Update every minute (60 000 ms)
+  timeUpdateInterval = window.setInterval(async () => {
+    forceUpdate.value = (forceUpdate.value + 1) % 60
+  }, 60000)
+})
+
+onUnmounted(() => {
+  if (timeUpdateInterval) {
+    clearInterval(timeUpdateInterval)
+    timeUpdateInterval = null
+  }
+})
+</script>
+
 <template>
   <div class="project-manager-popup">
     <div class="popup-header">
@@ -183,315 +492,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import {ref, computed, onMounted, onUnmounted} from 'vue'
-import {onClickOutside} from '@vueuse/core'
-import {useProjectStore, type Project} from '../../stores/projectStore'
-import { useLogStore } from '../../stores/logStore'
-import { usePopup } from '../../composables/usePopup'
-import FileExplorerButton from '../FileExplorerButton.vue'
-import {formatSize, timeSince} from "../../utils.ts";
-
-const { 
-  projects, 
-  selectedProject, 
-  projectCount,
-  isLoading,
-  setSelectedProject, 
-  removeProjects,
-  refreshProjects,
-  getEngineVersionString 
-} = useProjectStore()
-
-const { addLog } = useLogStore()
-const { showPopup } = usePopup()
-
-// Search and sorting state
-const searchQuery = ref('')
-const sortBy = ref<'name' | 'type' | 'size' | 'lastScan' | 'version'>('name')
-const sortOrder = ref<'asc' | 'desc'>('asc')
-const showSortDropdown = ref(false)
-
-// Timer for updating time-based fields
-let timeUpdateInterval: number | null = null
-let forceUpdate = ref(0)
-
-// Function to get time since with forced reactivity
-const getTimeSince = (date: number) => {
-  forceUpdate.value // Add forceUpdate to ensure reactivity
-  return timeSince(date)
-}
-
-// Optimized scoring algorithm for search
-const calculateProjectScore = (searchTerm: string, projectName: string): number => {
-  if (!searchTerm.trim()) return 1
-  
-  const search = searchTerm.toLowerCase().trim()
-  const name = projectName.toLowerCase()
-  
-  let score = 0
-  
-  // Count individual letter occurrences (+1 point each)
-  const letterCounts = new Map<string, number>()
-  for (const char of search) {
-    if (char !== ' ') {
-      letterCounts.set(char, (letterCounts.get(char) || 0) + 1)
-    }
-  }
-  
-  for (const char of name) {
-    if (letterCounts.has(char) && letterCounts.get(char)! > 0) {
-      score += 1
-      letterCounts.set(char, letterCounts.get(char)! - 1)
-    }
-  }
-  
-  // Find substring matches and add 2*length points
-  const words = search.split(/\s+/).filter(word => word.length > 0)
-  
-  for (const word of words) {
-    let startIndex = 0
-    while (true) {
-      const index = name.indexOf(word, startIndex)
-      if (index === -1) break
-      
-      score += 2 * word.length
-      startIndex = index + 1
-    }
-  }
-  
-  // Also check for the full search term as a substring
-  if (search.includes(' ')) {
-    let startIndex = 0
-    while (true) {
-      const index = name.indexOf(search, startIndex)
-      if (index === -1) break
-      
-      score += 2 * search.length
-      startIndex = index + 1
-    }
-  }
-  
-  return score
-}
-
-// Helper function for standard sorting comparison
-const standardSortCompare = (a: Project, b: Project): number => {
-  let comparison = 0
-  
-  switch (sortBy.value) {
-    case 'name':
-      comparison = a.name.localeCompare(b.name)
-      break
-    case 'type':
-      // C++ projects first when ascending, Blueprint first when descending
-      if (a.has_cpp === b.has_cpp) {
-        comparison = a.name.localeCompare(b.name) // Fallback to name
-      } else {
-        comparison = a.has_cpp ? -1 : 1
-      }
-      break
-    case 'size':
-      comparison = a.size_on_disk - b.size_on_disk
-      break
-    case 'lastScan':
-      comparison = a.last_scan_date - b.last_scan_date
-      break
-    case 'version':
-      // Custom engines are the highest version (last in ascending, first in descending)
-      const aIsCustom = typeof a.engine_association === 'string' && a.engine_association === 'Custom'
-      const bIsCustom = typeof b.engine_association === 'string' && b.engine_association === 'Custom'
-      
-      if (aIsCustom && !bIsCustom) {
-        comparison = 1 // Custom is the higher version
-      } else if (!aIsCustom && bIsCustom) {
-        comparison = -1
-      } else {
-        // Both custom or both standard - compare versions
-        const aVersion = getEngineVersionString(a.engine_association)
-        const bVersion = getEngineVersionString(b.engine_association)
-        comparison = aVersion.localeCompare(bVersion, undefined, { numeric: true })
-      }
-      break
-  }
-  
-  return sortOrder.value === 'asc' ? comparison : -comparison
-}
-
-// Helper function for the tiebreaking comparison (Name > Version > Type > Size > Last Scan)
-const tieBreakingCompare = (a: Project, b: Project): number => {
-  // 1. Name
-  let comparison = a.name.localeCompare(b.name)
-  if (comparison !== 0) return comparison
-  
-  // 2. Version
-  const aIsCustom = typeof a.engine_association === 'string' && a.engine_association === 'Custom'
-  const bIsCustom = typeof b.engine_association === 'string' && b.engine_association === 'Custom'
-  
-  if (aIsCustom && !bIsCustom) {
-    comparison = 1 // Custom is the higher version
-  } else if (!aIsCustom && bIsCustom) {
-    comparison = -1
-  } else {
-    const aVersion = getEngineVersionString(a.engine_association)
-    const bVersion = getEngineVersionString(b.engine_association)
-    comparison = aVersion.localeCompare(bVersion, undefined, { numeric: true })
-  }
-  if (comparison !== 0) return comparison
-  
-  // 3. Type (C++ vs Blueprint)
-  if (a.has_cpp !== b.has_cpp) {
-    return a.has_cpp ? -1 : 1 // C++ first
-  }
-  
-  // 4. Size
-  comparison = a.size_on_disk - b.size_on_disk
-  if (comparison !== 0) return comparison
-  
-  // 5. Last Scan
-  return a.last_scan_date - b.last_scan_date
-}
-
-// Filtered and sorted projects with optimized search and sorting
-const filteredAndSortedProjects = computed(() => {
-  const hasSearchQuery = searchQuery.value.trim().length > 0
-  
-  if (hasSearchQuery) {
-    // When searching: prioritize by score, then use the tiebreaking
-    
-    // Calculate scores for all projects
-    const scoredProjects = projects.value.map(project => ({
-      project,
-      score: calculateProjectScore(searchQuery.value, project.name)
-    }))
-    
-    // Filter out projects with score 0
-    const validProjects = scoredProjects.filter(item => item.score > 0)
-    
-    if (validProjects.length === 0) {
-      return []
-    }
-    
-    // Take the top 25% of results (minimum 1, maximum all results)
-    const top25PercentCount = Math.max(1, Math.ceil(validProjects.length * 0.25))
-    
-    // Sort by score first (highest first), then by the tiebreaking for equal scores
-    validProjects.sort((a, b) => {
-      // Primary sort: by score (descending)
-      if (a.score !== b.score) {
-        return b.score - a.score
-      }
-      
-      // Secondary sort: tiebreaking for equal scores
-      return tieBreakingCompare(a.project, b.project)
-    })
-    
-    const topResults = validProjects.slice(0, top25PercentCount)
-    return topResults.map(item => item.project)
-    
-  } else {
-    // When not searching: use standard sorting with the tiebreaking
-    
-    return [...projects.value].sort((a, b) => {
-      // Primary sort: by selected criteria
-      const primaryComparison = standardSortCompare(a, b)
-      
-      // If the primary comparison is equal, use the tiebreaking
-      if (primaryComparison === 0) {
-        return tieBreakingCompare(a, b)
-      }
-      
-      return primaryComparison
-    })
-  }
-})
-
-const selectProject = (project: Project) => {
-  setSelectedProject(project)
-  addLog(`Selected project: ${project.name}`)
-}
-
-const confirmRemoveProject = async (project: Project) => {
-  await removeProjects([project.path])
-}
-
-const handleRefresh = async () => {
-  try {
-    await refreshProjects()
-  } catch (error) {
-    // Ignore errors, the backend will handle it.
-  }
-}
-
-const openProjectDiscovery = () => {
-  showPopup({
-    id: 'project-discovery',
-    component: 'ProjectDiscovery',
-    props: {}
-  })
-}
-
-const clearSearch = () => {
-  searchQuery.value = ''
-}
-
-const toggleSortDropdown = () => {
-  showSortDropdown.value = !showSortDropdown.value
-}
-
-const setSortBy = (newSortBy: typeof sortBy.value) => {
-  sortBy.value = newSortBy
-  showSortDropdown.value = false
-}
-
-const toggleSortDirection = () => {
-  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
-}
-
-const getSortIcon = () => {
-  switch (sortBy.value) {
-    case 'name': return '📝'
-    case 'type': return '💻'
-    case 'size': return '📦'
-    case 'lastScan': return '🕒'
-    case 'version': return '⚙️'
-    default: return '📝'
-  }
-}
-
-const getSortText = () => {
-  switch (sortBy.value) {
-    case 'name': return 'Name'
-    case 'type': return 'Type'
-    case 'size': return 'Size'
-    case 'lastScan': return 'Last Scan'
-    case 'version': return 'Version'
-    default: return 'Name'
-  }
-}
-
-// Close dropdown when clicking outside
-const sortDropdownRef = ref()
-onClickOutside(sortDropdownRef, () => {
-  showSortDropdown.value = false
-})
-
-// Setup timer for updating time-based fields
-onMounted(() => {
-  // Update every minute (60 000 ms)
-  timeUpdateInterval = window.setInterval(async () => {
-    forceUpdate.value = (forceUpdate.value + 1) % 60
-  }, 60000)
-})
-
-onUnmounted(() => {
-  if (timeUpdateInterval) {
-    clearInterval(timeUpdateInterval)
-    timeUpdateInterval = null
-  }
-})
-</script>
 
 <style scoped>
 .project-manager-popup {

@@ -1,3 +1,199 @@
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
+import { useLogStore } from '../../stores/logStore'
+
+interface DetectedEngine {
+  name: string
+  path: string
+  version: string
+  is_custom: boolean
+}
+
+interface EngineDetectionResult {
+  engines: DetectedEngine[]
+  total_found: number
+  scan_duration_ms: number
+}
+
+interface TaskProgressPayload {
+  task_id: string
+  task_name: string
+  progress: number
+  status: 'Started' | 'InProgress' | 'Completed' | 'Failed'
+  message?: string
+}
+
+interface Props {
+  reconnectToRunningTask?: boolean
+  currentTask?: TaskProgressPayload | null
+  showResults?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  reconnectToRunningTask: false,
+  currentTask: null,
+  showResults: false
+})
+
+// const emit = defineEmits<{
+//   (e: 'close'): void
+// }>()
+
+const { addLog } = useLogStore()
+
+const isDetecting = ref(false)
+const detectionComplete = ref(false)
+const hasReconnected = ref(false)
+const currentTaskId = ref<string | null>(null)
+const detectionResult = ref<EngineDetectionResult>({
+  engines: [],
+  total_found: 0,
+  scan_duration_ms: 0
+})
+
+// Task progress listener
+let unlistenTaskProgress: (() => void) | null = null
+
+const getSubtitleText = () => {
+  if (hasReconnected.value) {
+    return 'Scan in progress - you can close this popup'
+  } else if (props.showResults) {
+    return 'Engine detection completed'
+  } else if (isDetecting.value) {
+    return 'Scan in progress - you can close this popup'
+  } else {
+    return 'This process may take several minutes'
+  }
+}
+
+const startDetection = async () => {
+  try {
+    isDetecting.value = true
+    detectionComplete.value = false
+    hasReconnected.value = false
+
+    addLog('Starting auto-detection of Unreal Engine installations...')
+
+    const result = await invoke('auto_detect_engines') as EngineDetectionResult
+
+    detectionResult.value = result
+    detectionComplete.value = true
+    isDetecting.value = false
+
+    if (result.total_found > 0) {
+      addLog(`Auto-detection completed successfully. Found ${result.total_found} engine(s).`)
+    } else {
+      addLog('Auto-detection completed. No engines were found.')
+    }
+
+    // Emit event to refresh engine settings
+    window.dispatchEvent(new CustomEvent('engines-updated'))
+
+  } catch (error) {
+    console.error('Engine auto-detection failed:', error)
+    addLog('Engine auto-detection failed. Check console for details.', 'error')
+    detectionComplete.value = true
+    detectionResult.value = {
+      engines: [],
+      total_found: 0,
+      scan_duration_ms: 0
+    }
+    isDetecting.value = false
+  }
+}
+
+const handleTaskProgress = (event: any) => {
+  const taskData: TaskProgressPayload = event.payload
+
+  // Check if this is an engine detection task
+  if (taskData.task_name.includes('Auto-detecting Unreal Engine') ||
+      taskData.task_name.includes('auto-detection') ||
+      taskData.task_id.includes('auto_detect_engines')) {
+
+    currentTaskId.value = taskData.task_id
+
+    if (taskData.status === 'Started' || taskData.status === 'InProgress') {
+      isDetecting.value = true
+      detectionComplete.value = false
+    } else if (taskData.status === 'Completed') {
+      isDetecting.value = false
+      detectionComplete.value = true
+
+      // Try to get the final result
+      setTimeout(async () => {
+        try {
+          // The backend should have saved the engines, emit refresh event
+          window.dispatchEvent(new CustomEvent('engines-updated'))
+        } catch (error) {
+          console.error('Failed to refresh engines after background completion:', error)
+        }
+      }, 1000)
+
+    } else if (taskData.status === 'Failed') {
+      isDetecting.value = false
+      detectionComplete.value = true
+      addLog('Engine auto-detection failed.', 'error')
+    }
+  }
+}
+
+const checkForOngoingScan = async () => {
+  // Check if there's an ongoing engine detection task
+  if (props.reconnectToRunningTask && props.currentTask) {
+    // Reconnect to the running task
+    currentTaskId.value = props.currentTask.task_id
+    isDetecting.value = true
+    hasReconnected.value = true
+    addLog('Reconnected to ongoing engine detection scan.')
+  } else if (props.showResults) {
+    // Show results state
+    isDetecting.value = false
+    detectionComplete.value = true
+    hasReconnected.value = false
+
+    // Try to get the latest detection results
+    try {
+      // Trigger engines refresh to get latest results
+      window.dispatchEvent(new CustomEvent('engines-updated'))
+    } catch (error) {
+      console.error('Failed to refresh engines:', error)
+    }
+  }
+}
+
+const formatDuration = (ms: number): string => {
+  const seconds = Math.floor(ms / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+
+  if (minutes > 0) {
+    return `${minutes}m ${remainingSeconds}s`
+  } else {
+    return `${remainingSeconds}s`
+  }
+}
+
+onMounted(async () => {
+  try {
+    // Listen for task progress events
+    unlistenTaskProgress = await listen('task_progress', handleTaskProgress)
+
+    // Check if there's an ongoing scan or if we should show results
+    await checkForOngoingScan()
+  } catch (error) {
+    console.error('Failed to initialize engine detection popup:', error)
+  }
+})
+
+onUnmounted(() => {
+  if (unlistenTaskProgress) {
+    unlistenTaskProgress()
+  }
+})
+</script>
+
 <template>
   <div class="engine-detection-popup">
     <div class="popup-header">
@@ -140,202 +336,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import { listen } from '@tauri-apps/api/event'
-import { useLogStore } from '../../stores/logStore'
-
-interface DetectedEngine {
-  name: string
-  path: string
-  version: string
-  is_custom: boolean
-}
-
-interface EngineDetectionResult {
-  engines: DetectedEngine[]
-  total_found: number
-  scan_duration_ms: number
-}
-
-interface TaskProgressPayload {
-  task_id: string
-  task_name: string
-  progress: number
-  status: 'Started' | 'InProgress' | 'Completed' | 'Failed'
-  message?: string
-}
-
-interface Props {
-  reconnectToRunningTask?: boolean
-  currentTask?: TaskProgressPayload | null
-  showResults?: boolean
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  reconnectToRunningTask: false,
-  currentTask: null,
-  showResults: false
-})
-
-// const emit = defineEmits<{
-//   (e: 'close'): void
-// }>()
-
-const { addLog } = useLogStore()
-
-const isDetecting = ref(false)
-const detectionComplete = ref(false)
-const hasReconnected = ref(false)
-const currentTaskId = ref<string | null>(null)
-const detectionResult = ref<EngineDetectionResult>({
-  engines: [],
-  total_found: 0,
-  scan_duration_ms: 0
-})
-
-// Task progress listener
-let unlistenTaskProgress: (() => void) | null = null
-
-const getSubtitleText = () => {
-  if (hasReconnected.value) {
-    return 'Scan in progress - you can close this popup'
-  } else if (props.showResults) {
-    return 'Engine detection completed'
-  } else if (isDetecting.value) {
-    return 'Scan in progress - you can close this popup'
-  } else {
-    return 'This process may take several minutes'
-  }
-}
-
-const startDetection = async () => {
-  try {
-    isDetecting.value = true
-    detectionComplete.value = false
-    hasReconnected.value = false
-    
-    addLog('Starting auto-detection of Unreal Engine installations...')
-    
-    const result = await invoke('auto_detect_engines') as EngineDetectionResult
-    
-    detectionResult.value = result
-    detectionComplete.value = true
-    isDetecting.value = false
-    
-    if (result.total_found > 0) {
-      addLog(`Auto-detection completed successfully. Found ${result.total_found} engine(s).`)
-    } else {
-      addLog('Auto-detection completed. No engines were found.')
-    }
-    
-    // Emit event to refresh engine settings
-    window.dispatchEvent(new CustomEvent('engines-updated'))
-    
-  } catch (error) {
-    console.error('Engine auto-detection failed:', error)
-    addLog('Engine auto-detection failed. Check console for details.', 'error')
-    detectionComplete.value = true
-    detectionResult.value = {
-      engines: [],
-      total_found: 0,
-      scan_duration_ms: 0
-    }
-    isDetecting.value = false
-  }
-}
-
-const handleTaskProgress = (event: any) => {
-  const taskData: TaskProgressPayload = event.payload
-  
-  // Check if this is an engine detection task
-  if (taskData.task_name.includes('Auto-detecting Unreal Engine') || 
-      taskData.task_name.includes('auto-detection') ||
-      taskData.task_id.includes('auto_detect_engines')) {
-    
-    currentTaskId.value = taskData.task_id
-    
-    if (taskData.status === 'Started' || taskData.status === 'InProgress') {
-      isDetecting.value = true
-      detectionComplete.value = false
-    } else if (taskData.status === 'Completed') {
-      isDetecting.value = false
-      detectionComplete.value = true
-      
-      // Try to get the final result
-      setTimeout(async () => {
-        try {
-          // The backend should have saved the engines, emit refresh event
-          window.dispatchEvent(new CustomEvent('engines-updated'))
-        } catch (error) {
-          console.error('Failed to refresh engines after background completion:', error)
-        }
-      }, 1000)
-      
-    } else if (taskData.status === 'Failed') {
-      isDetecting.value = false
-      detectionComplete.value = true
-      addLog('Engine auto-detection failed.', 'error')
-    }
-  }
-}
-
-const checkForOngoingScan = async () => {
-  // Check if there's an ongoing engine detection task
-  if (props.reconnectToRunningTask && props.currentTask) {
-    // Reconnect to the running task
-    currentTaskId.value = props.currentTask.task_id
-    isDetecting.value = true
-    hasReconnected.value = true
-    addLog('Reconnected to ongoing engine detection scan.')
-  } else if (props.showResults) {
-    // Show results state
-    isDetecting.value = false
-    detectionComplete.value = true
-    hasReconnected.value = false
-    
-    // Try to get the latest detection results
-    try {
-      // Trigger engines refresh to get latest results
-      window.dispatchEvent(new CustomEvent('engines-updated'))
-    } catch (error) {
-      console.error('Failed to refresh engines:', error)
-    }
-  }
-}
-
-const formatDuration = (ms: number): string => {
-  const seconds = Math.floor(ms / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const remainingSeconds = seconds % 60
-  
-  if (minutes > 0) {
-    return `${minutes}m ${remainingSeconds}s`
-  } else {
-    return `${remainingSeconds}s`
-  }
-}
-
-onMounted(async () => {
-  try {
-    // Listen for task progress events
-    unlistenTaskProgress = await listen('task_progress', handleTaskProgress)
-    
-    // Check if there's an ongoing scan or if we should show results
-    await checkForOngoingScan()
-  } catch (error) {
-    console.error('Failed to initialize engine detection popup:', error)
-  }
-})
-
-onUnmounted(() => {
-  if (unlistenTaskProgress) {
-    unlistenTaskProgress()
-  }
-})
-</script>
 
 <style scoped>
 .engine-detection-popup {

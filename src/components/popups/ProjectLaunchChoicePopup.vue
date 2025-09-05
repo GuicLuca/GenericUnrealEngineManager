@@ -1,120 +1,3 @@
-<template>
-  <div class="project-launch-popup">
-    <div class="popup-header">
-      <div class="header-content">
-        <h2 class="popup-title">
-          <span class="title-icon">🚀</span>
-          Launch {{ projectName }}
-        </h2>
-        <div class="project-note">This is a C++ project. Choose how you want to open it</div>
-      </div>
-      <button class="close-button" @click="$emit('close')" title="Close">
-        ✕
-      </button>
-    </div>
-
-    <div class="popup-content">
-      <div class="launch-options">
-        <button
-            class="launch-option engine-option"
-            @click="launchWithEngine"
-            :disabled="isLaunching"
-        >
-          <div class="option-icon">🎮</div>
-          <div class="option-content">
-            <div class="option-title">Open {{ projectName }} with Unreal Engine</div>
-            <div class="option-description">Open the project directly in Unreal Engine</div>
-          </div>
-        </button>
-
-        <button
-            class="launch-option ide-option"
-            @click="showProjectIdeSelection"
-            :disabled="isLaunching"
-        >
-          <div class="option-icon">💻</div>
-          <div class="option-content">
-            <div class="option-title">Open {{ projectName }} with IDE</div>
-            <div class="option-description">Open the project solution file in your preferred IDE</div>
-          </div>
-        </button>
-
-        <!-- Custom Engine Option (only for custom engine projects) -->
-        <button
-            v-if="isCustomEngine"
-            class="launch-option custom-engine-option"
-            @click="showCustomEngineIdeSelection"
-            :disabled="isLaunching"
-        >
-          <div class="option-icon">🔧</div>
-          <div class="option-content">
-            <div class="option-title">Open the custom engine with IDE</div>
-            <div class="option-description">Open the custom engine solution file in your preferred IDE</div>
-          </div>
-        </button>
-      </div>
-
-      <!-- IDE Selection for Project -->
-      <div v-if="activeIdeSelection === 'project'" class="ide-selection">
-        <h3 class="ide-title">Select IDE for {{ projectName }}</h3>
-        <div class="ide-list">
-          <button
-              v-for="ide in availableIdes"
-              :key="ide.name"
-              class="ide-item"
-              @click="launchProjectWithIde(ide.path)"
-              :disabled="isLaunching"
-          >
-            <div class="ide-icon">{{ ide.icon }}</div>
-            <div class="ide-info">
-              <div class="ide-name">{{ ide.name }}</div>
-              <div class="ide-path">{{ ide.path }}</div>
-            </div>
-          </button>
-
-          <div v-if="availableIdes.length === 0" class="no-ides">
-            <div class="no-ides-icon">⚠️</div>
-            <div class="no-ides-text">No IDEs configured</div>
-            <div class="no-ides-subtext">Configure IDE programs in settings</div>
-            <button class="settings-button" @click="openSettings">
-              Open Settings
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- IDE Selection for Custom Engine -->
-      <div v-if="activeIdeSelection === 'custom-engine'" class="ide-selection">
-        <h3 class="ide-title">Select IDE for Custom Engine</h3>
-        <div class="ide-list">
-          <button
-              v-for="ide in availableIdes"
-              :key="ide.name"
-              class="ide-item"
-              @click="launchCustomEngineWithIde(ide.path)"
-              :disabled="isLaunching"
-          >
-            <div class="ide-icon">{{ ide.icon }}</div>
-            <div class="ide-info">
-              <div class="ide-name">{{ ide.name }}</div>
-              <div class="ide-path">{{ ide.path }}</div>
-            </div>
-          </button>
-
-          <div v-if="availableIdes.length === 0" class="no-ides">
-            <div class="no-ides-icon">⚠️</div>
-            <div class="no-ides-text">No IDEs configured</div>
-            <div class="no-ides-subtext">Configure IDE programs in settings</div>
-            <button class="settings-button" @click="openSettings">
-              Open Settings
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import {ref, onMounted, computed} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
@@ -265,6 +148,123 @@ onMounted(() => {
   loadSettings()
 })
 </script>
+
+<template>
+  <div class="project-launch-popup">
+    <div class="popup-header">
+      <div class="header-content">
+        <h2 class="popup-title">
+          <span class="title-icon">🚀</span>
+          Launch {{ projectName }}
+        </h2>
+        <div class="project-note">This is a C++ project. Choose how you want to open it</div>
+      </div>
+      <button class="close-button" @click="$emit('close')" title="Close">
+        ✕
+      </button>
+    </div>
+
+    <div class="popup-content">
+      <div class="launch-options">
+        <button
+            class="launch-option engine-option"
+            @click="launchWithEngine"
+            :disabled="isLaunching"
+        >
+          <div class="option-icon">🎮</div>
+          <div class="option-content">
+            <div class="option-title">Open {{ projectName }} with Unreal Engine</div>
+            <div class="option-description">Open the project directly in Unreal Engine</div>
+          </div>
+        </button>
+
+        <button
+            class="launch-option ide-option"
+            @click="showProjectIdeSelection"
+            :disabled="isLaunching"
+        >
+          <div class="option-icon">💻</div>
+          <div class="option-content">
+            <div class="option-title">Open {{ projectName }} with IDE</div>
+            <div class="option-description">Open the project solution file in your preferred IDE</div>
+          </div>
+        </button>
+
+        <!-- Custom Engine Option (only for custom engine projects) -->
+        <button
+            v-if="isCustomEngine"
+            class="launch-option custom-engine-option"
+            @click="showCustomEngineIdeSelection"
+            :disabled="isLaunching"
+        >
+          <div class="option-icon">🔧</div>
+          <div class="option-content">
+            <div class="option-title">Open the custom engine with IDE</div>
+            <div class="option-description">Open the custom engine solution file in your preferred IDE</div>
+          </div>
+        </button>
+      </div>
+
+      <!-- IDE Selection for Project -->
+      <div v-if="activeIdeSelection === 'project'" class="ide-selection">
+        <h3 class="ide-title">Select IDE for {{ projectName }}</h3>
+        <div class="ide-list">
+          <button
+              v-for="ide in availableIdes"
+              :key="ide.name"
+              class="ide-item"
+              @click="launchProjectWithIde(ide.path)"
+              :disabled="isLaunching"
+          >
+            <div class="ide-icon">{{ ide.icon }}</div>
+            <div class="ide-info">
+              <div class="ide-name">{{ ide.name }}</div>
+              <div class="ide-path">{{ ide.path }}</div>
+            </div>
+          </button>
+
+          <div v-if="availableIdes.length === 0" class="no-ides">
+            <div class="no-ides-icon">⚠️</div>
+            <div class="no-ides-text">No IDEs configured</div>
+            <div class="no-ides-subtext">Configure IDE programs in settings</div>
+            <button class="settings-button" @click="openSettings">
+              Open Settings
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- IDE Selection for Custom Engine -->
+      <div v-if="activeIdeSelection === 'custom-engine'" class="ide-selection">
+        <h3 class="ide-title">Select IDE for Custom Engine</h3>
+        <div class="ide-list">
+          <button
+              v-for="ide in availableIdes"
+              :key="ide.name"
+              class="ide-item"
+              @click="launchCustomEngineWithIde(ide.path)"
+              :disabled="isLaunching"
+          >
+            <div class="ide-icon">{{ ide.icon }}</div>
+            <div class="ide-info">
+              <div class="ide-name">{{ ide.name }}</div>
+              <div class="ide-path">{{ ide.path }}</div>
+            </div>
+          </button>
+
+          <div v-if="availableIdes.length === 0" class="no-ides">
+            <div class="no-ides-icon">⚠️</div>
+            <div class="no-ides-text">No IDEs configured</div>
+            <div class="no-ides-subtext">Configure IDE programs in settings</div>
+            <button class="settings-button" @click="openSettings">
+              Open Settings
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .project-launch-popup {

@@ -1,3 +1,77 @@
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useTaskStore } from '../stores/taskStore'
+import { usePopup } from '../composables/usePopup'
+import {onClickOutside} from "@vueuse/core";
+
+const { activeTasks } = useTaskStore()
+const { showPopup } = usePopup()
+const showAllTasks = ref(false)
+const taskBarRef = ref(null) // Liked to the TaskbarRef element
+
+const overallProgress = computed(() => {
+  if (activeTasks.value.length === 0) return 0
+  const totalProgress = activeTasks.value.reduce((sum, task) => sum + task.progress, 0)
+  return (totalProgress / activeTasks.value.length) * 100
+})
+
+// Methods
+const getProgressClass = (status: string) => {
+  switch (status) {
+    case 'Started':
+    case 'InProgress':
+      return 'in-progress'
+    case 'Completed':
+      return 'completed'
+    case 'Failed':
+      return 'failed'
+    default:
+      return 'in-progress'
+  }
+}
+
+const toggleExpanded = () => {
+  showAllTasks.value = !showAllTasks.value
+}
+
+// Handle task completion for engine detection
+const handleTaskClick = (task: any) => {
+  // If it's an engine detection task that completed, show results
+  if (task.task_name.toLowerCase().includes('auto-detecting unreal engine') ||
+      task.task_name.toLowerCase().includes('engine detection')) {
+    if (task.status === 'Completed') {
+      showPopup({
+        id: 'engine-detection',
+        component: 'EngineDetection',
+        props: {
+          showResults: true
+        }
+      })
+    }
+  }
+}
+
+const isTaskClickable = (task: any) => {
+  return (task.task_name.toLowerCase().includes('auto-detecting unreal engine') ||
+          task.task_name.toLowerCase().includes('engine detection')) &&
+      task.status === 'Completed'
+}
+
+// On click outside to collapse expanded tasks
+onClickOutside(taskBarRef, () => {
+  if (showAllTasks.value) {
+    showAllTasks.value = false
+  }
+})
+
+// Auto-collapse when no tasks remain
+// const checkAutoCollapse = () => {
+//   if (activeTasks.value.length <= 1) {
+//     showAllTasks.value = false
+//   }
+// }
+</script>
+
 <template>
   <div class="task-progress-bar" ref="taskBarRef">
     <!-- Always visible compact progress bar -->
@@ -80,80 +154,6 @@
     </Transition>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useTaskStore } from '../stores/taskStore'
-import { usePopup } from '../composables/usePopup'
-import {onClickOutside} from "@vueuse/core";
-
-const { activeTasks } = useTaskStore()
-const { showPopup } = usePopup()
-const showAllTasks = ref(false)
-const taskBarRef = ref(null) // Liked to the TaskbarRef element
-
-const overallProgress = computed(() => {
-  if (activeTasks.value.length === 0) return 0
-  const totalProgress = activeTasks.value.reduce((sum, task) => sum + task.progress, 0)
-  return (totalProgress / activeTasks.value.length) * 100
-})
-
-// Methods
-const getProgressClass = (status: string) => {
-  switch (status) {
-    case 'Started':
-    case 'InProgress':
-      return 'in-progress'
-    case 'Completed':
-      return 'completed'
-    case 'Failed':
-      return 'failed'
-    default:
-      return 'in-progress'
-  }
-}
-
-const toggleExpanded = () => {
-  showAllTasks.value = !showAllTasks.value
-}
-
-// Handle task completion for engine detection
-const handleTaskClick = (task: any) => {
-  // If it's an engine detection task that completed, show results
-  if (task.task_name.toLowerCase().includes('auto-detecting unreal engine') ||
-      task.task_name.toLowerCase().includes('engine detection')) {
-    if (task.status === 'Completed') {
-      showPopup({
-        id: 'engine-detection',
-        component: 'EngineDetection',
-        props: {
-          showResults: true
-        }
-      })
-    }
-  }
-}
-
-const isTaskClickable = (task: any) => {
-  return (task.task_name.toLowerCase().includes('auto-detecting unreal engine') ||
-          task.task_name.toLowerCase().includes('engine detection')) &&
-         task.status === 'Completed'
-}
-
-// On click outside to collapse expanded tasks
-onClickOutside(taskBarRef, () => {
-  if (showAllTasks.value) {
-    showAllTasks.value = false
-  }
-})
-
-// Auto-collapse when no tasks remain
-// const checkAutoCollapse = () => {
-//   if (activeTasks.value.length <= 1) {
-//     showAllTasks.value = false
-//   }
-// }
-</script>
 
 <style scoped>
 .task-progress-bar {

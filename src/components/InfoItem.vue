@@ -1,3 +1,14 @@
+<script setup lang="ts">
+interface Props {
+  label: string
+  value: string
+  icon?: string
+  multiline?: boolean
+}
+
+defineProps<Props>()
+</script>
+
 <template>
   <div class="info-item">
     <div class="info-header">
@@ -9,17 +20,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-interface Props {
-  label: string
-  value: string
-  icon?: string
-  multiline?: boolean
-}
-
-defineProps<Props>()
-</script>
 
 <style scoped>
 .info-item {

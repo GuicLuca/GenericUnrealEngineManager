@@ -1,3 +1,83 @@
+<script setup lang="ts">
+import { reactive, onMounted, nextTick, ref } from 'vue'
+import { open } from '@tauri-apps/plugin-dialog'
+
+interface Props {
+  editingProgram?: string | null
+  initialName?: string
+  initialPath?: string
+  onSave?: (data: { name: string; path: string; isEdit: boolean; originalName?: string }) => void
+}
+
+interface Emits {
+  (e: 'close'): void
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  editingProgram: null,
+  initialName: '',
+  initialPath: ''
+})
+
+const emit = defineEmits<Emits>()
+
+const nameInput = ref<HTMLInputElement>()
+
+const programForm = reactive({
+  name: props.initialName || '',
+  path: props.initialPath || ''
+})
+
+const browseForExecutable = async () => {
+  try {
+    const selected = await open({
+      directory: false,
+      multiple: false,
+      title: 'Select IDE Executable',
+      filters: [
+        {
+          name: 'Executable Files',
+          extensions: ['exe', 'app', 'AppImage']
+        }
+      ]
+    })
+
+    if (selected && typeof selected === 'string') {
+      programForm.path = selected
+    }
+  } catch (error) {
+    console.error('Failed to open file dialog:', error)
+  }
+}
+
+const saveProgram = () => {
+  if (!programForm.name.trim() || !programForm.path.trim()) return
+
+  const data = {
+    name: programForm.name,
+    path: programForm.path,
+    isEdit: !!props.editingProgram,
+    originalName: props.editingProgram || undefined
+  }
+
+  // Call the onSave callback if provided
+  if (props.onSave) {
+    props.onSave(data)
+  }
+
+  // Close the popup
+  emit('close')
+}
+
+onMounted(async () => {
+  // Focus the appropriate input
+  await nextTick()
+  if (!props.editingProgram && nameInput.value) {
+    nameInput.value.focus()
+  }
+})
+</script>
+
 <template>
   <div class="ide-form-popup">
     <div class="popup-header">
@@ -62,86 +142,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { reactive, onMounted, nextTick, ref } from 'vue'
-import { open } from '@tauri-apps/plugin-dialog'
-
-interface Props {
-  editingProgram?: string | null
-  initialName?: string
-  initialPath?: string
-  onSave?: (data: { name: string; path: string; isEdit: boolean; originalName?: string }) => void
-}
-
-interface Emits {
-  (e: 'close'): void
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  editingProgram: null,
-  initialName: '',
-  initialPath: ''
-})
-
-const emit = defineEmits<Emits>()
-
-const nameInput = ref<HTMLInputElement>()
-
-const programForm = reactive({
-  name: props.initialName || '',
-  path: props.initialPath || ''
-})
-
-const browseForExecutable = async () => {
-  try {
-    const selected = await open({
-      directory: false,
-      multiple: false,
-      title: 'Select IDE Executable',
-      filters: [
-        {
-          name: 'Executable Files',
-          extensions: ['exe', 'app', 'AppImage']
-        }
-      ]
-    })
-    
-    if (selected && typeof selected === 'string') {
-      programForm.path = selected
-    }
-  } catch (error) {
-    console.error('Failed to open file dialog:', error)
-  }
-}
-
-const saveProgram = () => {
-  if (!programForm.name.trim() || !programForm.path.trim()) return
-
-  const data = {
-    name: programForm.name,
-    path: programForm.path,
-    isEdit: !!props.editingProgram,
-    originalName: props.editingProgram || undefined
-  }
-
-  // Call the onSave callback if provided
-  if (props.onSave) {
-    props.onSave(data)
-  }
-
-  // Close the popup
-  emit('close')
-}
-
-onMounted(async () => {
-  // Focus the appropriate input
-  await nextTick()
-  if (!props.editingProgram && nameInput.value) {
-    nameInput.value.focus()
-  }
-})
-</script>
 
 <style scoped>
 .ide-form-popup {

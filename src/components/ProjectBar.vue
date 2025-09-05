@@ -1,3 +1,52 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useProjectStore } from '../stores/projectStore'
+import { useLogStore } from '../stores/logStore'
+import { usePopup } from '../composables/usePopup'
+import FileExplorerButton from './FileExplorerButton.vue'
+
+const { selectedProject, projects, setSelectedProject, findProjectByPath } = useProjectStore()
+const { addLog } = useLogStore()
+const { showPopup } = usePopup()
+
+// Sort projects alphabetically by name
+const sortedProjects = computed(() => {
+  return [...projects.value].sort((a, b) => a.name.localeCompare(b.name))
+})
+
+const handleProjectChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement
+  const projectPath = target.value
+
+  if (projectPath) {
+    const project = findProjectByPath(projectPath)
+    setSelectedProject(project || null)
+    if (project) {
+      addLog(`Selected project: ${project.name}`)
+    }
+  } else {
+    setSelectedProject(null)
+    addLog('No project selected')
+  }
+}
+
+const openProjectManager = () => {
+  showPopup({
+    id: 'project-manager',
+    component: 'ProjectManager',
+    props: {}
+  })
+}
+
+const openSettings = () => {
+  showPopup({
+    id: 'settings',
+    component: 'Settings',
+    props: {}
+  })
+}
+</script>
+
 <template>
   <div class="project-bar">
     <div class="project-section">
@@ -44,55 +93,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { computed } from 'vue'
-import { useProjectStore } from '../stores/projectStore'
-import { useLogStore } from '../stores/logStore'
-import { usePopup } from '../composables/usePopup'
-import FileExplorerButton from './FileExplorerButton.vue'
-
-const { selectedProject, projects, setSelectedProject, findProjectByPath } = useProjectStore()
-const { addLog } = useLogStore()
-const { showPopup } = usePopup()
-
-// Sort projects alphabetically by name
-const sortedProjects = computed(() => {
-  return [...projects.value].sort((a, b) => a.name.localeCompare(b.name))
-})
-
-const handleProjectChange = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  const projectPath = target.value
-  
-  if (projectPath) {
-    const project = findProjectByPath(projectPath)
-    setSelectedProject(project || null)
-    if (project) {
-      addLog(`Selected project: ${project.name}`)
-    }
-  } else {
-    setSelectedProject(null)
-    addLog('No project selected')
-  }
-}
-
-const openProjectManager = () => {
-  showPopup({
-    id: 'project-manager',
-    component: 'ProjectManager',
-    props: {}
-  })
-}
-
-const openSettings = () => {
-  showPopup({
-    id: 'settings',
-    component: 'Settings',
-    props: {}
-  })
-}
-</script>
 
 <style scoped>
 .project-bar {

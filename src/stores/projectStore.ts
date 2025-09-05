@@ -77,7 +77,7 @@ export const useProjectStore = () => {
                 selectedProject.value = null
             } else {
                 // Update the selected project with the latest data
-                const updatedProject = backendProjects.find(p => 
+                const updatedProject = backendProjects.find(p =>
                     p.path === selectedProject.value?.path
                 )
                 if (updatedProject) {
@@ -143,7 +143,7 @@ export const useProjectStore = () => {
     const scanPlugins = async (projectPaths: string[]) => {
         try {
             isLoading.value = true
-            await invoke('scan_plugins', { projectPaths })
+            await invoke('scan_plugins', {projectPaths})
             // Backend will emit events to update the store
         } catch (error) {
             console.error('Failed to scan plugins:', error)

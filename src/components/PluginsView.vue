@@ -1,3 +1,67 @@
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useProjectStore, type ProjectPlugin } from '../stores/projectStore'
+import { useLogStore } from '../stores/logStore'
+import FileExplorerButton from './FileExplorerButton.vue'
+import { formatSize, timeSince } from '../utils'
+
+const { selectedProject, isLoading } = useProjectStore()
+const { addLog } = useLogStore()
+
+const activeFilter = ref('all')
+
+const filterOptions = [
+  { id: 'all', label: 'All', icon: '🔌' },
+  { id: 'enabled', label: 'Enabled', icon: '✅' },
+  { id: 'disabled', label: 'Disabled', icon: '❌' },
+  { id: 'project', label: 'Project', icon: '📁' },
+  { id: 'external', label: 'External', icon: '🌐' },
+  { id: 'marketplace', label: 'Marketplace', icon: '🛒' }
+]
+
+const plugins = computed(() => selectedProject.value?.plugins || [])
+const pluginCount = computed(() => plugins.value.length)
+
+const getFilteredPlugins = (filterId: string): ProjectPlugin[] => {
+  switch (filterId) {
+    case 'enabled':
+      return plugins.value.filter(p => p.is_enabled)
+    case 'disabled':
+      return plugins.value.filter(p => !p.is_enabled)
+    case 'project':
+      return plugins.value.filter(p => p.is_in_project)
+    case 'external':
+      return plugins.value.filter(p => !p.is_in_project)
+    case 'marketplace':
+      return plugins.value.filter(p => p.marketplace_url !== null && p.marketplace_url !== undefined)
+    default:
+      return plugins.value
+  }
+}
+
+const filteredPlugins = computed(() => getFilteredPlugins(activeFilter.value))
+
+const getPluginPath = (pluginName: string): string => {
+  if (!selectedProject.value) return ''
+
+  // Extract the project directory and construct the plugin path
+  const projectDir = selectedProject.value.path.replace(/[^/\\]*\.uproject$/, '')
+  return `${projectDir}Plugins/${pluginName}`
+}
+
+const openMarketplaceUrl = (url: string) => {
+  // Open the marketplace URL in the default browser
+  window.open(url, '_blank')
+  addLog(`Opened marketplace URL: ${url}`)
+}
+
+const openDocsUrl = (url: string) => {
+  // Open the documentation URL in the default browser
+  window.open(url, '_blank')
+  addLog(`Opened documentation URL: ${url}`)
+}
+</script>
+
 <template>
   <div class="plugins-view">
     <div class="plugins-header">
@@ -133,70 +197,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useProjectStore, type ProjectPlugin } from '../stores/projectStore'
-import { useLogStore } from '../stores/logStore'
-import FileExplorerButton from './FileExplorerButton.vue'
-import { formatSize, timeSince } from '../utils'
-
-const { selectedProject, isLoading } = useProjectStore()
-const { addLog } = useLogStore()
-
-const activeFilter = ref('all')
-
-const filterOptions = [
-  { id: 'all', label: 'All', icon: '🔌' },
-  { id: 'enabled', label: 'Enabled', icon: '✅' },
-  { id: 'disabled', label: 'Disabled', icon: '❌' },
-  { id: 'project', label: 'Project', icon: '📁' },
-  { id: 'external', label: 'External', icon: '🌐' },
-  { id: 'marketplace', label: 'Marketplace', icon: '🛒' }
-]
-
-const plugins = computed(() => selectedProject.value?.plugins || [])
-const pluginCount = computed(() => plugins.value.length)
-
-const getFilteredPlugins = (filterId: string): ProjectPlugin[] => {
-  switch (filterId) {
-    case 'enabled':
-      return plugins.value.filter(p => p.is_enabled)
-    case 'disabled':
-      return plugins.value.filter(p => !p.is_enabled)
-    case 'project':
-      return plugins.value.filter(p => p.is_in_project)
-    case 'external':
-      return plugins.value.filter(p => !p.is_in_project)
-    case 'marketplace':
-      return plugins.value.filter(p => p.marketplace_url !== null && p.marketplace_url !== undefined)
-    default:
-      return plugins.value
-  }
-}
-
-const filteredPlugins = computed(() => getFilteredPlugins(activeFilter.value))
-
-const getPluginPath = (pluginName: string): string => {
-  if (!selectedProject.value) return ''
-  
-  // Extract the project directory and construct the plugin path
-  const projectDir = selectedProject.value.path.replace(/[^/\\]*\.uproject$/, '')
-  return `${projectDir}Plugins/${pluginName}`
-}
-
-const openMarketplaceUrl = (url: string) => {
-  // Open the marketplace URL in the default browser
-  window.open(url, '_blank')
-  addLog(`Opened marketplace URL: ${url}`)
-}
-
-const openDocsUrl = (url: string) => {
-  // Open the documentation URL in the default browser
-  window.open(url, '_blank')
-  addLog(`Opened documentation URL: ${url}`)
-}
-</script>
 
 <style scoped>
 .plugins-view {

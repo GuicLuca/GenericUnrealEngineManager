@@ -1,65 +1,13 @@
-<template>
-  <div class="ide-settings">
-    <div class="settings-section">
-      <h4 class="section-title">Custom IDE Programs</h4>
-      <div class="section-description">
-        Add custom IDE programs that can be used to open C++ projects. These will appear in the project launch options.
-      </div>
-      
-      <div class="programs-list">
-        <div 
-          v-for="(path, name) in localPrograms"
-          :key="name"
-          class="program-item"
-        >
-          <div class="program-info">
-            <div class="program-name">{{ name }}</div>
-            <div class="program-path">{{ path }}</div>
-          </div>
-          <div class="program-actions">
-            <button
-              class="action-btn edit-btn"
-              @click="editProgram(name as string, path)"
-              title="Edit program"
-            >
-              ✏️
-            </button>
-            <button
-              class="action-btn remove-btn"
-              @click="handleRemoveProgram(name as string)"
-              title="Remove program"
-            >
-              🗑️
-            </button>
-          </div>
-        </div>
-
-        <div v-if="Object.keys(localPrograms).length === 0" class="no-programs">
-          <div class="no-programs-icon">💻</div>
-          <div class="no-programs-text">No custom IDE programs configured</div>
-          <div class="no-programs-subtext">Add IDE programs to launch C++ projects</div>
-        </div>
-      </div>
-      
-      <button class="add-program-btn" @click="openAddProgramPopup">
-        <span class="button-icon">➕</span>
-        Add IDE Program
-      </button>
-    </div>
-
-  </div>
-</template>
-
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
 import { usePopup } from '../../../composables/usePopup'
 import { useSettingsStore } from '../../../stores/settingsStore'
 
-const { 
-  getSettings, 
-  addIdeProgram, 
-  removeIdeProgram, 
-  updateIdeProgram 
+const {
+  getSettings,
+  addIdeProgram,
+  removeIdeProgram,
+  updateIdeProgram
 } = useSettingsStore()
 
 const { showPopup } = usePopup()
@@ -114,6 +62,58 @@ watch( () => getSettings('ide_programs').custom_programs, (newPrograms) => {
   Object.assign(localPrograms, newPrograms)
 }, { deep: true })
 </script>
+
+<template>
+  <div class="ide-settings">
+    <div class="settings-section">
+      <h4 class="section-title">Custom IDE Programs</h4>
+      <div class="section-description">
+        Add custom IDE programs that can be used to open C++ projects. These will appear in the project launch options.
+      </div>
+      
+      <div class="programs-list">
+        <div 
+          v-for="(path, name) in localPrograms"
+          :key="name"
+          class="program-item"
+        >
+          <div class="program-info">
+            <div class="program-name">{{ name }}</div>
+            <div class="program-path">{{ path }}</div>
+          </div>
+          <div class="program-actions">
+            <button
+              class="action-btn edit-btn"
+              @click="editProgram(name as string, path)"
+              title="Edit program"
+            >
+              ✏️
+            </button>
+            <button
+              class="action-btn remove-btn"
+              @click="handleRemoveProgram(name as string)"
+              title="Remove program"
+            >
+              🗑️
+            </button>
+          </div>
+        </div>
+
+        <div v-if="Object.keys(localPrograms).length === 0" class="no-programs">
+          <div class="no-programs-icon">💻</div>
+          <div class="no-programs-text">No custom IDE programs configured</div>
+          <div class="no-programs-subtext">Add IDE programs to launch C++ projects</div>
+        </div>
+      </div>
+      
+      <button class="add-program-btn" @click="openAddProgramPopup">
+        <span class="button-icon">➕</span>
+        Add IDE Program
+      </button>
+    </div>
+
+  </div>
+</template>
 
 <style scoped>
 .ide-settings {

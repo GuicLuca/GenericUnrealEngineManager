@@ -93,7 +93,7 @@ export const useSettingsStore = () => {
             throw error;
         }
     };
-    
+
     // Load settings from backend
     const loadSettings = async (): Promise<void> => {
         try {

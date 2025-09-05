@@ -1,15 +1,3 @@
-<template>
-  <button
-      class="file-explorer-btn"
-      :class="{ 'btn-small': size === 'small', 'btn-mini': size === 'mini' }"
-      @click="handleOpenExplorer"
-      :title="title"
-      :disabled="disabled"
-  >
-    📁
-  </button>
-</template>
-
 <script setup lang="ts">
 import {invoke} from "@tauri-apps/api/core"
 import {useLogStore} from '../stores/logStore'
@@ -46,6 +34,18 @@ const handleOpenExplorer = async (): Promise<void> => {
   }
 }
 </script>
+
+<template>
+  <button
+      class="file-explorer-btn"
+      :class="{ 'btn-small': size === 'small', 'btn-mini': size === 'mini' }"
+      @click="handleOpenExplorer"
+      :title="title"
+      :disabled="disabled"
+  >
+    📁
+  </button>
+</template>
 
 <style scoped>
 .file-explorer-btn {

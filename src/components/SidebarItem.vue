@@ -1,14 +1,3 @@
-<template>
-  <div 
-    class="sidebar-item" 
-    :class="{ disabled }"
-    @click="handleClick"
-  >
-    <div class="sidebar-icon">{{ icon }}</div>
-    <div class="sidebar-label">{{ label }}</div>
-  </div>
-</template>
-
 <script setup lang="ts">
 interface Props {
   icon: string
@@ -29,6 +18,17 @@ const handleClick = () => {
   }
 }
 </script>
+
+<template>
+  <div 
+    class="sidebar-item" 
+    :class="{ disabled }"
+    @click="handleClick"
+  >
+    <div class="sidebar-icon">{{ icon }}</div>
+    <div class="sidebar-label">{{ label }}</div>
+  </div>
+</template>
 
 <style scoped>
 .sidebar-item {

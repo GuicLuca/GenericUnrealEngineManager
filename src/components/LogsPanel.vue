@@ -1,23 +1,3 @@
-<template>
-  <div class="logs-panel">
-    <div class="logs-content" ref="scrollDiv" @scroll="handleScroll">
-      <div 
-        v-for="log in logs" 
-        :key="log.id"
-        class="log-entry"
-        :class="{ [`log-${log.level}`]: log.level }"
-      >
-        <span class="log-timestamp">{{ log.timestamp }}</span>
-        <span class="log-level" v-if="log.level">{{ log.level.toUpperCase() }}</span>
-        <span class="log-message" v-html="formatLogMessage(log.message)"></span>
-      </div>
-      <div v-if="logs.length === 0" class="no-logs">
-        No logs available
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { useLogStore } from '../stores/logStore'
 const { logs } = useLogStore()
@@ -30,21 +10,21 @@ const shouldAutoScroll = ref(true)
 const formatLogMessage = (message: string): string => {
   // Escape HTML first to prevent XSS
   const escaped = message
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-  
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+
   // Then format special characters
   return escaped
-    .replace(/\\n/g, '<br>')
-    .replace(/\\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
-    .replace(/\\r/g, '')
-    .replace(/\n/g, '<br>')
-    .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
-    .replace(/\r/g, '')
-    .replace(/  /g, '&nbsp;&nbsp;') // Convert double spaces to non-breaking spaces
+      .replace(/\\n/g, '<br>')
+      .replace(/\\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
+      .replace(/\\r/g, '')
+      .replace(/\n/g, '<br>')
+      .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
+      .replace(/\r/g, '')
+      .replace(/  /g, '&nbsp;&nbsp;') // Convert double spaces to non-breaking spaces
 }
 
 const handleScroll = () => {
@@ -69,6 +49,26 @@ onUpdated(() => {
   scrollToBottom()
 })
 </script>
+
+<template>
+  <div class="logs-panel">
+    <div class="logs-content" ref="scrollDiv" @scroll="handleScroll">
+      <div 
+        v-for="log in logs" 
+        :key="log.id"
+        class="log-entry"
+        :class="{ [`log-${log.level}`]: log.level }"
+      >
+        <span class="log-timestamp">{{ log.timestamp }}</span>
+        <span class="log-level" v-if="log.level">{{ log.level.toUpperCase() }}</span>
+        <span class="log-message" v-html="formatLogMessage(log.message)"></span>
+      </div>
+      <div v-if="logs.length === 0" class="no-logs">
+        No logs available
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .logs-panel {

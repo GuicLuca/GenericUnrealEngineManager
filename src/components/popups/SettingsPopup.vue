@@ -1,3 +1,78 @@
+<script setup lang="ts">
+import {onUnmounted, ref} from 'vue'
+import { useLogStore } from '../../stores/logStore'
+import { useSettingsStore } from '../../stores/settingsStore'
+import GeneralSettings from './settings/GeneralSettings.vue'
+import IdeSettings from './settings/IdeSettings.vue'
+import EngineSettings from './settings/EngineSettings.vue'
+import CleaningSettings from './settings/CleaningSettings.vue'
+import CompressionSettings from './settings/CompressionSettings.vue'
+
+// const emit = defineEmits<{
+//   (e: 'close'): void
+// }>()
+
+const { addLog } = useLogStore()
+const {
+  resetToDefaults: resetStoreToDefaults,
+  isLoading,
+  hasUnsavedChanges,
+  saveSettings
+} = useSettingsStore()
+
+const activeTab = ref('general')
+
+const tabs = [
+  {
+    id: 'general',
+    label: 'General',
+    icon: '🏠'
+  },
+  {
+    id: 'ide',
+    label: 'IDE Programs',
+    icon: '💻'
+  },
+  {
+    id: 'engines',
+    label: 'Engine Programs',
+    icon: '⚙️'
+  },
+  {
+    id: 'cleaning',
+    label: 'Cleaning Defaults',
+    icon: '🧹'
+  },
+  {
+    id: 'compression',
+    label: 'Compression',
+    icon: '🗜️'
+  }
+]
+
+const setActiveTab = (tabId: string) => {
+  activeTab.value = tabId
+}
+
+const resetToDefaults = async () => {
+  if (confirm('Are you sure you want to reset all settings to their default values? This action cannot be undone.')) {
+    resetStoreToDefaults().then()
+    addLog('Settings reset to defaults')
+  }
+}
+
+onUnmounted(() => {
+  // save settings when the component is unmounted if it has unsaved changes
+  if (hasUnsavedChanges.value) {
+    saveSettings().then(() => {
+      addLog('Settings saved on close')
+    }).catch(error => {
+      addLog(`Failed to save settings: ${error.message}`, 'error')
+    })
+  }
+})
+</script>
+
 <template>
   <div class="settings-popup">
     <div class="popup-header">
@@ -78,81 +153,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import {onUnmounted, ref} from 'vue'
-import { useLogStore } from '../../stores/logStore'
-import { useSettingsStore } from '../../stores/settingsStore'
-import GeneralSettings from './settings/GeneralSettings.vue'
-import IdeSettings from './settings/IdeSettings.vue'
-import EngineSettings from './settings/EngineSettings.vue'
-import CleaningSettings from './settings/CleaningSettings.vue'
-import CompressionSettings from './settings/CompressionSettings.vue'
-
-// const emit = defineEmits<{
-//   (e: 'close'): void
-// }>()
-
-const { addLog } = useLogStore()
-const { 
-  resetToDefaults: resetStoreToDefaults,
-  isLoading,
-  hasUnsavedChanges,
-  saveSettings
-} = useSettingsStore()
-
-const activeTab = ref('general')
-
-const tabs = [
-  {
-    id: 'general',
-    label: 'General',
-    icon: '🏠'
-  },
-  {
-    id: 'ide',
-    label: 'IDE Programs',
-    icon: '💻'
-  },
-  {
-    id: 'engines',
-    label: 'Engine Programs',
-    icon: '⚙️'
-  },
-  {
-    id: 'cleaning',
-    label: 'Cleaning Defaults',
-    icon: '🧹'
-  },
-  {
-    id: 'compression',
-    label: 'Compression',
-    icon: '🗜️'
-  }
-]
-
-const setActiveTab = (tabId: string) => {
-  activeTab.value = tabId
-}
-
-const resetToDefaults = async () => {
-  if (confirm('Are you sure you want to reset all settings to their default values? This action cannot be undone.')) {
-    resetStoreToDefaults().then()
-    addLog('Settings reset to defaults')
-  }
-}
-
-onUnmounted(() => {
-  // save settings when the component is unmounted if it has unsaved changes
-  if (hasUnsavedChanges.value) {
-    saveSettings().then(() => {
-      addLog('Settings saved on close')
-    }).catch(error => {
-      addLog(`Failed to save settings: ${error.message}`, 'error')
-    })
-  }
-})
-</script>
 
 <style scoped>
 .settings-popup {

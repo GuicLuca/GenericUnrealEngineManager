@@ -1,61 +1,3 @@
-<template>
-  <div class="engine-settings">
-    <div class="settings-section">
-      <h4 class="section-title">Custom Engine Installations</h4>
-      <div class="section-description">
-        Manage custom Unreal Engine installations. These can be source builds or custom engine versions.
-      </div>
-
-      <div class="engines-list">
-        <div
-            v-for="(path, name) in sortedEngineInstances"
-            :key="name"
-            class="engine-item"
-        >
-          <div class="engine-info">
-            <div class="engine-name">{{ name }}</div>
-            <div class="engine-path">{{ path }}</div>
-          </div>
-          <div class="engine-actions">
-            <button
-                class="action-btn edit-btn"
-                @click="editEngine(name as string, path)"
-                title="Edit engine"
-            >
-              ✏️
-            </button>
-            <button
-                class="action-btn remove-btn"
-                @click="handleRemoveEngine(name as string)"
-                title="Remove engine"
-            >
-              🗑️
-            </button>
-          </div>
-        </div>
-
-        <div v-if="Object.keys(localEngines).length === 0" class="no-engines">
-          <div class="no-engines-icon">⚙️</div>
-          <div class="no-engines-text">No custom engines configured</div>
-          <div class="no-engines-subtext">Add custom engine installations or source builds</div>
-        </div>
-      </div>
-
-      <div class="engine-actions-row">
-        <button class="add-engine-btn" @click="openAddEnginePopup">
-          <span class="button-icon">➕</span>
-          Add Custom Engine
-        </button>
-
-        <button class="auto-detect-btn" @click="autoDetectEngines">
-          <span class="button-icon">🔍</span>
-          Auto-Detect Engines
-        </button>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import {computed, reactive, watch} from 'vue'
 import {usePopup} from '../../../composables/usePopup'
@@ -152,6 +94,64 @@ watch( () => getSettings('engine_programs').custom_engines, (newEngines) => {
   Object.assign(localEngines, newEngines)
 }, {deep: true})
 </script>
+
+<template>
+  <div class="engine-settings">
+    <div class="settings-section">
+      <h4 class="section-title">Custom Engine Installations</h4>
+      <div class="section-description">
+        Manage custom Unreal Engine installations. These can be source builds or custom engine versions.
+      </div>
+
+      <div class="engines-list">
+        <div
+            v-for="(path, name) in sortedEngineInstances"
+            :key="name"
+            class="engine-item"
+        >
+          <div class="engine-info">
+            <div class="engine-name">{{ name }}</div>
+            <div class="engine-path">{{ path }}</div>
+          </div>
+          <div class="engine-actions">
+            <button
+                class="action-btn edit-btn"
+                @click="editEngine(name as string, path)"
+                title="Edit engine"
+            >
+              ✏️
+            </button>
+            <button
+                class="action-btn remove-btn"
+                @click="handleRemoveEngine(name as string)"
+                title="Remove engine"
+            >
+              🗑️
+            </button>
+          </div>
+        </div>
+
+        <div v-if="Object.keys(localEngines).length === 0" class="no-engines">
+          <div class="no-engines-icon">⚙️</div>
+          <div class="no-engines-text">No custom engines configured</div>
+          <div class="no-engines-subtext">Add custom engine installations or source builds</div>
+        </div>
+      </div>
+
+      <div class="engine-actions-row">
+        <button class="add-engine-btn" @click="openAddEnginePopup">
+          <span class="button-icon">➕</span>
+          Add Custom Engine
+        </button>
+
+        <button class="auto-detect-btn" @click="autoDetectEngines">
+          <span class="button-icon">🔍</span>
+          Auto-Detect Engines
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .engine-settings {

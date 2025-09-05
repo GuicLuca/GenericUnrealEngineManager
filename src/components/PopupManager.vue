@@ -1,3 +1,54 @@
+<script setup lang="ts">
+import {onMounted} from 'vue'
+import {usePopup} from '../composables/usePopup'
+import {useLogStore} from '../stores/logStore'
+import {useSettingsStore} from "../stores/settingsStore.ts";
+import WelcomePopup from './popups/WelcomePopup.vue'
+import ProjectDiscoveryPopup from './popups/ProjectDiscoveryPopup.vue'
+import ProjectManagerPopup from './popups/ProjectManagerPopup.vue'
+import ProjectLaunchChoicePopup from './popups/ProjectLaunchChoicePopup.vue'
+import ProjectCleanPopup from './popups/ProjectCleanPopup.vue'
+import ProjectCompressPopup from './popups/ProjectCompressPopup.vue'
+import ProjectPackagePopup from './popups/ProjectPackagePopup.vue'
+import SettingsPopup from './popups/SettingsPopup.vue'
+import EngineDetectionPopup from './popups/EngineDetectionPopup.vue'
+import PresetFormPopup from "./popups/settings/PresetFormPopup.vue";
+import IdeFormPopup from "./popups/settings/IdeFormPopup.vue";
+import EngineFormPopup from "./popups/settings/EngineFormPopup.vue";
+
+const {popupState, hidePopup, initPopupListener, showPopup} = usePopup()
+const {addLog} = useLogStore()
+const {getSettings, loadSettings} = useSettingsStore()
+
+const handleOverlayClick = (popup: any) => {
+  if (!popup.persistent) {
+    hidePopup(popup.id)
+  }
+}
+
+const handleProjectDiscoverySubmit = (data: any) => {
+  addLog('Starting project discovery...')
+  console.log('Project discovery submitted:', data)
+  // Here you would typically call a Tauri command to start the discovery
+  hidePopup() // Close the top popup
+}
+
+onMounted(async () => {
+  initPopupListener()
+
+  await loadSettings().then(async () => {
+    const generalSettings = getSettings('general')
+    if (generalSettings.show_welcome_popup) {
+      showPopup({
+        id: 'welcome',
+        component: 'Welcome',
+        props: {}
+      })
+    }
+  })
+})
+</script>
+
 <template>
   <Teleport to="body">
     <!-- Render all popups in the stack -->
@@ -107,57 +158,6 @@
     </div>
   </Teleport>
 </template>
-
-<script setup lang="ts">
-import {onMounted} from 'vue'
-import {usePopup} from '../composables/usePopup'
-import {useLogStore} from '../stores/logStore'
-import {useSettingsStore} from "../stores/settingsStore.ts";
-import WelcomePopup from './popups/WelcomePopup.vue'
-import ProjectDiscoveryPopup from './popups/ProjectDiscoveryPopup.vue'
-import ProjectManagerPopup from './popups/ProjectManagerPopup.vue'
-import ProjectLaunchChoicePopup from './popups/ProjectLaunchChoicePopup.vue'
-import ProjectCleanPopup from './popups/ProjectCleanPopup.vue'
-import ProjectCompressPopup from './popups/ProjectCompressPopup.vue'
-import ProjectPackagePopup from './popups/ProjectPackagePopup.vue'
-import SettingsPopup from './popups/SettingsPopup.vue'
-import EngineDetectionPopup from './popups/EngineDetectionPopup.vue'
-import PresetFormPopup from "./popups/settings/PresetFormPopup.vue";
-import IdeFormPopup from "./popups/settings/IdeFormPopup.vue";
-import EngineFormPopup from "./popups/settings/EngineFormPopup.vue";
-
-const {popupState, hidePopup, initPopupListener, showPopup} = usePopup()
-const {addLog} = useLogStore()
-const {getSettings, loadSettings} = useSettingsStore()
-
-const handleOverlayClick = (popup: any) => {
-  if (!popup.persistent) {
-    hidePopup(popup.id)
-  }
-}
-
-const handleProjectDiscoverySubmit = (data: any) => {
-  addLog('Starting project discovery...')
-  console.log('Project discovery submitted:', data)
-  // Here you would typically call a Tauri command to start the discovery
-  hidePopup() // Close the top popup
-}
-
-onMounted(async () => {
-  initPopupListener()
-
-  await loadSettings().then(async () => {
-    const generalSettings = getSettings('general')
-    if (generalSettings.show_welcome_popup) {
-      showPopup({
-        id: 'welcome',
-        component: 'Welcome',
-        props: {}
-      })
-    }
-  })
-})
-</script>
 
 <style scoped>
 .popup-overlay {

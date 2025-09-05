@@ -1,3 +1,7 @@
+<script setup lang="ts">
+import PluginsView from './PluginsView.vue'
+</script>
+
 <template>
   <div class="main-area">
     <div class="main-area-content">
@@ -5,10 +9,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import PluginsView from './PluginsView.vue'
-</script>
 
 <style scoped>
 .main-area {

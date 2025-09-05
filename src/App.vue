@@ -1,25 +1,25 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import {ref} from 'vue'
 import ProjectBar from './components/ProjectBar.vue'
-import Sidebar, { type SidebarItem } from './components/Sidebar.vue'
+import Sidebar, {type SidebarItem} from './components/Sidebar.vue'
 import MainArea from './components/MainArea.vue'
 import InfoPanel from './components/InfoPanel.vue'
-import BottomPanel, { type BottomTab } from './components/BottomPanel.vue'
+import BottomPanel, {type BottomTab} from './components/BottomPanel.vue'
 import PopupManager from './components/PopupManager.vue'
 import TaskProgressBar from './components/TaskProgressBar.vue'
 
 const sidebarItems = ref<SidebarItem[]>([
-  { name: 'Rescan', icon: '🔄', action: 'rescan', requiresProject: true },
-  { name: 'Open', icon: '↰', action: 'open', requiresProject: true },
-  { name: 'Package', icon: '📦', action: 'package', requiresProject: true },
-  { name: 'Clean', icon: '🧹', action: 'clean', requiresProject: true },
-  { name: 'Compress', icon: '🗜️', action: 'compress', requiresProject: true },
-  { name: 'Untrack', icon: '🖇️', action: 'untrack', requiresProject: true }
+  {name: 'Rescan', icon: '🔄', action: 'rescan', requiresProject: true},
+  {name: 'Open', icon: '↰', action: 'open', requiresProject: true},
+  {name: 'Package', icon: '📦', action: 'package', requiresProject: true},
+  {name: 'Clean', icon: '🧹', action: 'clean', requiresProject: true},
+  {name: 'Compress', icon: '🗜️', action: 'compress', requiresProject: true},
+  {name: 'Untrack', icon: '🖇️', action: 'untrack', requiresProject: true}
 ])
 
 const bottomTabs = ref<BottomTab[]>([
-  { id: 'logs', title: 'Logs', icon: '📄' },
-  { id: 'development', title: 'Development', icon: '🛠️' }
+  {id: 'logs', title: 'Logs', icon: '📄'},
+  {id: 'development', title: 'Development', icon: '🛠️'}
 ])
 
 // Panel dimensions
@@ -48,35 +48,35 @@ const handleTabChange = (tabId: string): void => {
 
 <template>
   <div class="app-container">
-    <ProjectBar />
+    <ProjectBar/>
 
     <div class="main-content">
-      <Sidebar :items="sidebarItems" />
+      <Sidebar :items="sidebarItems"/>
 
-      <MainArea />
+      <MainArea/>
 
       <InfoPanel
-        :width="infoPanelWidth"
-        :min-width="minInfoPanelWidth"
-        :max-width="maxInfoPanelWidth"
-        @resize="handleInfoPanelResize"
+          :width="infoPanelWidth"
+          :min-width="minInfoPanelWidth"
+          :max-width="maxInfoPanelWidth"
+          @resize="handleInfoPanelResize"
       />
     </div>
 
     <BottomPanel
-      :tabs="bottomTabs"
-      :height="logsHeight"
-      :min-height="minLogsHeight"
-      :max-height="maxLogsHeight"
-      @resize="handleLogsResize"
-      @tab-change="handleTabChange"
+        :tabs="bottomTabs"
+        :height="logsHeight"
+        :min-height="minLogsHeight"
+        :max-height="maxLogsHeight"
+        @resize="handleLogsResize"
+        @tab-change="handleTabChange"
     />
 
     <!-- Task Progress Bar -->
-    <TaskProgressBar />
+    <TaskProgressBar/>
 
     <!-- Popup Manager -->
-    <PopupManager />
+    <PopupManager/>
   </div>
 </template>
 

@@ -1,3 +1,286 @@
+<script setup lang="ts">
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
+import InfoTooltip from '../InfoTooltip.vue'
+import { useLogStore } from '../../stores/logStore'
+import { useProjectStore } from '../../stores/projectStore'
+
+interface Props {
+  projectName: string
+  projectPath: string
+}
+
+interface CleaningSelection {
+  ide_files: boolean
+  binaries: boolean
+  build: boolean
+  intermediate: boolean
+  derived_data_cache: boolean
+  saved: boolean
+  analyze_plugins: boolean
+  plugin_binaries: boolean
+  plugin_intermediate: boolean
+  plugin_node_size_cache: boolean
+}
+
+type CompressionAlgorithm = 'Zip' | 'SevenZip' | 'Tar' | 'TarGz'
+
+interface AppSettings {
+  compression: {
+    filename_format: string
+    custom_presets: Record<string, string>
+  }
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<{
+  (e: 'close'): void
+}>()
+
+const { addLog } = useLogStore()
+const { findProjectByPath } = useProjectStore()
+
+const isCompressing = ref(false)
+const cleanBeforeCompress = ref(false)
+const selectedAlgorithm = ref<CompressionAlgorithm>('Zip')
+const selectedFormat = ref('[Project]_[YYYY][MM][DD][HH][mm]')
+const destinationPath = ref('')
+const availableAlgorithms = ref<CompressionAlgorithm[]>([])
+const availableFormats = ref<Record<string, string>>({})
+const systemUsername = ref('john_doe')
+const systemHostname = ref('DESKTOP-PC')
+
+const cleaningSelection = reactive<CleaningSelection>({
+  ide_files: true,
+  binaries: true,
+  build: true,
+  intermediate: true,
+  derived_data_cache: false,
+  saved: false,
+  analyze_plugins: false,
+  plugin_binaries: false,
+  plugin_intermediate: false,
+  plugin_node_size_cache: false
+})
+
+const canCompress = computed(() => {
+  return destinationPath.value.trim() !== '' && selectedAlgorithm.value !== null
+})
+
+// Sort available formats alphabetically by name
+const sortedAvailableFormats = computed(() => {
+  const entries = Object.entries(availableFormats.value)
+  entries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
+  return Object.fromEntries(entries)
+})
+
+const outputFilename = computed(() => {
+  // Get the project details for better filename generation
+  const project = findProjectByPath(props.projectPath)
+
+  // Generate the preview using the selected format
+  const now = new Date()
+  let preview = selectedFormat.value
+
+  // Replace common tags with example values
+  const replacements: Record<string, string> = {
+    'Project': props.projectName,
+    'Type': project?.has_cpp ? 'Cpp' : 'Bp',
+    'Engine': project ? getEngineVersionFormatted(project.engine_association) : 'Unknown',
+    'SizeMB': project ? Math.floor(project.size_on_disk / (1024 * 1024)).toString() : '0',
+    'SizeGB': project ? Math.floor(project.size_on_disk / (1024 * 1024 * 1024)).toString() : '0',
+    'PluginCount': project ? project.plugins.length.toString() : '0',
+    'Algorithm': getAlgorithmDisplayName(selectedAlgorithm.value),
+    'YYYY': now.getFullYear().toString(),
+    'YY': now.getFullYear().toString().slice(-2),
+    'MM': (now.getMonth() + 1).toString().padStart(2, '0'),
+    'DD': now.getDate().toString().padStart(2, '0'),
+    'HH': now.getHours().toString().padStart(2, '0'),
+    'mm': now.getMinutes().toString().padStart(2, '0'),
+    'ss': now.getSeconds().toString().padStart(2, '0'),
+    'Month': now.toLocaleDateString('en-US', { month: 'long' }),
+    'Mon': now.toLocaleDateString('en-US', { month: 'short' }),
+    'Day': now.toLocaleDateString('en-US', { weekday: 'long' }),
+    'Weekday': now.toLocaleDateString('en-US', { weekday: 'short' }),
+    'User': systemUsername.value,
+    'Computer': systemHostname.value,
+    'Timestamp': Math.floor(now.getTime() / 1000).toString()
+  }
+
+  for (const [key, value] of Object.entries(replacements)) {
+    preview = preview.replace(new RegExp(`\\[${key}\\]`, 'g'), value)
+  }
+
+  const extension = getExtensionForAlgorithm(selectedAlgorithm.value)
+  if (!preview.includes('.')) {
+    preview += `.${extension}`
+  }
+
+  return preview
+})
+
+// Watch for changes in selectedFormat to update preview
+watch(selectedFormat, () => {
+  // The computed property will automatically update
+})
+
+const getEngineVersionFormatted = (engineAssociation: any): string => {
+  if (typeof engineAssociation === 'string' && engineAssociation === 'Custom') {
+    return 'Custom'
+  }
+  if (typeof engineAssociation === 'object' && engineAssociation.Standard) {
+    return engineAssociation.Standard.replace(/\./g, '-')
+  }
+  return 'Unknown'
+}
+
+const getAlgorithmDisplayName = (algorithm: CompressionAlgorithm): string => {
+  switch (algorithm) {
+    case 'Zip': return 'ZIP'
+    case 'SevenZip': return '7-Zip'
+    case 'Tar': return 'TAR'
+    case 'TarGz': return 'TAR.GZ'
+    default: return algorithm
+  }
+}
+
+const getAlgorithmDescription = (algorithm: CompressionAlgorithm): string => {
+  switch (algorithm) {
+    case 'Zip': return 'Standard ZIP compression, widely supported'
+    case 'SevenZip': return 'High compression ratio, requires 7-Zip'
+    case 'Tar': return 'Archive format, no compression'
+    case 'TarGz': return 'TAR with GZIP compression'
+    default: return ''
+  }
+}
+
+const getExtensionForAlgorithm = (algorithm: CompressionAlgorithm): string => {
+  switch (algorithm) {
+    case 'Zip': return 'zip'
+    case 'SevenZip': return '7z'
+    case 'Tar': return 'tar'
+    case 'TarGz': return 'tar.gz'
+    default: return 'zip'
+  }
+}
+
+const loadSystemInfo = async () => {
+  try {
+    systemUsername.value = await invoke('get_system_username') as string
+    systemHostname.value = await invoke('get_system_hostname') as string
+  } catch (error) {
+    console.error('Failed to load system info:', error)
+    // Keep fallback values
+  }
+}
+
+const loadAvailableAlgorithms = async () => {
+  try {
+    const algorithms = await invoke('get_available_compression_algorithms') as CompressionAlgorithm[]
+    availableAlgorithms.value = algorithms
+
+    // Set the default algorithm to the first available one
+    if (algorithms.length > 0) {
+      selectedAlgorithm.value = algorithms[0]
+    }
+  } catch (error) {
+    console.error('Failed to load available compression algorithms:', error)
+    addLog('Failed to load compression algorithms', 'error')
+    // Fallback to ZIP
+    availableAlgorithms.value = ['Zip']
+    selectedAlgorithm.value = 'Zip'
+  }
+}
+
+const loadAvailableFormats = async () => {
+  try {
+    const settings = await invoke('get_settings') as AppSettings
+    availableFormats.value = settings.compression.custom_presets
+
+    // Set default format
+    if (settings.compression.filename_format) {
+      selectedFormat.value = settings.compression.filename_format
+    }
+  } catch (error) {
+    console.error('Failed to load compression settings:', error)
+    addLog('Failed to load compression settings', 'error')
+    // Fallback formats
+    availableFormats.value = {
+      'Default': '[Project]_[YYYY][MM][DD][HH][mm]',
+      'Default Extended': '[Project]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]',
+      'Simple': '[Project]_[Type]'
+    }
+  }
+}
+
+const updatePreview = () => {
+  // Force reactivity update for the computed property
+  // The computed property will automatically recalculate
+}
+
+const selectDestination = async () => {
+  if (isCompressing.value) return
+
+  try {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: 'Select destination folder for compressed archive'
+    })
+
+    if (selected) {
+      destinationPath.value = selected
+    }
+  } catch (error) {
+    console.error('Failed to open destination dialog:', error)
+    addLog('Failed to open destination dialog', 'error')
+  }
+}
+
+const startCompression = async () => {
+  if (!canCompress.value || isCompressing.value) return
+
+  try {
+    isCompressing.value = true
+
+    const request = {
+      project_path: props.projectPath,
+      destination_path: destinationPath.value,
+      compression_algorithm: selectedAlgorithm.value,
+      clean_before_compress: cleanBeforeCompress.value,
+      cleaning_selection: cleanBeforeCompress.value ? {
+        ide_files: cleaningSelection.ide_files,
+        binaries: cleaningSelection.binaries,
+        build: cleaningSelection.build,
+        intermediate: cleaningSelection.intermediate,
+        derived_data_cache: cleaningSelection.derived_data_cache,
+        saved: cleaningSelection.saved,
+        analyze_plugins: cleaningSelection.analyze_plugins,
+        plugin_binaries: cleaningSelection.plugin_binaries,
+        plugin_intermediate: cleaningSelection.plugin_intermediate,
+        plugin_node_size_cache: cleaningSelection.plugin_node_size_cache
+      } : null
+    }
+
+    await invoke('compress_project', { request })
+
+    emit('close')
+
+  } catch (error) {
+    // Do nothing, the backend will handle the error
+  } finally {
+    isCompressing.value = false
+  }
+}
+
+onMounted(() => {
+  loadSystemInfo()
+  loadAvailableAlgorithms()
+  loadAvailableFormats()
+})
+</script>
+
 <template>
   <div class="project-compress-popup">
     <div class="popup-header">
@@ -269,289 +552,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import { open } from '@tauri-apps/plugin-dialog'
-import InfoTooltip from '../InfoTooltip.vue'
-import { useLogStore } from '../../stores/logStore'
-import { useProjectStore } from '../../stores/projectStore'
-
-interface Props {
-  projectName: string
-  projectPath: string
-}
-
-interface CleaningSelection {
-  ide_files: boolean
-  binaries: boolean
-  build: boolean
-  intermediate: boolean
-  derived_data_cache: boolean
-  saved: boolean
-  analyze_plugins: boolean
-  plugin_binaries: boolean
-  plugin_intermediate: boolean
-  plugin_node_size_cache: boolean
-}
-
-type CompressionAlgorithm = 'Zip' | 'SevenZip' | 'Tar' | 'TarGz'
-
-interface AppSettings {
-  compression: {
-    filename_format: string
-    custom_presets: Record<string, string>
-  }
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits<{
-  (e: 'close'): void
-}>()
-
-const { addLog } = useLogStore()
-const { findProjectByPath } = useProjectStore()
-
-const isCompressing = ref(false)
-const cleanBeforeCompress = ref(false)
-const selectedAlgorithm = ref<CompressionAlgorithm>('Zip')
-const selectedFormat = ref('[Project]_[YYYY][MM][DD][HH][mm]')
-const destinationPath = ref('')
-const availableAlgorithms = ref<CompressionAlgorithm[]>([])
-const availableFormats = ref<Record<string, string>>({})
-const systemUsername = ref('john_doe')
-const systemHostname = ref('DESKTOP-PC')
-
-const cleaningSelection = reactive<CleaningSelection>({
-  ide_files: true,
-  binaries: true,
-  build: true,
-  intermediate: true,
-  derived_data_cache: false,
-  saved: false,
-  analyze_plugins: false,
-  plugin_binaries: false,
-  plugin_intermediate: false,
-  plugin_node_size_cache: false
-})
-
-const canCompress = computed(() => {
-  return destinationPath.value.trim() !== '' && selectedAlgorithm.value !== null
-})
-
-// Sort available formats alphabetically by name
-const sortedAvailableFormats = computed(() => {
-  const entries = Object.entries(availableFormats.value)
-  entries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
-  return Object.fromEntries(entries)
-})
-
-const outputFilename = computed(() => {
-  // Get the project details for better filename generation
-  const project = findProjectByPath(props.projectPath)
-  
-  // Generate the preview using the selected format
-  const now = new Date()
-  let preview = selectedFormat.value
-  
-  // Replace common tags with example values
-  const replacements: Record<string, string> = {
-    'Project': props.projectName,
-    'Type': project?.has_cpp ? 'Cpp' : 'Bp',
-    'Engine': project ? getEngineVersionFormatted(project.engine_association) : 'Unknown',
-    'SizeMB': project ? Math.floor(project.size_on_disk / (1024 * 1024)).toString() : '0',
-    'SizeGB': project ? Math.floor(project.size_on_disk / (1024 * 1024 * 1024)).toString() : '0',
-    'PluginCount': project ? project.plugins.length.toString() : '0',
-    'Algorithm': getAlgorithmDisplayName(selectedAlgorithm.value),
-    'YYYY': now.getFullYear().toString(),
-    'YY': now.getFullYear().toString().slice(-2),
-    'MM': (now.getMonth() + 1).toString().padStart(2, '0'),
-    'DD': now.getDate().toString().padStart(2, '0'),
-    'HH': now.getHours().toString().padStart(2, '0'),
-    'mm': now.getMinutes().toString().padStart(2, '0'),
-    'ss': now.getSeconds().toString().padStart(2, '0'),
-    'Month': now.toLocaleDateString('en-US', { month: 'long' }),
-    'Mon': now.toLocaleDateString('en-US', { month: 'short' }),
-    'Day': now.toLocaleDateString('en-US', { weekday: 'long' }),
-    'Weekday': now.toLocaleDateString('en-US', { weekday: 'short' }),
-    'User': systemUsername.value,
-    'Computer': systemHostname.value,
-    'Timestamp': Math.floor(now.getTime() / 1000).toString()
-  }
-  
-  for (const [key, value] of Object.entries(replacements)) {
-    preview = preview.replace(new RegExp(`\\[${key}\\]`, 'g'), value)
-  }
-  
-  const extension = getExtensionForAlgorithm(selectedAlgorithm.value)
-  if (!preview.includes('.')) {
-    preview += `.${extension}`
-  }
-  
-  return preview
-})
-
-// Watch for changes in selectedFormat to update preview
-watch(selectedFormat, () => {
-  // The computed property will automatically update
-})
-
-const getEngineVersionFormatted = (engineAssociation: any): string => {
-  if (typeof engineAssociation === 'string' && engineAssociation === 'Custom') {
-    return 'Custom'
-  }
-  if (typeof engineAssociation === 'object' && engineAssociation.Standard) {
-    return engineAssociation.Standard.replace(/\./g, '-')
-  }
-  return 'Unknown'
-}
-
-const getAlgorithmDisplayName = (algorithm: CompressionAlgorithm): string => {
-  switch (algorithm) {
-    case 'Zip': return 'ZIP'
-    case 'SevenZip': return '7-Zip'
-    case 'Tar': return 'TAR'
-    case 'TarGz': return 'TAR.GZ'
-    default: return algorithm
-  }
-}
-
-const getAlgorithmDescription = (algorithm: CompressionAlgorithm): string => {
-  switch (algorithm) {
-    case 'Zip': return 'Standard ZIP compression, widely supported'
-    case 'SevenZip': return 'High compression ratio, requires 7-Zip'
-    case 'Tar': return 'Archive format, no compression'
-    case 'TarGz': return 'TAR with GZIP compression'
-    default: return ''
-  }
-}
-
-const getExtensionForAlgorithm = (algorithm: CompressionAlgorithm): string => {
-  switch (algorithm) {
-    case 'Zip': return 'zip'
-    case 'SevenZip': return '7z'
-    case 'Tar': return 'tar'
-    case 'TarGz': return 'tar.gz'
-    default: return 'zip'
-  }
-}
-
-const loadSystemInfo = async () => {
-  try {
-    systemUsername.value = await invoke('get_system_username') as string
-    systemHostname.value = await invoke('get_system_hostname') as string
-  } catch (error) {
-    console.error('Failed to load system info:', error)
-    // Keep fallback values
-  }
-}
-
-const loadAvailableAlgorithms = async () => {
-  try {
-    const algorithms = await invoke('get_available_compression_algorithms') as CompressionAlgorithm[]
-    availableAlgorithms.value = algorithms
-    
-    // Set the default algorithm to the first available one
-    if (algorithms.length > 0) {
-      selectedAlgorithm.value = algorithms[0]
-    }
-  } catch (error) {
-    console.error('Failed to load available compression algorithms:', error)
-    addLog('Failed to load compression algorithms', 'error')
-    // Fallback to ZIP
-    availableAlgorithms.value = ['Zip']
-    selectedAlgorithm.value = 'Zip'
-  }
-}
-
-const loadAvailableFormats = async () => {
-  try {
-    const settings = await invoke('get_settings') as AppSettings
-    availableFormats.value = settings.compression.custom_presets
-    
-    // Set default format
-    if (settings.compression.filename_format) {
-      selectedFormat.value = settings.compression.filename_format
-    }
-  } catch (error) {
-    console.error('Failed to load compression settings:', error)
-    addLog('Failed to load compression settings', 'error')
-    // Fallback formats
-    availableFormats.value = {
-      'Default': '[Project]_[YYYY][MM][DD][HH][mm]',
-      'Default Extended': '[Project]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]',
-      'Simple': '[Project]_[Type]'
-    }
-  }
-}
-
-const updatePreview = () => {
-  // Force reactivity update for the computed property
-  // The computed property will automatically recalculate
-}
-
-const selectDestination = async () => {
-  if (isCompressing.value) return
-  
-  try {
-    const selected = await open({
-      directory: true,
-      multiple: false,
-      title: 'Select destination folder for compressed archive'
-    })
-    
-    if (selected) {
-      destinationPath.value = selected
-    }
-  } catch (error) {
-    console.error('Failed to open destination dialog:', error)
-    addLog('Failed to open destination dialog', 'error')
-  }
-}
-
-const startCompression = async () => {
-  if (!canCompress.value || isCompressing.value) return
-  
-  try {
-    isCompressing.value = true
-    
-    const request = {
-      project_path: props.projectPath,
-      destination_path: destinationPath.value,
-      compression_algorithm: selectedAlgorithm.value,
-      clean_before_compress: cleanBeforeCompress.value,
-      cleaning_selection: cleanBeforeCompress.value ? {
-        ide_files: cleaningSelection.ide_files,
-        binaries: cleaningSelection.binaries,
-        build: cleaningSelection.build,
-        intermediate: cleaningSelection.intermediate,
-        derived_data_cache: cleaningSelection.derived_data_cache,
-        saved: cleaningSelection.saved,
-        analyze_plugins: cleaningSelection.analyze_plugins,
-        plugin_binaries: cleaningSelection.plugin_binaries,
-        plugin_intermediate: cleaningSelection.plugin_intermediate,
-        plugin_node_size_cache: cleaningSelection.plugin_node_size_cache
-      } : null
-    }
-    
-    await invoke('compress_project', { request })
-    
-    emit('close')
-    
-  } catch (error) {
-    // Do nothing, the backend will handle the error
-  } finally {
-    isCompressing.value = false
-  }
-}
-
-onMounted(() => {
-  loadSystemInfo()
-  loadAvailableAlgorithms()
-  loadAvailableFormats()
-})
-</script>
 
 <style scoped>
 .project-compress-popup {

@@ -1,18 +1,18 @@
-import { createApp } from "vue";
+import {createApp} from "vue";
 import App from "./App.vue";
 import "./styles/variables.css";
-import { useLogStore } from './stores/logStore'
-import { useProjectStore } from './stores/projectStore'
-import { useTaskStore } from './stores/taskStore'
-import { useSettingsStore } from './stores/settingsStore'
+import {useLogStore} from './stores/logStore'
+import {useProjectStore} from './stores/projectStore'
+import {useTaskStore} from './stores/taskStore'
+import {useSettingsStore} from './stores/settingsStore'
 
 createApp(App).mount("#app");
 
 // Initialize stores
-const { addLog, initLogListener } = useLogStore()
-const { initializeStore } = useProjectStore()
-const { initTaskListener } = useTaskStore()
-const { initSettingsListener, loadSettings } = useSettingsStore()
+const {addLog, initLogListener} = useLogStore()
+const {initializeStore} = useProjectStore()
+const {initTaskListener} = useTaskStore()
+const {initSettingsListener, loadSettings} = useSettingsStore()
 
 try {
     // Initialize log system
@@ -24,7 +24,7 @@ try {
     await initTaskListener()
     // Initialize the project store and listen for backend events
     await initializeStore()
-    
+
     // Frontend initialization complete
     addLog('Application started successfully')
 } catch (error) {

@@ -1,3 +1,76 @@
+<script setup lang="ts">
+import { ref, computed, nextTick, watch } from 'vue'
+
+interface Props {
+  content: string
+}
+
+const props = defineProps<Props>()
+
+const showTooltip = ref(false)
+const iconRef = ref<HTMLElement>()
+const tooltipRef = ref<HTMLElement>()
+const tooltipPosition = ref({ left: 0, top: 0 })
+
+// Calculate dynamic width based on content length
+const tooltipStyle = computed(() => {
+  const contentLength = props.content.length
+  let width = '20rem' // Default width
+
+  if (contentLength > 100) {
+    width = '30rem'
+  } else if (contentLength > 200) {
+    width = '40rem'
+  } else if (contentLength > 300) {
+    width = '50rem'
+  }
+
+  return {
+    width,
+    maxWidth: '90vw',
+    position: 'fixed' as const,
+    zIndex: 10001,
+    left: `${tooltipPosition.value.left}px`,
+    top: `${tooltipPosition.value.top}px`,
+    transform: 'translateY(-100%)'
+  }
+})
+
+// Position tooltip relative to icon when shown
+watch(showTooltip, async (isVisible) => {
+  if (isVisible && iconRef.value) {
+    await nextTick()
+
+    // Wait a bit more for the tooltip to be fully rendered
+    setTimeout(() => {
+      if (!iconRef.value || !tooltipRef.value) return
+
+      const iconRect = iconRef.value.getBoundingClientRect()
+      const tooltipElement = tooltipRef.value
+      const tooltipRect = tooltipElement.getBoundingClientRect()
+
+      // Calculate initial position (centered above icon)
+      let left = iconRect.left + (iconRect.width / 2) - (tooltipRect.width / 2)
+      const top = iconRect.top - 8 // 8px gap above icon
+
+      // Ensure tooltip doesn't go beyond left edge
+      if (left < 8) {
+        left = 8
+      }
+
+      // Ensure tooltip doesn't go beyond right edge
+      const viewportWidth = window.innerWidth
+      if (left + tooltipRect.width > viewportWidth - 8) {
+        left = viewportWidth - tooltipRect.width - 8
+      }
+
+      // Update position
+      tooltipPosition.value = { left, top }
+    }, 10)
+  }
+})
+</script>
+
 <template>
   <div class="info-tooltip-container">
     <div 
@@ -25,79 +98,6 @@
     </Teleport>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, computed, nextTick, watch } from 'vue'
-
-interface Props {
-  content: string
-}
-
-const props = defineProps<Props>()
-
-const showTooltip = ref(false)
-const iconRef = ref<HTMLElement>()
-const tooltipRef = ref<HTMLElement>()
-const tooltipPosition = ref({ left: 0, top: 0 })
-
-// Calculate dynamic width based on content length
-const tooltipStyle = computed(() => {
-  const contentLength = props.content.length
-  let width = '20rem' // Default width
-  
-  if (contentLength > 100) {
-    width = '30rem'
-  } else if (contentLength > 200) {
-    width = '40rem'
-  } else if (contentLength > 300) {
-    width = '50rem'
-  }
-  
-  return {
-    width,
-    maxWidth: '90vw',
-    position: 'fixed' as const,
-    zIndex: 10001,
-    left: `${tooltipPosition.value.left}px`,
-    top: `${tooltipPosition.value.top}px`,
-    transform: 'translateY(-100%)'
-  }
-})
-
-// Position tooltip relative to icon when shown
-watch(showTooltip, async (isVisible) => {
-  if (isVisible && iconRef.value) {
-    await nextTick()
-    
-    // Wait a bit more for the tooltip to be fully rendered
-    setTimeout(() => {
-      if (!iconRef.value || !tooltipRef.value) return
-      
-      const iconRect = iconRef.value.getBoundingClientRect()
-      const tooltipElement = tooltipRef.value
-      const tooltipRect = tooltipElement.getBoundingClientRect()
-      
-      // Calculate initial position (centered above icon)
-      let left = iconRect.left + (iconRect.width / 2) - (tooltipRect.width / 2)
-      const top = iconRect.top - 8 // 8px gap above icon
-      
-      // Ensure tooltip doesn't go beyond left edge
-      if (left < 8) {
-        left = 8
-      }
-      
-      // Ensure tooltip doesn't go beyond right edge
-      const viewportWidth = window.innerWidth
-      if (left + tooltipRect.width > viewportWidth - 8) {
-        left = viewportWidth - tooltipRect.width - 8
-      }
-      
-      // Update position
-      tooltipPosition.value = { left, top }
-    }, 10)
-  }
-})
-</script>
 
 <style scoped>
 .info-tooltip-container {
