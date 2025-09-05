@@ -1,3 +1,61 @@
+<script setup lang="ts">
+import {ref, reactive, onMounted, watch} from 'vue'
+import {invoke} from '@tauri-apps/api/core'
+import {useSettingsStore} from '../../../stores/settingsStore'
+import {usePopup} from "../../../composables/usePopup.ts";
+import {emit} from "@tauri-apps/api/event";
+
+const {getSettings, updateGeneralSettings} = useSettingsStore()
+const {showPopup, hidePopup} = usePopup()
+
+const localGeneral = reactive({... getSettings('general')})
+
+const systemInfo = ref({
+  platform: 'Unknown',
+  version: '0.1.0',
+  username: 'Unknown',
+  hostname: 'Unknown'
+})
+
+const handleUpdate = (source: string) => {
+  switch (source) {
+    case 'autostart_enabled':
+      break
+    case 'show_welcome_popup':
+      if (localGeneral.show_welcome_popup) {
+        showPopup({
+          id: 'welcome',
+          component: 'Welcome',
+          props: {}
+        })
+        // hide self popup after showing welcome
+        hidePopup('settings')
+      }
+      break
+  }
+  updateGeneralSettings(localGeneral)
+}
+
+const loadSystemInfo = async () => {
+  try {
+    systemInfo.value.platform = navigator.platform || 'Unknown'
+    systemInfo.value.username = await invoke('get_system_username') as string
+    systemInfo.value.hostname = await invoke('get_system_hostname') as string
+  } catch (error) {
+    console.error('Failed to load system info:', error)
+  }
+}
+
+// Watch for external changes to settings
+watch( () => getSettings('general'), (newGeneral) => {
+  Object.assign(localGeneral, newGeneral)
+}, {deep: true})
+
+onMounted(() => {
+  loadSystemInfo()
+})
+</script>
+
 <template>
   <div class="general-settings">
     <div class="settings-section">
@@ -63,63 +121,6 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import {ref, reactive, onMounted, watch} from 'vue'
-import {invoke} from '@tauri-apps/api/core'
-import {useSettingsStore} from '../../../stores/settingsStore'
-import {usePopup} from "../../../composables/usePopup.ts";
-import {emit} from "@tauri-apps/api/event";
-
-const {getSettings, updateGeneralSettings} = useSettingsStore()
-const {showPopup, hidePopup} = usePopup()
-
-const localGeneral = reactive({... getSettings('general')})
-
-const systemInfo = ref({
-  platform: 'Unknown',
-  version: '0.1.0',
-  username: 'Unknown',
-  hostname: 'Unknown'
-})
-
-const handleUpdate = (source: string) => {
-  switch (source) {
-    case 'autostart_enabled':
-      break
-    case 'show_welcome_popup':
-      if (localGeneral.show_welcome_popup) {
-        showPopup({
-          id: 'welcome',
-          component: 'Welcome',
-          props: {}
-        })
-        // hide self popup after showing welcome
-        hidePopup('settings')
-      }
-      break
-  }
-  updateGeneralSettings(localGeneral)
-}
-
-const loadSystemInfo = async () => {
-  try {
-    systemInfo.value.platform = navigator.platform || 'Unknown'
-    systemInfo.value.username = await invoke('get_system_username') as string
-    systemInfo.value.hostname = await invoke('get_system_hostname') as string
-  } catch (error) {
-    console.error('Failed to load system info:', error)
-  }
-}
-
-// Watch for external changes to settings
-watch( () => getSettings('general'), (newGeneral) => {
-  Object.assign(localGeneral, newGeneral)
-}, {deep: true})
-
-onMounted(() => {
-  loadSystemInfo()
-})
-</script>
 
 <style scoped>
 .general-settings {

@@ -1,3 +1,128 @@
+<script setup lang="ts">
+import { ref, reactive, computed, onMounted } from 'vue'
+import { open } from '@tauri-apps/plugin-dialog'
+import { invoke } from '@tauri-apps/api/core'
+import { useLogStore } from '../../../stores/logStore.ts'
+
+interface Props {
+  editingEngine?: string | null
+  initialPath?: string
+  onSave?: (data: { name: string; path: string; isEdit: boolean; originalName?: string }) => void
+}
+
+interface Emits {
+  (e: 'close'): void
+}
+
+interface DetectedEngine {
+  name: string
+  version: string
+  path: string
+  is_custom: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  editingEngine: null,
+  initialPath: ''
+})
+
+const emit = defineEmits<Emits>()
+const { addLog } = useLogStore()
+
+const engineForm = reactive({
+  path: props.initialPath || ''
+})
+
+const detectedEngine = ref<DetectedEngine | null>(null)
+const isProcessing = ref(false)
+
+const canSave = computed(() => {
+  return engineForm.path.trim() !== '' && detectedEngine.value !== null && !isProcessing.value
+})
+
+const browseForEngineDirectory = async () => {
+  if (isProcessing.value) return
+
+  try {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: 'Select Engine Root Directory'
+    })
+
+    if (selected) {
+      engineForm.path = selected
+      await detectEngine()
+    }
+  } catch (error) {
+    console.error('Failed to open directory dialog:', error)
+    addLog('Failed to open directory dialog', 'error')
+  }
+}
+
+const detectEngine = async () => {
+  if (!engineForm.path.trim()) {
+    detectedEngine.value = null
+    return
+  }
+
+  try {
+    isProcessing.value = true
+    detectedEngine.value = null
+
+    const result = await invoke('detect_engine_at_path', {
+      enginePath: engineForm.path
+    }) as DetectedEngine
+
+    detectedEngine.value = result
+
+  } catch (error) {
+    console.error('Failed to detect engine:', error)
+    addLog('No valid Unreal Engine installation found at the specified path', 'warn')
+    detectedEngine.value = null
+  } finally {
+    isProcessing.value = false
+  }
+}
+
+const saveEngine = async () => {
+  if (!canSave.value) return
+
+  try {
+    isProcessing.value = true
+
+    const data = {
+      name: detectedEngine.value!.name,
+      path: engineForm.path,
+      isEdit: !!props.editingEngine,
+      originalName: props.editingEngine || undefined
+    }
+
+    // Call the onSave callback if provided
+    if (props.onSave) {
+      props.onSave(data)
+    }
+
+    addLog(`${props.editingEngine ? 'Updated' : 'Added'} engine: ${detectedEngine.value!.name}`)
+
+    // Close the popup
+    emit('close')
+
+  } catch (error) {
+    console.error('Failed to save engine:', error)
+    addLog('Failed to save engine', 'error')
+  } finally {
+    isProcessing.value = false
+  }
+}
+
+onMounted(async () => {
+  if (engineForm.path) {
+    await detectEngine()
+  }
+})
+</script>
+
 <template>
   <div class="engine-form-popup">
     <div class="popup-header">
@@ -68,130 +193,6 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
-import { open } from '@tauri-apps/plugin-dialog'
-import { invoke } from '@tauri-apps/api/core'
-import { useLogStore } from '../../../stores/logStore.ts'
-
-interface Props {
-  editingEngine?: string | null
-  initialPath?: string
-  onSave?: (data: { name: string; path: string; isEdit: boolean; originalName?: string }) => void
-}
-
-interface Emits {
-  (e: 'close'): void
-}
-
-interface DetectedEngine {
-  name: string
-  version: string
-  path: string
-  is_custom: boolean
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  editingEngine: null,
-  initialPath: ''
-})
-
-const emit = defineEmits<Emits>()
-const { addLog } = useLogStore()
-
-const engineForm = reactive({
-  path: props.initialPath || ''
-})
-
-const detectedEngine = ref<DetectedEngine | null>(null)
-const isProcessing = ref(false)
-
-const canSave = computed(() => {
-  return engineForm.path.trim() !== '' && detectedEngine.value !== null && !isProcessing.value
-})
-
-const browseForEngineDirectory = async () => {
-  if (isProcessing.value) return
-  
-  try {
-    const selected = await open({
-      directory: true,
-      multiple: false,
-      title: 'Select Engine Root Directory'
-    })
-    
-    if (selected) {
-      engineForm.path = selected
-      await detectEngine()
-    }
-  } catch (error) {
-    console.error('Failed to open directory dialog:', error)
-    addLog('Failed to open directory dialog', 'error')
-  }
-}
-
-const detectEngine = async () => {
-  if (!engineForm.path.trim()) {
-    detectedEngine.value = null
-    return
-  }
-  
-  try {
-    isProcessing.value = true
-    detectedEngine.value = null
-    
-    const result = await invoke('detect_engine_at_path', {
-      enginePath: engineForm.path
-    }) as DetectedEngine
-    
-    detectedEngine.value = result
-    
-  } catch (error) {
-    console.error('Failed to detect engine:', error)
-    addLog('No valid Unreal Engine installation found at the specified path', 'warn')
-    detectedEngine.value = null
-  } finally {
-    isProcessing.value = false
-  }
-}
-
-const saveEngine = async () => {
-  if (!canSave.value) return
-  
-  try {
-    isProcessing.value = true
-    
-    const data = {
-      name: detectedEngine.value!.name,
-      path: engineForm.path,
-      isEdit: !!props.editingEngine,
-      originalName: props.editingEngine || undefined
-    }
-    
-    // Call the onSave callback if provided
-    if (props.onSave) {
-      props.onSave(data)
-    }
-    
-    addLog(`${props.editingEngine ? 'Updated' : 'Added'} engine: ${detectedEngine.value!.name}`)
-    
-    // Close the popup
-    emit('close')
-    
-  } catch (error) {
-    console.error('Failed to save engine:', error)
-    addLog('Failed to save engine', 'error')
-  } finally {
-    isProcessing.value = false
-  }
-}
-
-onMounted(async () => {
-  if (engineForm.path) {
-    await detectEngine()
-  }
-})
-</script>
 
 <style scoped>
 .engine-form-popup {

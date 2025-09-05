@@ -1,3 +1,83 @@
+<script setup lang="ts">
+import { reactive, ref } from 'vue'
+import { open } from '@tauri-apps/plugin-dialog'
+import InfoTooltip from '../InfoTooltip.vue'
+import { useProjectStore } from '../../stores/projectStore'
+import { useLogStore } from '../../stores/logStore'
+
+interface ProjectDiscoveryData {
+  baseFolder: string
+  ignoreEngine: boolean
+  ignoreTemplates: boolean
+  ignoreSamples: boolean
+}
+
+interface Emits {
+  (e: 'close'): void
+}
+
+const emit = defineEmits<Emits>()
+
+const { discoverProjects } = useProjectStore()
+const { addLog } = useLogStore()
+
+const isDiscovering = ref(false)
+
+const formData = reactive<ProjectDiscoveryData>({
+  baseFolder: '',
+  ignoreEngine: true,
+  ignoreTemplates: true,
+  ignoreSamples: true
+})
+
+const selectFolder = async () => {
+  if (isDiscovering.value) return
+
+  try {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: 'Select Base Folder for Project Discovery'
+    })
+
+    if (selected && typeof selected === 'string') {
+      formData.baseFolder = selected
+    }
+  } catch (error) {
+    console.error('Failed to open folder dialog:', error)
+    addLog('Failed to open folder dialog', 'error')
+  }
+}
+
+const handleSubmit = async () => {
+  if (!formData.baseFolder.trim() || isDiscovering.value) {
+    return
+  }
+
+  try {
+    isDiscovering.value = true
+
+    const request = {
+      base_folder: formData.baseFolder,
+      ignore_engine: formData.ignoreEngine,
+      ignore_templates: formData.ignoreTemplates,
+      ignore_samples: formData.ignoreSamples
+    }
+
+    const result = await discoverProjects(request)
+
+    addLog(`Project discovery completed. Found ${result.total_found} new projects in ${result.scan_duration_ms}ms`)
+    emit('close')
+
+  } catch (error) {
+    console.error('Project discovery failed:', error)
+    addLog('Project discovery failed. Check console for details.', 'error')
+  } finally {
+    isDiscovering.value = false
+  }
+}
+</script>
+
 <template>
   <div class="project-discovery-popup">
     <div class="popup-header">
@@ -115,86 +195,6 @@
     </form>
   </div>
 </template>
-
-<script setup lang="ts">
-import { reactive, ref } from 'vue'
-import { open } from '@tauri-apps/plugin-dialog'
-import InfoTooltip from '../InfoTooltip.vue'
-import { useProjectStore } from '../../stores/projectStore'
-import { useLogStore } from '../../stores/logStore'
-
-interface ProjectDiscoveryData {
-  baseFolder: string
-  ignoreEngine: boolean
-  ignoreTemplates: boolean
-  ignoreSamples: boolean
-}
-
-interface Emits {
-  (e: 'close'): void
-}
-
-const emit = defineEmits<Emits>()
-
-const { discoverProjects } = useProjectStore()
-const { addLog } = useLogStore()
-
-const isDiscovering = ref(false)
-
-const formData = reactive<ProjectDiscoveryData>({
-  baseFolder: '',
-  ignoreEngine: true,
-  ignoreTemplates: true,
-  ignoreSamples: true
-})
-
-const selectFolder = async () => {
-  if (isDiscovering.value) return
-  
-  try {
-    const selected = await open({
-      directory: true,
-      multiple: false,
-      title: 'Select Base Folder for Project Discovery'
-    })
-    
-    if (selected && typeof selected === 'string') {
-      formData.baseFolder = selected
-    }
-  } catch (error) {
-    console.error('Failed to open folder dialog:', error)
-    addLog('Failed to open folder dialog', 'error')
-  }
-}
-
-const handleSubmit = async () => {
-  if (!formData.baseFolder.trim() || isDiscovering.value) {
-    return
-  }
-  
-  try {
-    isDiscovering.value = true
-    
-    const request = {
-      base_folder: formData.baseFolder,
-      ignore_engine: formData.ignoreEngine,
-      ignore_templates: formData.ignoreTemplates,
-      ignore_samples: formData.ignoreSamples
-    }
-    
-    const result = await discoverProjects(request)
-    
-    addLog(`Project discovery completed. Found ${result.total_found} new projects in ${result.scan_duration_ms}ms`)
-    emit('close')
-    
-  } catch (error) {
-    console.error('Project discovery failed:', error)
-    addLog('Project discovery failed. Check console for details.', 'error')
-  } finally {
-    isDiscovering.value = false
-  }
-}
-</script>
 
 <style scoped>
 .project-discovery-popup {

@@ -1,3 +1,190 @@
+<script setup lang="ts">
+import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { usePopup } from '../../../composables/usePopup'
+import { useSettingsStore } from '../../../stores/settingsStore'
+
+const {
+  getSettings,
+  addCompressionPreset,
+  removeCompressionPreset,
+  updateCompressionPreset,
+  setCompressionFormat
+} = useSettingsStore()
+
+const { showPopup } = usePopup()
+
+const localCompression = reactive({ ... getSettings('compression') })
+
+const selectedPreset = ref('Default')
+const systemInfo = ref({
+  username: 'john_doe',
+  hostname: 'DESKTOP-PC'
+})
+
+// Sort available formats alphabetically by name
+const sortedAvailableFormats = computed(() => {
+  const entries = Object.entries(localCompression.custom_presets)
+  entries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
+  return Object.fromEntries(entries)
+})
+
+// Sort custom presets alphabetically by name
+const sortedCustomPresets = computed(() => {
+  const entries = Object.entries(localCompression.custom_presets)
+  entries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
+  return Object.fromEntries(entries)
+})
+
+const previewFilename = computed(() => {
+  return getPreviewForFormat(localCompression.filename_format)
+})
+
+const getPreviewForFormat = (format: string): string => {
+  const now = new Date()
+  let preview = format
+
+  // Replace common tags with example values
+  const replacements: Record<string, string> = {
+    'Project': 'MyAwesomeProject',
+    'Type': 'Cpp',
+    'Engine': '5-3',
+    'SizeMB': '1024',
+    'SizeGB': '1',
+    'PluginCount': '5',
+    'Algorithm': 'ZIP',
+    'YYYY': now.getFullYear().toString(),
+    'YY': now.getFullYear().toString().slice(-2),
+    'MM': (now.getMonth() + 1).toString().padStart(2, '0'),
+    'DD': now.getDate().toString().padStart(2, '0'),
+    'HH': now.getHours().toString().padStart(2, '0'),
+    'mm': now.getMinutes().toString().padStart(2, '0'),
+    'ss': now.getSeconds().toString().padStart(2, '0'),
+    'Month': now.toLocaleDateString('en-US', { month: 'long' }),
+    'Mon': now.toLocaleDateString('en-US', { month: 'short' }),
+    'Day': now.toLocaleDateString('en-US', { weekday: 'long' }),
+    'Weekday': now.toLocaleDateString('en-US', { weekday: 'short' }),
+    'User': systemInfo.value.username,
+    'Computer': systemInfo.value.hostname,
+    'Timestamp': Math.floor(now.getTime() / 1000).toString()
+  }
+
+  for (const [key, value] of Object.entries(replacements)) {
+    preview = preview.replace(new RegExp(`\\[${key}\\]`, 'g'), value)
+  }
+
+  if (!preview.includes('.')) {
+    preview += '.zip'
+  }
+
+  return preview
+}
+
+const applyPreset = () => {
+  if (selectedPreset.value && localCompression.custom_presets[selectedPreset.value]) {
+    localCompression.filename_format = localCompression.custom_presets[selectedPreset.value]
+    setCompressionFormat(localCompression.filename_format)
+  }
+}
+
+const openAddPresetPopup = () => {
+  showPopup({
+    id: 'preset-form',
+    component: 'PresetForm',
+    props: {
+      onSave: handlePresetSave
+    }
+  })
+}
+
+const editPreset = (name: string, format: string) => {
+  showPopup({
+    id: 'preset-form',
+    component: 'PresetForm',
+    props: {
+      editingPreset: name,
+      initialName: name,
+      initialFormat: format,
+      onSave: handlePresetSave
+    }
+  })
+}
+
+const removePreset = (name: string) => {
+  if (name === 'Default') return // Prevent removing the default preset
+
+  removeCompressionPreset(name)
+  delete localCompression.custom_presets[name]
+
+  // If the removed preset was selected, switch to Default
+  if (selectedPreset.value === name) {
+    selectedPreset.value = 'Default'
+    applyPreset()
+  }
+
+}
+
+const handlePresetSave = (data: { name: string; format: string; isEdit: boolean; originalName?: string }) => {
+  if (data.isEdit && data.originalName) {
+    // Update existing preset
+    updateCompressionPreset(data.originalName, data.name, data.format)
+    // Remove old entry if name changed
+    if (data.originalName !== data.name) {
+      delete localCompression.custom_presets[data.originalName]
+    }
+  } else {
+    // Add new preset
+    addCompressionPreset(data.name, data.format)
+  }
+
+  localCompression.custom_presets[data.name] = data.format
+}
+
+const loadSystemInfo = async () => {
+  try {
+    systemInfo.value.username = await invoke('get_system_username') as string
+    systemInfo.value.hostname = await invoke('get_system_hostname') as string
+  } catch (error) {
+    console.error('Failed to load system info:', error)
+  }
+}
+
+// Watch for external changes to settings
+watch( () => getSettings('compression'), (newCompression) => {
+  Object.assign(localCompression, newCompression)
+
+  // Ensure the selected preset is corresponding to filename_format
+  if (newCompression.filename_format) {
+    const presetName = Object.keys(newCompression.custom_presets).find(name =>
+        newCompression.custom_presets[name] === newCompression.filename_format
+    )
+
+    if (presetName) {
+      selectedPreset.value = presetName
+    } else {
+      selectedPreset.value = 'Default'
+    }
+  } else {
+    selectedPreset.value = 'Default'
+  }
+}, { deep: true })
+
+onMounted(async () => {
+  await loadSystemInfo()
+
+  // Set the selected preset to correspond to the current filename format
+  if (localCompression.filename_format) {
+    const presetName = Object.keys(localCompression.custom_presets).find(name =>
+        localCompression.custom_presets[name] === localCompression.filename_format
+    )
+
+    selectedPreset.value = presetName || 'Default'
+  } else {
+    selectedPreset.value = 'Default'
+  }
+})
+</script>
+
 <template>
   <div class="compression-settings">
     <div class="settings-section">
@@ -89,193 +276,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import { usePopup } from '../../../composables/usePopup'
-import { useSettingsStore } from '../../../stores/settingsStore'
-
-const { 
-  getSettings, 
-  addCompressionPreset, 
-  removeCompressionPreset, 
-  updateCompressionPreset, 
-  setCompressionFormat 
-} = useSettingsStore()
-
-const { showPopup } = usePopup()
-
-const localCompression = reactive({ ... getSettings('compression') })
-
-const selectedPreset = ref('Default')
-const systemInfo = ref({
-  username: 'john_doe',
-  hostname: 'DESKTOP-PC'
-})
-
-// Sort available formats alphabetically by name
-const sortedAvailableFormats = computed(() => {
-  const entries = Object.entries(localCompression.custom_presets)
-  entries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
-  return Object.fromEntries(entries)
-})
-
-// Sort custom presets alphabetically by name
-const sortedCustomPresets = computed(() => {
-  const entries = Object.entries(localCompression.custom_presets)
-  entries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
-  return Object.fromEntries(entries)
-})
-
-const previewFilename = computed(() => {
-  return getPreviewForFormat(localCompression.filename_format)
-})
-
-const getPreviewForFormat = (format: string): string => {
-  const now = new Date()
-  let preview = format
-  
-  // Replace common tags with example values
-  const replacements: Record<string, string> = {
-    'Project': 'MyAwesomeProject',
-    'Type': 'Cpp',
-    'Engine': '5-3',
-    'SizeMB': '1024',
-    'SizeGB': '1',
-    'PluginCount': '5',
-    'Algorithm': 'ZIP',
-    'YYYY': now.getFullYear().toString(),
-    'YY': now.getFullYear().toString().slice(-2),
-    'MM': (now.getMonth() + 1).toString().padStart(2, '0'),
-    'DD': now.getDate().toString().padStart(2, '0'),
-    'HH': now.getHours().toString().padStart(2, '0'),
-    'mm': now.getMinutes().toString().padStart(2, '0'),
-    'ss': now.getSeconds().toString().padStart(2, '0'),
-    'Month': now.toLocaleDateString('en-US', { month: 'long' }),
-    'Mon': now.toLocaleDateString('en-US', { month: 'short' }),
-    'Day': now.toLocaleDateString('en-US', { weekday: 'long' }),
-    'Weekday': now.toLocaleDateString('en-US', { weekday: 'short' }),
-    'User': systemInfo.value.username,
-    'Computer': systemInfo.value.hostname,
-    'Timestamp': Math.floor(now.getTime() / 1000).toString()
-  }
-  
-  for (const [key, value] of Object.entries(replacements)) {
-    preview = preview.replace(new RegExp(`\\[${key}\\]`, 'g'), value)
-  }
-  
-  if (!preview.includes('.')) {
-    preview += '.zip'
-  }
-  
-  return preview
-}
-
-const applyPreset = () => {
-  if (selectedPreset.value && localCompression.custom_presets[selectedPreset.value]) {
-    localCompression.filename_format = localCompression.custom_presets[selectedPreset.value]
-    setCompressionFormat(localCompression.filename_format)
-  }
-}
-
-const openAddPresetPopup = () => {
-  showPopup({
-    id: 'preset-form',
-    component: 'PresetForm',
-    props: {
-      onSave: handlePresetSave
-    }
-  })
-}
-
-const editPreset = (name: string, format: string) => {
-  showPopup({
-    id: 'preset-form',
-    component: 'PresetForm',
-    props: {
-      editingPreset: name,
-      initialName: name,
-      initialFormat: format,
-      onSave: handlePresetSave
-    }
-  })
-}
-
-const removePreset = (name: string) => {
-  if (name === 'Default') return // Prevent removing the default preset
-  
-  removeCompressionPreset(name)
-  delete localCompression.custom_presets[name]
-  
-  // If the removed preset was selected, switch to Default
-  if (selectedPreset.value === name) {
-    selectedPreset.value = 'Default'
-    applyPreset()
-  }
-  
-}
-
-const handlePresetSave = (data: { name: string; format: string; isEdit: boolean; originalName?: string }) => {
-  if (data.isEdit && data.originalName) {
-    // Update existing preset
-    updateCompressionPreset(data.originalName, data.name, data.format)
-    // Remove old entry if name changed
-    if (data.originalName !== data.name) {
-      delete localCompression.custom_presets[data.originalName]
-    }
-  } else {
-    // Add new preset
-    addCompressionPreset(data.name, data.format)
-  }
-
-  localCompression.custom_presets[data.name] = data.format
-}
-
-const loadSystemInfo = async () => {
-  try {
-    systemInfo.value.username = await invoke('get_system_username') as string
-    systemInfo.value.hostname = await invoke('get_system_hostname') as string
-  } catch (error) {
-    console.error('Failed to load system info:', error)
-  }
-}
-
-// Watch for external changes to settings
-watch( () => getSettings('compression'), (newCompression) => {
-  Object.assign(localCompression, newCompression)
-  
-  // Ensure the selected preset is corresponding to filename_format
-  if (newCompression.filename_format) {
-    const presetName = Object.keys(newCompression.custom_presets).find(name => 
-      newCompression.custom_presets[name] === newCompression.filename_format
-    )
-    
-    if (presetName) {
-      selectedPreset.value = presetName
-    } else {
-      selectedPreset.value = 'Default'
-    }
-  } else {
-    selectedPreset.value = 'Default'
-  }
-}, { deep: true })
-
-onMounted(async () => {
-  await loadSystemInfo()
-  
-  // Set the selected preset to correspond to the current filename format
-  if (localCompression.filename_format) {
-    const presetName = Object.keys(localCompression.custom_presets).find(name => 
-      localCompression.custom_presets[name] === localCompression.filename_format
-    )
-    
-    selectedPreset.value = presetName || 'Default'
-  } else {
-    selectedPreset.value = 'Default'
-  }
-})
-</script>
 
 <style scoped>
 .compression-settings {

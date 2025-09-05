@@ -1,3 +1,219 @@
+<script setup lang="ts">
+import { ref, reactive, computed, onMounted } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
+import InfoTooltip from '../InfoTooltip.vue'
+import { useLogStore } from '../../stores/logStore'
+import { useProjectStore } from '../../stores/projectStore'
+
+interface Props {
+  projectName: string
+  projectPath: string
+}
+
+interface PackageConfig {
+  buildType: string
+  targetPlatform: string
+  outputDirectory: string
+  forDistribution: boolean
+  includePrerequisites: boolean
+  includeAppLocalPrerequisites: boolean
+  includeCrashReporter: boolean
+  usePakFile: boolean
+  compressContent: boolean
+  createArchive: boolean
+  archiveFormat: string
+  archiveFilenameFormat: string
+}
+
+type CompressionAlgorithm = 'Zip' | 'SevenZip' | 'Tar' | 'TarGz'
+
+const props = defineProps<Props>()
+const emit = defineEmits<{
+  (e: 'close'): void
+}>()
+
+const { addLog } = useLogStore()
+const { findProjectByPath } = useProjectStore()
+
+const isPackaging = ref(false)
+const availableFormats = ref<Record<string, string>>({})
+
+const packageConfig = reactive<PackageConfig>({
+  buildType: 'Development',
+  targetPlatform: 'Win64',
+  outputDirectory: '',
+  createArchive: false,
+  archiveFormat: 'Zip',
+  archiveFilenameFormat: '[Project]_[Platform]_[BuildType]_[YYYY][MM][DD][HH][mm]'
+})
+
+const canPackage = computed(() => {
+  return packageConfig.outputDirectory.trim() !== ''
+})
+
+const archivePreview = computed(() => {
+  if (!packageConfig.createArchive) return ''
+
+  const project = findProjectByPath(props.projectPath)
+  const now = new Date()
+  let preview = packageConfig.archiveFilenameFormat
+
+  const replacements: Record<string, string> = {
+    'Project': props.projectName,
+    'Platform': packageConfig.targetPlatform,
+    'BuildType': packageConfig.buildType,
+    'Type': project?.has_cpp ? 'Cpp' : 'Bp',
+    'Engine': project ? getEngineVersionFormatted(project.engine_association) : 'Unknown',
+    'YYYY': now.getFullYear().toString(),
+    'YY': now.getFullYear().toString().slice(-2),
+    'MM': (now.getMonth() + 1).toString().padStart(2, '0'),
+    'DD': now.getDate().toString().padStart(2, '0'),
+    'HH': now.getHours().toString().padStart(2, '0'),
+    'mm': now.getMinutes().toString().padStart(2, '0'),
+    'ss': now.getSeconds().toString().padStart(2, '0')
+  }
+
+  for (const [key, value] of Object.entries(replacements)) {
+    preview = preview.replace(new RegExp(`\\[${key}\\]`, 'g'), value)
+  }
+
+  const extension = getExtensionForAlgorithm(packageConfig.archiveFormat as CompressionAlgorithm)
+  if (!preview.includes('.')) {
+    preview += `.${extension}`
+  }
+
+  return preview
+})
+
+const getBuildTypeDescription = (buildType: string): string => {
+  switch (buildType) {
+    case 'Debug':
+      return 'Full debugging information, no optimizations. Largest and slowest build.'
+    case 'DebugGame':
+      return 'Debugging for game code only, engine is optimized. Good for gameplay debugging.'
+    case 'Development':
+      return 'Balanced build with some optimizations and debugging capabilities.'
+    case 'Shipping':
+      return 'Fully optimized build for release. No debugging information, smallest size.'
+    case 'Test':
+      return 'Similar to Shipping but with some console commands and stats enabled.'
+    default:
+      return ''
+  }
+}
+
+const getEngineVersionFormatted = (engineAssociation: any): string => {
+  if (typeof engineAssociation === 'string' && engineAssociation === 'Custom') {
+    return 'Custom'
+  }
+  if (typeof engineAssociation === 'object' && engineAssociation.Standard) {
+    return engineAssociation.Standard.replace(/\./g, '-')
+  }
+  return 'Unknown'
+}
+
+const getExtensionForAlgorithm = (algorithm: CompressionAlgorithm): string => {
+  switch (algorithm) {
+    case 'Zip': return 'zip'
+    case 'SevenZip': return '7z'
+    case 'Tar': return 'tar'
+    case 'TarGz': return 'tar.gz'
+    default: return 'zip'
+  }
+}
+
+const selectOutputDirectory = async () => {
+  if (isPackaging.value) return
+
+  try {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: 'Select output directory for packaged build'
+    })
+
+    if (selected) {
+      packageConfig.outputDirectory = selected
+    }
+  } catch (error) {
+    console.error('Failed to open directory dialog:', error)
+    addLog('Failed to open directory dialog', 'error')
+  }
+}
+
+const loadAvailableFormats = async () => {
+  try {
+    const settings = await invoke('get_settings') as any
+    availableFormats.value = {
+      'Default': '[Project]_[Platform]_[BuildType]_[YYYY][MM][DD][HH][mm]',
+      'Extended': '[Project]_[Platform]_[BuildType]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]',
+      'Simple': '[Project]_[Platform]_[BuildType]',
+      ...settings.compression.custom_presets
+    }
+  } catch (error) {
+    console.error('Failed to load compression settings:', error)
+    availableFormats.value = {
+      'Default': '[Project]_[Platform]_[BuildType]_[YYYY][MM][DD][HH][mm]',
+      'Extended': '[Project]_[Platform]_[BuildType]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]',
+      'Simple': '[Project]_[Platform]_[BuildType]'
+    }
+  }
+}
+
+const detectPlatform = async () => {
+  try {
+    const platform = await invoke('get_current_platform') as string
+    switch (platform.toLowerCase()) {
+      case 'windows':
+        packageConfig.targetPlatform = 'Win64'
+        break
+      case 'macos':
+        packageConfig.targetPlatform = 'Mac'
+        break
+      case 'linux':
+        packageConfig.targetPlatform = 'Linux'
+        break
+    }
+  } catch (error) {
+    console.error('Failed to detect platform:', error)
+    // Keep default Win64
+  }
+}
+
+const startPackaging = async () => {
+  if (!canPackage.value || isPackaging.value) return
+
+  try {
+    isPackaging.value = true
+
+    const request = {
+      project_path: props.projectPath,
+      build_type: packageConfig.buildType,
+      target_platform: packageConfig.targetPlatform,
+      output_directory: packageConfig.outputDirectory,
+      create_archive: packageConfig.createArchive,
+      archive_format: packageConfig.createArchive ? packageConfig.archiveFormat : null,
+      archive_filename_format: packageConfig.createArchive ? packageConfig.archiveFilenameFormat : null
+    }
+
+    await invoke('package_project', { request })
+
+    emit('close')
+
+  } catch (error) {
+    // Backend will handle error logging
+  } finally {
+    isPackaging.value = false
+  }
+}
+
+onMounted(() => {
+  loadAvailableFormats()
+  detectPlatform()
+})
+</script>
+
 <template>
   <div class="project-package-popup">
     <div class="popup-header">
@@ -171,222 +387,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import { open } from '@tauri-apps/plugin-dialog'
-import InfoTooltip from '../InfoTooltip.vue'
-import { useLogStore } from '../../stores/logStore'
-import { useProjectStore } from '../../stores/projectStore'
-
-interface Props {
-  projectName: string
-  projectPath: string
-}
-
-interface PackageConfig {
-  buildType: string
-  targetPlatform: string
-  outputDirectory: string
-  forDistribution: boolean
-  includePrerequisites: boolean
-  includeAppLocalPrerequisites: boolean
-  includeCrashReporter: boolean
-  usePakFile: boolean
-  compressContent: boolean
-  createArchive: boolean
-  archiveFormat: string
-  archiveFilenameFormat: string
-}
-
-type CompressionAlgorithm = 'Zip' | 'SevenZip' | 'Tar' | 'TarGz'
-
-const props = defineProps<Props>()
-const emit = defineEmits<{
-  (e: 'close'): void
-}>()
-
-const { addLog } = useLogStore()
-const { findProjectByPath } = useProjectStore()
-
-const isPackaging = ref(false)
-const availableFormats = ref<Record<string, string>>({})
-
-const packageConfig = reactive<PackageConfig>({
-  buildType: 'Development',
-  targetPlatform: 'Win64',
-  outputDirectory: '',
-  createArchive: false,
-  archiveFormat: 'Zip',
-  archiveFilenameFormat: '[Project]_[Platform]_[BuildType]_[YYYY][MM][DD][HH][mm]'
-})
-
-const canPackage = computed(() => {
-  return packageConfig.outputDirectory.trim() !== ''
-})
-
-const archivePreview = computed(() => {
-  if (!packageConfig.createArchive) return ''
-  
-  const project = findProjectByPath(props.projectPath)
-  const now = new Date()
-  let preview = packageConfig.archiveFilenameFormat
-  
-  const replacements: Record<string, string> = {
-    'Project': props.projectName,
-    'Platform': packageConfig.targetPlatform,
-    'BuildType': packageConfig.buildType,
-    'Type': project?.has_cpp ? 'Cpp' : 'Bp',
-    'Engine': project ? getEngineVersionFormatted(project.engine_association) : 'Unknown',
-    'YYYY': now.getFullYear().toString(),
-    'YY': now.getFullYear().toString().slice(-2),
-    'MM': (now.getMonth() + 1).toString().padStart(2, '0'),
-    'DD': now.getDate().toString().padStart(2, '0'),
-    'HH': now.getHours().toString().padStart(2, '0'),
-    'mm': now.getMinutes().toString().padStart(2, '0'),
-    'ss': now.getSeconds().toString().padStart(2, '0')
-  }
-  
-  for (const [key, value] of Object.entries(replacements)) {
-    preview = preview.replace(new RegExp(`\\[${key}\\]`, 'g'), value)
-  }
-  
-  const extension = getExtensionForAlgorithm(packageConfig.archiveFormat as CompressionAlgorithm)
-  if (!preview.includes('.')) {
-    preview += `.${extension}`
-  }
-  
-  return preview
-})
-
-const getBuildTypeDescription = (buildType: string): string => {
-  switch (buildType) {
-    case 'Debug':
-      return 'Full debugging information, no optimizations. Largest and slowest build.'
-    case 'DebugGame':
-      return 'Debugging for game code only, engine is optimized. Good for gameplay debugging.'
-    case 'Development':
-      return 'Balanced build with some optimizations and debugging capabilities.'
-    case 'Shipping':
-      return 'Fully optimized build for release. No debugging information, smallest size.'
-    case 'Test':
-      return 'Similar to Shipping but with some console commands and stats enabled.'
-    default:
-      return ''
-  }
-}
-
-const getEngineVersionFormatted = (engineAssociation: any): string => {
-  if (typeof engineAssociation === 'string' && engineAssociation === 'Custom') {
-    return 'Custom'
-  }
-  if (typeof engineAssociation === 'object' && engineAssociation.Standard) {
-    return engineAssociation.Standard.replace(/\./g, '-')
-  }
-  return 'Unknown'
-}
-
-const getExtensionForAlgorithm = (algorithm: CompressionAlgorithm): string => {
-  switch (algorithm) {
-    case 'Zip': return 'zip'
-    case 'SevenZip': return '7z'
-    case 'Tar': return 'tar'
-    case 'TarGz': return 'tar.gz'
-    default: return 'zip'
-  }
-}
-
-const selectOutputDirectory = async () => {
-  if (isPackaging.value) return
-  
-  try {
-    const selected = await open({
-      directory: true,
-      multiple: false,
-      title: 'Select output directory for packaged build'
-    })
-    
-    if (selected) {
-      packageConfig.outputDirectory = selected
-    }
-  } catch (error) {
-    console.error('Failed to open directory dialog:', error)
-    addLog('Failed to open directory dialog', 'error')
-  }
-}
-
-const loadAvailableFormats = async () => {
-  try {
-    const settings = await invoke('get_settings') as any
-    availableFormats.value = {
-      'Default': '[Project]_[Platform]_[BuildType]_[YYYY][MM][DD][HH][mm]',
-      'Extended': '[Project]_[Platform]_[BuildType]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]',
-      'Simple': '[Project]_[Platform]_[BuildType]',
-      ...settings.compression.custom_presets
-    }
-  } catch (error) {
-    console.error('Failed to load compression settings:', error)
-    availableFormats.value = {
-      'Default': '[Project]_[Platform]_[BuildType]_[YYYY][MM][DD][HH][mm]',
-      'Extended': '[Project]_[Platform]_[BuildType]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]',
-      'Simple': '[Project]_[Platform]_[BuildType]'
-    }
-  }
-}
-
-const detectPlatform = async () => {
-  try {
-    const platform = await invoke('get_current_platform') as string
-    switch (platform.toLowerCase()) {
-      case 'windows':
-        packageConfig.targetPlatform = 'Win64'
-        break
-      case 'macos':
-        packageConfig.targetPlatform = 'Mac'
-        break
-      case 'linux':
-        packageConfig.targetPlatform = 'Linux'
-        break
-    }
-  } catch (error) {
-    console.error('Failed to detect platform:', error)
-    // Keep default Win64
-  }
-}
-
-const startPackaging = async () => {
-  if (!canPackage.value || isPackaging.value) return
-  
-  try {
-    isPackaging.value = true
-    
-    const request = {
-      project_path: props.projectPath,
-      build_type: packageConfig.buildType,
-      target_platform: packageConfig.targetPlatform,
-      output_directory: packageConfig.outputDirectory,
-      create_archive: packageConfig.createArchive,
-      archive_format: packageConfig.createArchive ? packageConfig.archiveFormat : null,
-      archive_filename_format: packageConfig.createArchive ? packageConfig.archiveFilenameFormat : null
-    }
-    
-    await invoke('package_project', { request })
-    
-    emit('close')
-    
-  } catch (error) {
-    // Backend will handle error logging
-  } finally {
-    isPackaging.value = false
-  }
-}
-
-onMounted(() => {
-  loadAvailableFormats()
-  detectPlatform()
-})
-</script>
 
 <style scoped>
 .project-package-popup {

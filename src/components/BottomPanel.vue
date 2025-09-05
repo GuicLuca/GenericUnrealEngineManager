@@ -1,37 +1,3 @@
-<template>
-  <div class="bottom-panel" :style="{ height: height + 'px' }">
-    <div 
-      class="resize-handle" 
-      @mousedown="startResize"
-    ></div>
-    
-    <div class="tabs-header">
-      <div class="tabs-nav">
-        <button 
-          v-for="tab in tabs" 
-          :key="tab.id"
-          class="tab-button"
-          :class="{ active: activeTab === tab.id }"
-          @click="setActiveTab(tab.id)"
-        >
-          <span class="tab-icon">{{ tab.icon }}</span>
-          <span class="tab-title">{{ tab.title }}</span>
-        </button>
-      </div>
-    </div>
-    
-    <div class="tabs-content">
-      <div v-if="activeTab === 'logs'" class="tab-panel">
-        <LogsPanel />
-      </div>
-      <div v-else-if="activeTab === 'development'" class="tab-panel">
-        <DevelopmentPanel />
-      </div>
-      <!-- Add more tab panels here as needed -->
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref } from 'vue'
 import LogsPanel from './LogsPanel.vue'
@@ -75,10 +41,10 @@ const startResize = (event: MouseEvent) => {
 
 const handleResize = (event: MouseEvent) => {
   if (!isResizing.value) return
-  
+
   const containerRect = document.querySelector('.app-container')?.getBoundingClientRect()
   if (!containerRect) return
-  
+
   const newHeight = containerRect.bottom - event.clientY
   const clampedHeight = Math.min(Math.max(newHeight, props.minHeight), props.maxHeight)
   emit('resize', clampedHeight)
@@ -90,6 +56,40 @@ const stopResize = () => {
   document.removeEventListener('mouseup', stopResize)
 }
 </script>
+
+<template>
+  <div class="bottom-panel" :style="{ height: height + 'px' }">
+    <div 
+      class="resize-handle" 
+      @mousedown="startResize"
+    ></div>
+    
+    <div class="tabs-header">
+      <div class="tabs-nav">
+        <button 
+          v-for="tab in tabs" 
+          :key="tab.id"
+          class="tab-button"
+          :class="{ active: activeTab === tab.id }"
+          @click="setActiveTab(tab.id)"
+        >
+          <span class="tab-icon">{{ tab.icon }}</span>
+          <span class="tab-title">{{ tab.title }}</span>
+        </button>
+      </div>
+    </div>
+    
+    <div class="tabs-content">
+      <div v-if="activeTab === 'logs'" class="tab-panel">
+        <LogsPanel />
+      </div>
+      <div v-else-if="activeTab === 'development'" class="tab-panel">
+        <DevelopmentPanel />
+      </div>
+      <!-- Add more tab panels here as needed -->
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .bottom-panel {

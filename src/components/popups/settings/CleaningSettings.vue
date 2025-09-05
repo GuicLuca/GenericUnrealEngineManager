@@ -1,3 +1,29 @@
+<script setup lang="ts">
+import { reactive, watch } from 'vue'
+import InfoTooltip from '../../InfoTooltip.vue'
+import { useSettingsStore } from '../../../stores/settingsStore'
+
+const { getSettings, updateCleaningDefaults } = useSettingsStore()
+
+const localCleaning = reactive({ ...getSettings('cleaning_defaults') })
+
+const handleUpdate = () => {
+  // If analyze_plugins is disabled, also disable plugin options
+  if (!localCleaning.analyze_plugins) {
+    localCleaning.plugin_binaries = false
+    localCleaning.plugin_intermediate = false
+    localCleaning.plugin_node_size_cache = false
+  }
+
+  updateCleaningDefaults(localCleaning)
+}
+
+// Watch for external changes to settings
+watch(() => getSettings('cleaning_defaults'), (newCleaning) => {
+  Object.assign(localCleaning, newCleaning)
+}, { deep: true })
+</script>
+
 <template>
   <div class="cleaning-settings">
     <div class="settings-section">
@@ -192,32 +218,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { reactive, watch } from 'vue'
-import InfoTooltip from '../../InfoTooltip.vue'
-import { useSettingsStore } from '../../../stores/settingsStore'
-
-const { getSettings, updateCleaningDefaults } = useSettingsStore()
-
-const localCleaning = reactive({ ...getSettings('cleaning_defaults') })
-
-const handleUpdate = () => {
-  // If analyze_plugins is disabled, also disable plugin options
-  if (!localCleaning.analyze_plugins) {
-    localCleaning.plugin_binaries = false
-    localCleaning.plugin_intermediate = false
-    localCleaning.plugin_node_size_cache = false
-  }
-  
-  updateCleaningDefaults(localCleaning)
-}
-
-// Watch for external changes to settings
-watch(() => getSettings('cleaning_defaults'), (newCleaning) => {
-  Object.assign(localCleaning, newCleaning)
-}, { deep: true })
-</script>
 
 <style scoped>
 .cleaning-settings {
