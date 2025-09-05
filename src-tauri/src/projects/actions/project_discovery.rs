@@ -1,11 +1,11 @@
-use crate::misc::prelude::{log};
+use crate::misc::errors::ErrorLevel;
+use crate::misc::payloads::{ProjectDiscoveryRequest, ProjectDiscoveryResult};
+use crate::misc::prelude::log;
 use crate::misc::progress::TaskProgress;
 use crate::projects::models::project::Project;
-use crate::misc::payloads::{ProjectDiscoveryRequest, ProjectDiscoveryResult};
-use std::path::{Path, PathBuf};
 use log::error;
+use std::path::{Path, PathBuf};
 use tauri::{command, AppHandle};
-use crate::misc::errors::ErrorLevel;
 
 /// # Project Discovery Actions
 /// This module provides actions for discovering Unreal Engine projects
@@ -18,11 +18,14 @@ pub async fn discover_projects(
     request: ProjectDiscoveryRequest,
 ) -> Result<ProjectDiscoveryResult, String> {
     let start_time = std::time::Instant::now();
-    let task_id = format!("discover_projects_{}", chrono::Utc::now().timestamp_millis());
+    let task_id = format!(
+        "discover_projects_{}",
+        chrono::Utc::now().timestamp_millis()
+    );
     let progress = TaskProgress::new(
         app_handle.clone(),
         task_id,
-        format!("Discovering projects in {}", request.base_folder)
+        format!("Discovering projects in {}", request.base_folder),
     );
 
     match scan_folder_for_projects(
@@ -86,7 +89,10 @@ pub async fn scan_folder_for_projects(
     'entries: for (index, entry) in glob_entries.into_iter().enumerate() {
         // Update progress for file scanning
         let scan_progress = 0.2 + (index as f32 / total_files as f32) * 0.5;
-        progress.update(scan_progress, Some(format!("Scanning file {} of {}", index + 1, total_files)));
+        progress.update(
+            scan_progress,
+            Some(format!("Scanning file {} of {}", index + 1, total_files)),
+        );
 
         match entry {
             Ok(path) => {
@@ -134,7 +140,10 @@ pub async fn scan_folder_for_projects(
     for (index, path) in detected_projects.into_iter().enumerate() {
         // Update progress for project processing
         let process_progress = 0.7 + (index as f32 / total_new as f32) * 0.2;
-        progress.update(process_progress, Some(format!("Processing project {} of {}", index + 1, total_new)));
+        progress.update(
+            process_progress,
+            Some(format!("Processing project {} of {}", index + 1, total_new)),
+        );
 
         if !known_path.contains(&path) {
             // Create a new Project object
@@ -164,7 +173,7 @@ pub fn remove_projects(app_handle: AppHandle, project_paths: Vec<String>) -> Res
     let progress = TaskProgress::new(
         app_handle.clone(),
         task_id,
-        format!("Removing {} project(s)", project_paths.len())
+        format!("Removing {} project(s)", project_paths.len()),
     );
 
     // Convert the project paths from strings to PathBuf
@@ -241,7 +250,7 @@ pub fn rescan_projects(app_handle: AppHandle, project_paths: Vec<String>) -> Res
     let progress = TaskProgress::new(
         app_handle.clone(),
         task_id,
-        format!("Rescanning {} project(s)", project_paths.len())
+        format!("Rescanning {} project(s)", project_paths.len()),
     );
 
     // Convert the project paths from strings to PathBuf
@@ -249,9 +258,9 @@ pub fn rescan_projects(app_handle: AppHandle, project_paths: Vec<String>) -> Res
         .into_iter()
         .map(PathBuf::from)
         .collect::<Vec<PathBuf>>();
-    
+
     progress.update(0.5, Some("Scanning project metadata...".to_string()));
-    
+
     // Refresh the projects in the store
     match Project::scan_projects(&app_handle, &paths_to_refresh) {
         Ok(_) => {

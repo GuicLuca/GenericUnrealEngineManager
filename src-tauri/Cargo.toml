@@ -49,4 +49,4 @@ walkdir = "2.3"
 zip = "0.6"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-single-instance = "2"
+tauri-plugin-single-instance = { version = "2.3.4" }

@@ -1,44 +1,21 @@
 use crate::misc::errors::Verror::MessageError;
 use crate::misc::errors::{ErrorLevel, Result};
+use crate::misc::payloads::{CleaningRequest, CleaningResult};
 use crate::misc::prelude::{format_size, log};
 use crate::misc::progress::TaskProgress;
 use crate::projects::models::project::Project;
 use crate::settings::actions::settings_manager;
 use log::{error, info};
-use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::{command, AppHandle};
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CleaningSelection {
-    pub ide_files: bool,
-    pub binaries: bool,
-    pub build: bool,
-    pub intermediate: bool,
-    pub derived_data_cache: bool,
-    pub saved: bool,
-    pub analyze_plugins: bool,
-    pub plugin_binaries: bool,
-    pub plugin_intermediate: bool,
-    pub plugin_node_size_cache: bool,
-    pub save_as_default: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CleaningResult {
-    pub original_size: u64,
-    pub new_size: u64,
-    pub saved_size: u64,
-    pub cleaned_items: Vec<String>,
-}
 
 /// Clean project temporary and generated files
 #[command]
 pub async fn clean_project(
     app_handle: AppHandle,
     project_path: String,
-    selection: CleaningSelection,
+    selection: CleaningRequest,
 ) -> Result<CleaningResult> {
     let project_path = PathBuf::from(project_path);
 
@@ -59,7 +36,7 @@ pub async fn clean_project(
     let progress = TaskProgress::new(
         app_handle.clone(),
         task_id,
-        format!("Cleaning project: {}", project_name)
+        format!("Cleaning project: {}", project_name),
     );
 
     info!("Starting cleaning process for project: {}", project_name);
@@ -151,7 +128,6 @@ pub async fn clean_project(
     // Get the new size
     let new_size = fs_extra::dir::get_size(project_dir).unwrap_or(0);
     let saved_size = original_size.saturating_sub(new_size);
-    
 
     // Log completion
     let saved_size_str = format_size(saved_size);
@@ -161,7 +137,11 @@ pub async fn clean_project(
         project_name, new_size_str, saved_size_str
     );
 
-    progress.complete(Some(format!("Cleaned {} items, saved {}", cleaned_items.len(), saved_size_str)));
+    progress.complete(Some(format!(
+        "Cleaned {} items, saved {}",
+        cleaned_items.len(),
+        saved_size_str
+    )));
 
     info!("{}", completion_msg);
     log(&app_handle, ErrorLevel::Info, &completion_msg);
@@ -171,7 +151,11 @@ pub async fn clean_project(
         error!("Failed to update project size: {}", e);
     }
 
-    progress.complete(Some(format!("Cleaned {} items, saved {}", cleaned_items.len(), saved_size_str)));
+    progress.complete(Some(format!(
+        "Cleaned {} items, saved {}",
+        cleaned_items.len(),
+        saved_size_str
+    )));
 
     let result = CleaningResult {
         original_size,
@@ -198,7 +182,7 @@ fn clean_directory(base_dir: &Path, dir_name: &str, cleaned_items: &mut Vec<Stri
     }
 }
 
-fn save_cleaning_defaults(app_handle: &AppHandle, selection: &CleaningSelection) -> Result<()> {
+fn save_cleaning_defaults(app_handle: &AppHandle, selection: &CleaningRequest) -> Result<()> {
     let mut settings = settings_manager::load_settings(app_handle)?;
 
     settings.cleaning_defaults.ide_files = selection.ide_files;

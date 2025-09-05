@@ -1,47 +1,23 @@
-use crate::misc::prelude::*;
+use crate::misc::errors::Result;
+use crate::misc::errors::Verror::MessageError;
+use crate::misc::payloads::{CompressionRequest, CompressionResult, PackageRequest, PackageResult};
 use crate::misc::progress::TaskProgress;
-use crate::settings::actions::settings_manager::SettingsManager;
-use serde::{Deserialize, Serialize};
+use crate::projects::actions::project_compressor;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tauri::AppHandle;
 use tokio::fs;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PackageRequest {
-    pub project_path: String,
-    pub build_type: String,
-    pub target_platform: String,
-    pub output_directory: String,
-    pub create_archive: bool,
-    pub archive_format: Option<String>,
-    pub archive_filename_format: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PackageResult {
-    pub success: bool,
-    pub output_path: String,
-    pub archive_path: Option<String>,
-    pub package_duration_ms: u64,
-    pub total_duration_ms: u64,
-}
-
 pub struct ProjectPackager {
     app_handle: AppHandle,
-    progress_manager: TaskProgress,
 }
 
 impl ProjectPackager {
     pub fn new(app_handle: AppHandle) -> Self {
-        Self {
-            progress_manager: TaskProgress::new(app_handle.clone()),
-            app_handle,
-        }
+        Self { app_handle }
     }
 
     pub async fn package_project(&self, request: PackageRequest) -> Result<PackageResult> {
-        let start_time = std::time::Instant::now();
         let project_name = Path::new(&request.project_path)
             .file_stem()
             .and_then(|s| s.to_str())
@@ -52,23 +28,25 @@ impl ProjectPackager {
         let task_name = format!("Packaging {} for {}", project_name, request.target_platform);
 
         // Start progress tracking
-        self.progress_manager
-            .start_task(&task_id, &task_name, Some("Initializing packaging process..."))
-            .await?;
+        let progress_manager =
+            TaskProgress::new(self.app_handle.clone(), task_id.clone(), task_name.clone());
 
-        let result = self.package_project_internal(request.clone(), &task_id).await;
+        progress_manager.update(
+            0.1f32,
+            Some("Initializing packaging process...".to_string()),
+        );
+
+        let result = self
+            .package_project_internal(request.clone(), &progress_manager)
+            .await;
 
         match result {
             Ok(package_result) => {
-                self.progress_manager
-                    .complete_task(&task_id, Some("Packaging completed successfully"))
-                    .await?;
+                progress_manager.complete(Some("Packaging completed successfully".to_string()));
                 Ok(package_result)
             }
             Err(e) => {
-                self.progress_manager
-                    .fail_task(&task_id, Some(&format!("Packaging failed: {}", e)))
-                    .await?;
+                progress_manager.fail(Some(format!("Packaging failed: {}", e)));
                 Err(e)
             }
         }
@@ -77,74 +55,69 @@ impl ProjectPackager {
     async fn package_project_internal(
         &self,
         request: PackageRequest,
-        task_id: &str,
+        progress_manager: &TaskProgress,
     ) -> Result<PackageResult> {
         let start_time = std::time::Instant::now();
 
         // Validate project path
         let project_path = Path::new(&request.project_path);
         if !project_path.exists() {
-            return Err(anyhow::anyhow!("Project file does not exist: {}", request.project_path));
+            return Err(MessageError(format!(
+                "Project file does not exist: {}",
+                request.project_path
+            )));
         }
 
         // Find engine installation
-        self.progress_manager
-            .update_task(task_id, 0.1, Some("Finding Unreal Engine installation..."))
-            .await?;
+        progress_manager.update(
+            0.1,
+            Some("Finding Unreal Engine installation...".to_string()),
+        );
 
         let engine_path = self.find_engine_for_project(project_path).await?;
 
         // Prepare output directory
-        self.progress_manager
-            .update_task(task_id, 0.2, Some("Preparing output directory..."))
-            .await?;
+        progress_manager.update(0.2, Some("Preparing output directory...".to_string()));
 
         let output_dir = Path::new(&request.output_directory);
         fs::create_dir_all(output_dir).await?;
 
         // Build RunUAT command
-        self.progress_manager
-            .update_task(task_id, 0.3, Some("Building packaging command..."))
-            .await?;
+        progress_manager.update(0.3, Some("Building packaging command...".to_string()));
 
         let runuat_path = self.get_runuat_path(&engine_path)?;
         let mut command = self.build_package_command(&runuat_path, &request)?;
 
         // Execute packaging
-        self.progress_manager
-            .update_task(task_id, 0.4, Some("Starting Unreal Engine packaging..."))
-            .await?;
+        progress_manager.update(0.4, Some("Starting Unreal Engine packaging...".to_string()));
 
         let package_start = std::time::Instant::now();
         let output = command.output()?;
         let package_duration = package_start.elapsed();
 
         if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            return Err(anyhow::anyhow!(
+            return Err(MessageError(format!(
                 "Packaging failed. Stdout: {}\nStderr: {}",
-                stdout,
-                stderr
-            ));
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            )));
         }
 
-        self.progress_manager
-            .update_task(task_id, 0.8, Some("Packaging completed, finalizing..."))
-            .await?;
+        progress_manager.update(0.8, Some("Packaging completed, finalizing...".to_string()));
 
         // Determine the actual output path
         let output_path = self.find_packaged_output(&output_dir, &request.target_platform)?;
 
         let mut archive_path = None;
 
-        // Create archive if requested
+        // Create an archive if requested
         if request.create_archive {
-            self.progress_manager
-                .update_task(task_id, 0.9, Some("Creating archive..."))
-                .await?;
+            progress_manager.update(0.9, Some("Creating archive...".to_string()));
 
-            archive_path = Some(self.create_archive(&request, &output_path).await?);
+            let archive_result = Some(self.create_archive(&request).await?);
+            if let Some(archive) = &archive_result {
+                archive_path = Some(archive.output_path.clone());
+            }
         }
 
         let total_duration = start_time.elapsed();
@@ -176,7 +149,7 @@ impl ProjectPackager {
                         }
                     }
                 } else {
-                    // Try to find standard engine installation
+                    // Try to find a standard engine installation
                     return self.find_standard_engine(version).await;
                 }
             }
@@ -214,7 +187,10 @@ impl ProjectPackager {
             }
         }
 
-        Err(anyhow::anyhow!("Could not find Unreal Engine {} installation", version))
+        Err(MessageError(format!(
+            "Could not find Unreal Engine {} installation",
+            version
+        )))
     }
 
     async fn find_any_available_engine(&self) -> Result<PathBuf> {
@@ -226,15 +202,9 @@ impl ProjectPackager {
                 "D:\\Epic Games",
             ]
         } else if cfg!(target_os = "macos") {
-            vec![
-                "/Users/Shared/Epic Games",
-                "/Applications/Epic Games",
-            ]
+            vec!["/Users/Shared/Epic Games", "/Applications/Epic Games"]
         } else {
-            vec![
-                "/opt/UnrealEngine",
-                "/usr/local/UnrealEngine",
-            ]
+            vec!["/opt/UnrealEngine", "/usr/local/UnrealEngine"]
         };
 
         for search_path in search_paths {
@@ -252,31 +222,48 @@ impl ProjectPackager {
             }
         }
 
-        Err(anyhow::anyhow!("Could not find any Unreal Engine installation"))
+        Err(MessageError(
+            "Could not find any Unreal Engine installation".to_string(),
+        ))
     }
 
     fn get_runuat_path(&self, engine_path: &Path) -> Result<PathBuf> {
         let runuat_path = if cfg!(target_os = "windows") {
-            engine_path.join("Engine").join("Build").join("BatchFiles").join("RunUAT.bat")
+            engine_path
+                .join("Engine")
+                .join("Build")
+                .join("BatchFiles")
+                .join("RunUAT.bat")
         } else {
-            engine_path.join("Engine").join("Build").join("BatchFiles").join("RunUAT.sh")
+            engine_path
+                .join("Engine")
+                .join("Build")
+                .join("BatchFiles")
+                .join("RunUAT.sh")
         };
 
         if !runuat_path.exists() {
-            return Err(anyhow::anyhow!("RunUAT script not found at: {}", runuat_path.display()));
+            return Err(MessageError(format!(
+                "RunUAT script not found at: {}",
+                runuat_path.display()
+            )));
         }
 
         Ok(runuat_path)
     }
 
-    fn build_package_command(&self, runuat_path: &Path, request: &PackageRequest) -> Result<Command> {
+    fn build_package_command(
+        &self,
+        runuat_path: &Path,
+        request: &PackageRequest,
+    ) -> Result<Command> {
         let mut command = if cfg!(target_os = "windows") {
             let mut cmd = Command::new("cmd");
             cmd.args(&["/C", &runuat_path.to_string_lossy()]);
             cmd
         } else {
             let mut cmd = Command::new("bash");
-            cmd.arg(&runuat_path.to_string_lossy());
+            cmd.arg(&runuat_path.as_os_str());
             cmd
         };
 
@@ -330,141 +317,43 @@ impl ProjectPackager {
         Ok(output_dir.to_path_buf())
     }
 
-    async fn create_archive(&self, request: &PackageRequest, output_path: &Path) -> Result<String> {
+    async fn create_archive(&self, request: &PackageRequest) -> Result<CompressionResult> {
+        if request.archive_format.is_none() {
+            return Err(MessageError(
+                "Archive format not specified for archiving".to_string(),
+            ));
+        }
+
         // Use the existing compression functionality
-        use crate::projects::actions::project_compressor::ProjectCompressor;
-
-        let compressor = ProjectCompressor::new(self.app_handle.clone());
-        
-        // Generate archive filename
-        let archive_name = self.generate_archive_filename(request)?;
-        let archive_path = output_path.parent()
-            .unwrap_or(output_path)
-            .join(&archive_name);
-
-        // Create compression request
-        let compression_request = crate::projects::actions::project_compressor::CompressionRequest {
-            source_path: output_path.to_string_lossy().to_string(),
-            destination_path: archive_path.parent().unwrap().to_string_lossy().to_string(),
-            compression_algorithm: request.archive_format.as_ref().unwrap().clone(),
-            filename: Some(archive_name),
+        let compression_request = CompressionRequest {
+            project_path: request.project_path.clone(),
+            destination_path: request.output_directory.clone(),
+            compression_algorithm: request.archive_format.clone().unwrap(),
+            clean_before_compress: false,
+            cleaning_selection: None,
         };
 
-        let result = compressor.compress_directory(compression_request).await?;
-        Ok(result.output_path)
-    }
+        let result =
+            project_compressor::compress_project(self.app_handle.clone(), compression_request)
+                .await?;
 
-    fn generate_archive_filename(&self, request: &PackageRequest) -> Result<String> {
-        let format = request.archive_filename_format.as_ref()
-            .unwrap_or(&"[Project]_[Platform]_[BuildType]_[YYYY][MM][DD][HH][mm]".to_string());
-
-        let now = chrono::Local::now();
-        let project_name = Path::new(&request.project_path)
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("Unknown")
-            .replace(".uproject", "");
-
-        let mut filename = format.clone();
-        
-        // Replace placeholders
-        filename = filename.replace("[Project]", &project_name);
-        filename = filename.replace("[Platform]", &request.target_platform);
-        filename = filename.replace("[BuildType]", &request.build_type);
-        filename = filename.replace("[YYYY]", &now.format("%Y").to_string());
-        filename = filename.replace("[MM]", &now.format("%m").to_string());
-        filename = filename.replace("[DD]", &now.format("%d").to_string());
-        filename = filename.replace("[HH]", &now.format("%H").to_string());
-        filename = filename.replace("[mm]", &now.format("%M").to_string());
-        filename = filename.replace("[ss]", &now.format("%S").to_string());
-
-        // Add extension if not present
-        let extension = match request.archive_format.as_ref().unwrap().as_str() {
-            "Zip" => "zip",
-            "SevenZip" => "7z",
-            "Tar" => "tar",
-            "TarGz" => "tar.gz",
-            _ => "zip",
-        };
-
-        if !filename.contains('.') {
-            filename.push('.');
-            filename.push_str(extension);
-        }
-
-        Ok(filename)
+        Ok(result)
     }
 }
 
-/// Check if the engine for a project is available in app settings
-pub async fn check_engine_availability(project_path: &str) -> Result<bool, String> {
-    let project = crate::projects::actions::behavior::load_project_from_path(project_path)
-        .map_err(|e| format!("Failed to load project: {}", e))?;
-    
-    let settings = SettingsManager::load_settings()
-        .map_err(|e| format!("Failed to load settings: {}", e))?;
-    
-    match &project.engine_association {
-        crate::projects::models::project::EngineAssociation::Standard(version) => {
-            // Check if we have a registered engine for this version
-            for (name, _path) in &settings.engine_programs.custom_engines {
-                if name.contains(version) {
-                    return Ok(true);
-                }
-            }
-            Ok(false)
+#[tauri::command]
+pub async fn package_project(
+    app_handle: AppHandle,
+    request: PackageRequest,
+) -> std::result::Result<(), String> {
+    let packager = ProjectPackager::new(app_handle);
+
+    // Run packaging in the background
+    tokio::spawn(async move {
+        if let Err(e) = packager.package_project(request).await {
+            eprintln!("Packaging failed: {}", e);
         }
-        crate::projects::models::project::EngineAssociation::Custom => {
-            // For custom engines, check if we have any registered custom engines
-            Ok(!settings.engine_programs.custom_engines.is_empty())
-        }
-    }
-}
+    });
 
-/// Find the RunUAT script for the given project
-fn find_runuat_script(project_path: &str) -> Result<PathBuf, String> {
-    let project = crate::projects::actions::behavior::load_project_from_path(project_path)
-        .map_err(|e| format!("Failed to load project: {}", e))?;
-    
-    let settings = SettingsManager::load_settings()
-        .map_err(|e| format!("Failed to load settings: {}", e))?;
-
-    let engine_path = match &project.engine_association {
-        crate::projects::models::project::EngineAssociation::Standard(version) => {
-            // Find registered engine for this version
-            let mut found_engine_path = None;
-            for (name, path) in &settings.engine_programs.custom_engines {
-                if name.contains(version) {
-                    found_engine_path = Some(PathBuf::from(path));
-                    break;
-                }
-            }
-            
-            found_engine_path.ok_or_else(|| {
-                format!("Unreal Engine {} is not registered in the application settings", version)
-            })?
-        }
-        crate::projects::models::project::EngineAssociation::Custom => {
-            // For custom engines, use the first registered custom engine
-            // or try to find one that might be related to this project
-            if let Some((name, path)) = settings.engine_programs.custom_engines.iter().next() {
-                PathBuf::from(path)
-            } else {
-                return Err("No custom Unreal Engine installations are registered in the application settings".to_string());
-            }
-        }
-    };
-
-    // Construct the RunUAT path
-    let runuat_path = if cfg!(target_os = "windows") {
-        engine_path.join("Engine").join("Build").join("BatchFiles").join("RunUAT.bat")
-    } else {
-        engine_path.join("Engine").join("Build").join("BatchFiles").join("RunUAT.sh")
-    };
-
-    if !runuat_path.exists() {
-        return Err(format!("RunUAT script not found at: {}", runuat_path.display()));
-    }
-
-    Ok(runuat_path)
+    Ok(())
 }

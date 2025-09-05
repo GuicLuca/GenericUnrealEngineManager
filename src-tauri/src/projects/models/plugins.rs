@@ -1,19 +1,19 @@
 use serde::{Deserialize, Serialize};
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 
 /// Represents a plugin in an Unreal Engine project read from the .uplugin file.
-/// It does not include all the metadata from the .uplugin file, but only the 
+/// It does not include all the metadata from the .uplugin file, but only the
 /// data related to the plugin's association with a project.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectPlugin {
-    pub name: String, // Name of the plugin (from .uplugin file)
-    pub is_enabled: bool, // Indicates if the plugin is enabled
+    pub name: String,                    // Name of the plugin (from .uplugin file)
+    pub is_enabled: bool,                // Indicates if the plugin is enabled
     pub is_in_project: bool, // Indicates if the plugin is part of the project (in ./Plugins directory) or in the engine (in ENGINE/Plugins/... directory)
     pub marketplace_url: Option<String>, // URL to the plugin on the Unreal Marketplace, if available
-    pub docs_url: Option<String>, // URL to the plugin documentation, if available
-    pub size_on_disk: Option<u64>, // Size on disk in bytes (None if is_in_project is false)
-    pub last_scan_date: u64, // Last scan date of the plugin (seconds since UNIX epoch)
+    pub docs_url: Option<String>,        // URL to the plugin documentation, if available
+    pub size_on_disk: Option<u64>,       // Size on disk in bytes (None if is_in_project is false)
+    pub last_scan_date: u64,             // Last scan date of the plugin (seconds since UNIX epoch)
 }
 
 #[derive(Debug, Deserialize)]
@@ -53,15 +53,16 @@ impl ProjectPlugin {
 
         // Read and parse the .uplugin file
         let uplugin_content = fs::read_to_string(uplugin_path)?;
-        let uplugin_data: UpluginFile = serde_json::from_str(&uplugin_content)
-            .unwrap_or_else(|_| UpluginFile {
+        let uplugin_data: UpluginFile =
+            serde_json::from_str(&uplugin_content).unwrap_or(UpluginFile {
                 friendly_name: None,
                 marketplace_url: None,
                 docs_url: None,
             });
 
         // Determine the final plugin name (prefer friendly name from .uplugin, fallback to file name)
-        let final_name = uplugin_data.friendly_name
+        let final_name = uplugin_data
+            .friendly_name
             .unwrap_or_else(|| plugin_name.clone());
 
         // Determine if the plugin is enabled (from .uproject data, default to true)
@@ -118,8 +119,15 @@ impl ProjectPlugin {
         }
     }
 
-    /// Rescans a plugin and updates its metadata
-    pub fn rescan(&mut self, uplugin_path: &Path, uproject_plugin_data: Option<&UprojectPluginEntry>) -> Result<(), Box<dyn std::error::Error>> {
+    #[allow(dead_code)]
+    /// Rescans a plugin and updates its metadata.
+    /// This function is not used currently because we do a full rescan of all plugins from the owning project each time,
+    /// but it may be useful in the future for rescanning individual plugins.
+    pub fn rescan(
+        &mut self,
+        uplugin_path: &Path,
+        uproject_plugin_data: Option<&UprojectPluginEntry>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         if !self.is_in_project {
             // For external plugins, just update the scan date and enabled status
             if let Some(uproject_data) = uproject_plugin_data {

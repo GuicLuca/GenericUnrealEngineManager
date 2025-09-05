@@ -1,6 +1,5 @@
-use crate::misc::errors;
 use log::{error, info};
-use tauri::{command, AppHandle, Manager};
+use tauri::{command, AppHandle};
 use tauri_plugin_autostart::ManagerExt;
 
 /// Enable autostart for the application

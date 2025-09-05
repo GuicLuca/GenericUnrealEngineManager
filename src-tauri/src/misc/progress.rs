@@ -1,7 +1,16 @@
 use crate::env;
-use crate::misc::payloads::{TaskProgressPayload, TaskStatus};
+use crate::misc::payloads::TaskProgressPayload;
 use log::error;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TaskStatus {
+    Started,
+    InProgress,
+    Completed,
+    Failed,
+}
 
 /// Helper struct to manage background task progress reporting
 pub struct TaskProgress {
@@ -18,7 +27,7 @@ impl TaskProgress {
             task_id,
             task_name,
         };
-        
+
         // Emit task started event
         progress.emit_progress(0.0, TaskStatus::Started, None);
         progress
@@ -58,13 +67,16 @@ impl TaskProgress {
 impl Drop for TaskProgress {
     fn drop(&mut self) {
         // Ensure task is marked as completed when dropped
-        if let Err(e) = self.app_handle.emit(env::EVENT_TASK_PROGRESS, TaskProgressPayload {
-            task_id: self.task_id.clone(),
-            task_name: self.task_name.clone(),
-            progress: 1.0,
-            status: TaskStatus::Completed,
-            message: None,
-        }) {
+        if let Err(e) = self.app_handle.emit(
+            env::EVENT_TASK_PROGRESS,
+            TaskProgressPayload {
+                task_id: self.task_id.clone(),
+                task_name: self.task_name.clone(),
+                progress: 1.0,
+                status: TaskStatus::Completed,
+                message: None,
+            },
+        ) {
             error!("Failed to emit task completion event on drop: {}", e);
         }
     }

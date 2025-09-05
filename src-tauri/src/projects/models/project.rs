@@ -161,8 +161,8 @@ impl Project {
             // Check if this plugin was already found in the project's Plugins folder
             // We need to be careful here because the plugin name in .uproject might be different
             // from the friendly name in the .uplugin file
-            let already_found = found_plugin_names.contains(plugin_name) ||
-                found_plugin_names.contains(&uproject_plugin_data.name);
+            let already_found = found_plugin_names.contains(plugin_name)
+                || found_plugin_names.contains(&uproject_plugin_data.name);
 
             if !already_found {
                 // This plugin is referenced in .uproject but not found in the project folder

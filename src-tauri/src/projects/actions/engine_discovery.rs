@@ -1,14 +1,14 @@
+use crate::misc::errors::Verror::MessageError;
 use crate::misc::errors::{ErrorLevel, Result};
+use crate::misc::payloads::EngineDiscoveryResult;
 use crate::misc::prelude::log;
 use crate::misc::progress::TaskProgress;
 use crate::settings::actions::settings_manager;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::{command, AppHandle};
-use crate::misc::errors::Verror::MessageError;
 
 #[derive(Debug, Deserialize)]
 struct BuildVersion {
@@ -30,26 +30,26 @@ pub struct DetectedEngine {
     pub is_custom: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct EngineDiscoveryResult {
-    pub engines: Vec<DetectedEngine>,
-    pub total_found: usize,
-    pub scan_duration_ms: u128,
-}
-
 /// Auto-detect installed Unreal Engine versions on the computer
 #[command]
 pub async fn auto_detect_engines(app_handle: AppHandle) -> Result<EngineDiscoveryResult> {
     let start_time = std::time::Instant::now();
-    let task_id = format!("auto_detect_engines_{}", chrono::Utc::now().timestamp_millis());
+    let task_id = format!(
+        "auto_detect_engines_{}",
+        chrono::Utc::now().timestamp_millis()
+    );
     let progress = TaskProgress::new(
         app_handle.clone(),
         task_id,
-        "Auto-detecting Unreal Engine installations".to_string()
+        "Auto-detecting Unreal Engine installations".to_string(),
     );
 
     info!("Starting auto-detection of Unreal Engine installations");
-    log(&app_handle, ErrorLevel::Info, "Starting auto-detection of Unreal Engine installations");
+    log(
+        &app_handle,
+        ErrorLevel::Info,
+        "Starting auto-detection of Unreal Engine installations",
+    );
 
     progress.update(0.1, Some("Scanning system drives...".to_string()));
 
@@ -63,14 +63,14 @@ pub async fn auto_detect_engines(app_handle: AppHandle) -> Result<EngineDiscover
         let drive_progress = 0.1 + (index as f32 / total_drives as f32) * 0.8;
         progress.update(
             drive_progress,
-            Some(format!("Scanning drive: {}", drive.display()))
+            Some(format!("Scanning drive: {}", drive.display())),
         );
 
         info!("Scanning drive: {}", drive.display());
         log(
             &app_handle,
             ErrorLevel::Info,
-            &format!("Scanning drive: {}", drive.display())
+            &format!("Scanning drive: {}", drive.display()),
         );
 
         match scan_drive_for_engines(&app_handle, drive, &progress, drive_progress).await {
@@ -82,7 +82,7 @@ pub async fn auto_detect_engines(app_handle: AppHandle) -> Result<EngineDiscover
                 log(
                     &app_handle,
                     ErrorLevel::Error,
-                    &format!("Error scanning drive {}: {}", drive.display(), e)
+                    &format!("Error scanning drive {}: {}", drive.display(), e),
                 );
             }
         }
@@ -97,7 +97,10 @@ pub async fn auto_detect_engines(app_handle: AppHandle) -> Result<EngineDiscover
                 log(
                     &app_handle,
                     ErrorLevel::Info,
-                    &format!("Saved {} detected engines to settings", detected_engines.len())
+                    &format!(
+                        "Saved {} detected engines to settings",
+                        detected_engines.len()
+                    ),
                 );
             }
             Err(e) => {
@@ -105,7 +108,7 @@ pub async fn auto_detect_engines(app_handle: AppHandle) -> Result<EngineDiscover
                 log(
                     &app_handle,
                     ErrorLevel::Error,
-                    &format!("Failed to save detected engines: {}", e)
+                    &format!("Failed to save detected engines: {}", e),
                 );
             }
         }
@@ -131,32 +134,46 @@ pub async fn auto_detect_engines(app_handle: AppHandle) -> Result<EngineDiscover
 }
 
 #[tauri::command]
-pub async fn detect_engine_at_path(app_handle: AppHandle, engine_path: String) -> Result<DetectedEngine> {
-    let task_id = format!("auto_detect_engines_{}", chrono::Utc::now().timestamp_millis());
+pub async fn detect_engine_at_path(
+    app_handle: AppHandle,
+    engine_path: String,
+) -> Result<DetectedEngine> {
+    let task_id = format!(
+        "auto_detect_engines_{}",
+        chrono::Utc::now().timestamp_millis()
+    );
     let progress = TaskProgress::new(
         app_handle.clone(),
         task_id,
-        "Auto-detecting Unreal Engine installations".to_string()
+        "Auto-detecting Unreal Engine installations".to_string(),
     );
-    
+
     progress.update(0.1, Some("Validating specified path...".to_string()));
-    
+
     info!("Detecting engine at path: {}", engine_path);
-    log(&app_handle, ErrorLevel::Info, &format!("Checking for engine at: {}", engine_path));
+    log(
+        &app_handle,
+        ErrorLevel::Info,
+        &format!("Checking for engine at: {}", engine_path),
+    );
 
     let path = PathBuf::from(&engine_path);
     if !path.exists() {
         return Err(MessageError("Path does not exist".to_string()));
     }
-    
+
     progress.update(0.4, Some("Detecting engine at location...".to_string()));
 
     // First, check if the provided path itself is an engine root (containing "Engine" folder)
     let engine_root = path.clone();
     match validate_engine_directory(&engine_root) {
         Ok(Some(engine)) => {
-            log(&app_handle, ErrorLevel::Info, &format!("Found valid engine: {} at {}", engine.name, engine.path));
-            
+            log(
+                &app_handle,
+                ErrorLevel::Info,
+                &format!("Found valid engine: {} at {}", engine.name, engine.path),
+            );
+
             save_detected_engines(&app_handle, &[engine.clone()])?;
             progress.complete(Some(format!("Found valid engine: {}", engine.name)));
             return Ok(engine);
@@ -167,7 +184,11 @@ pub async fn detect_engine_at_path(app_handle: AppHandle, engine_path: String) -
                 if let Some(parent) = path.parent() {
                     match validate_engine_directory(parent) {
                         Ok(Some(engine)) => {
-                            log(&app_handle, ErrorLevel::Info, &format!("Found valid engine: {} at {}", engine.name, engine.path));
+                            log(
+                                &app_handle,
+                                ErrorLevel::Info,
+                                &format!("Found valid engine: {} at {}", engine.name, engine.path),
+                            );
 
                             save_detected_engines(&app_handle, &[engine.clone()])?;
                             progress.complete(Some(format!("Found valid engine: {}", engine.name)));
@@ -180,18 +201,29 @@ pub async fn detect_engine_at_path(app_handle: AppHandle, engine_path: String) -
         }
         Err(e) => {
             error!("Error validating engine directory: {}", e);
-            log(&app_handle, ErrorLevel::Error, &format!("Error validating engine: {}", e));
+            log(
+                &app_handle,
+                ErrorLevel::Error,
+                &format!("Error validating engine: {}", e),
+            );
             progress.complete(Some("Error validating engine directory".to_string()));
             return Err(e);
         }
     }
 
     // If we got here, no valid engine was found
-    progress.complete(Some("No valid Unreal Engine installation found at the specified path".to_string()));
-    log(&app_handle, ErrorLevel::Warning, &format!("No valid Unreal Engine found at: {}", engine_path));
-    Err(MessageError("No valid Unreal Engine installation found at the specified path".to_string()))
+    progress.complete(Some(
+        "No valid Unreal Engine installation found at the specified path".to_string(),
+    ));
+    log(
+        &app_handle,
+        ErrorLevel::Warning,
+        &format!("No valid Unreal Engine found at: {}", engine_path),
+    );
+    Err(MessageError(
+        "No valid Unreal Engine installation found at the specified path".to_string(),
+    ))
 }
-
 
 /// Get all system drives/mount points
 fn get_system_drives() -> Result<Vec<PathBuf>> {
@@ -212,21 +244,15 @@ fn get_system_drives() -> Result<Vec<PathBuf>> {
     #[cfg(target_os = "macos")]
     {
         // On macOS, scan common locations and mounted volumes
-        let common_paths = vec![
-            "/",
-            "/Applications",
-            "/Users",
-            "/opt",
-            "/usr/local",
-        ];
-        
+        let common_paths = vec!["/", "/Applications", "/Users", "/opt", "/usr/local"];
+
         for path_str in common_paths {
             let path = PathBuf::from(path_str);
             if path.exists() {
                 drives.push(path);
             }
         }
-        
+
         // Also scan mounted volumes
         if let Ok(entries) = fs::read_dir("/Volumes") {
             for entry in entries.flatten() {
@@ -240,22 +266,15 @@ fn get_system_drives() -> Result<Vec<PathBuf>> {
     #[cfg(target_os = "linux")]
     {
         // On Linux, scan root and common mount points
-        let common_paths = vec![
-            "/",
-            "/home",
-            "/opt",
-            "/usr",
-            "/usr/local",
-            "/var",
-        ];
-        
+        let common_paths = vec!["/", "/home", "/opt", "/usr", "/usr/local", "/var"];
+
         for path_str in common_paths {
             let path = PathBuf::from(path_str);
             if path.exists() {
                 drives.push(path);
             }
         }
-        
+
         // Also scan mounted filesystems
         let mount_points = vec!["/mnt", "/media"];
         for mount_point in mount_points {
@@ -289,9 +308,9 @@ async fn scan_drive_for_engines(
     // Use glob to find potential engine directories
     // Look for directories that contain an "Engine" subdirectory
     let pattern = format!("{}/**/Engine", drive.display());
-    
+
     info!("Searching pattern: {}", pattern);
-    
+
     let glob_entries: Vec<_> = match glob::glob(&pattern) {
         Ok(entries) => entries.collect(),
         Err(e) => {
@@ -305,13 +324,21 @@ async fn scan_drive_for_engines(
         return Ok(engines);
     }
 
-    info!("Found {} potential engine directories on {}", total_candidates, drive.display());
+    info!(
+        "Found {} potential engine directories on {}",
+        total_candidates,
+        drive.display()
+    );
 
     for (index, entry) in glob_entries.into_iter().enumerate() {
         let candidate_progress = base_progress + (index as f32 / total_candidates as f32) * 0.05;
         progress.update(
             candidate_progress,
-            Some(format!("Checking potential engine directory {} of {}", index + 1, total_candidates))
+            Some(format!(
+                "Checking potential engine directory {} of {}",
+                index + 1,
+                total_candidates
+            )),
         );
 
         match entry {
@@ -320,11 +347,17 @@ async fn scan_drive_for_engines(
                 if let Some(engine_root) = engine_path.parent() {
                     match validate_engine_directory(engine_root) {
                         Ok(Some(detected_engine)) => {
-                            info!("Detected engine: {} at {}", detected_engine.name, detected_engine.path);
+                            info!(
+                                "Detected engine: {} at {}",
+                                detected_engine.name, detected_engine.path
+                            );
                             log(
                                 app_handle,
                                 ErrorLevel::Info,
-                                &format!("Detected engine: {} at {}", detected_engine.name, detected_engine.path)
+                                &format!(
+                                    "Detected engine: {} at {}",
+                                    detected_engine.name, detected_engine.path
+                                ),
                             );
                             engines.push(detected_engine);
                         }
@@ -332,7 +365,11 @@ async fn scan_drive_for_engines(
                             // Not a valid engine directory, continue
                         }
                         Err(e) => {
-                            error!("Error validating engine directory {}: {}", engine_root.display(), e);
+                            error!(
+                                "Error validating engine directory {}: {}",
+                                engine_root.display(),
+                                e
+                            );
                         }
                     }
                 }
@@ -349,7 +386,7 @@ async fn scan_drive_for_engines(
 /// Validate if a directory is a valid Unreal Engine installation
 fn validate_engine_directory(engine_root: &Path) -> Result<Option<DetectedEngine>> {
     let engine_dir = engine_root.join("Engine");
-    
+
     // Check if the Engine directory exists
     if !engine_dir.exists() {
         return Ok(None);
@@ -374,16 +411,19 @@ fn validate_engine_directory(engine_root: &Path) -> Result<Option<DetectedEngine
     let build_version: BuildVersion = match serde_json::from_str(&build_version_content) {
         Ok(bv) => bv,
         Err(e) => {
-            error!("Failed to parse Build.version at {}: {}", build_version_path.display(), e);
+            error!(
+                "Failed to parse Build.version at {}: {}",
+                build_version_path.display(),
+                e
+            );
             return Ok(None);
         }
     };
 
     // Create the version string
-    let version = format!("{}.{}.{}", 
-        build_version.major_version, 
-        build_version.minor_version, 
-        build_version.patch_version
+    let version = format!(
+        "{}.{}.{}",
+        build_version.major_version, build_version.minor_version, build_version.patch_version
     );
 
     // Determine if it's a custom engine based on branch name
@@ -419,19 +459,30 @@ fn save_detected_engines(app_handle: &AppHandle, engines: &[DetectedEngine]) -> 
     // Add detected engines to custom engines (avoid duplicates)
     for engine in engines {
         // Check if this engine path is already registered
-        let already_exists = settings.engine_programs.custom_engines
+        let already_exists = settings
+            .engine_programs
+            .custom_engines
             .values()
             .any(|existing_path| existing_path == &engine.path);
 
         if !already_exists {
-            settings.engine_programs.custom_engines.insert(
-                engine.name.clone(),
-                engine.path.clone()
+            settings
+                .engine_programs
+                .custom_engines
+                .insert(engine.name.clone(), engine.path.clone());
+        } else {
+            info!(
+                "Engine {} at {} is already registered, skipping",
+                engine.name, engine.path
             );
-        } 
-        else { 
-            info!("Engine {} at {} is already registered, skipping", engine.name, engine.path);
-            log(&app_handle, ErrorLevel::Warning, &format!("Engine {} at {} is already registered, skipping", engine.name, engine.path));
+            log(
+                &app_handle,
+                ErrorLevel::Warning,
+                &format!(
+                    "Engine {} at {} is already registered, skipping",
+                    engine.name, engine.path
+                ),
+            );
         }
     }
 

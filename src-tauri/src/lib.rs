@@ -1,19 +1,19 @@
 #![allow(unused_doc_comments)]
 
-use std::process::exit;
-use std::sync::Arc;
-use log::{error, info};
-use serde_json::json;
-use tauri::{App, AppHandle, Builder, Emitter, Manager, RunEvent, Window, WindowEvent, Wry};
-use tauri_plugin_log::Target;
-use tauri_plugin_store::{Store, StoreExt};
 use crate::misc::errors;
 use crate::misc::payloads::AppInitializedPayload;
 use crate::projects::models::project::Project;
 use crate::settings::actions::settings_manager;
+use log::{error, info};
+use serde_json::json;
+use std::process::exit;
+use std::sync::Arc;
+use tauri::{App, AppHandle, Builder, Emitter, Manager, RunEvent, Window, WindowEvent, Wry};
+use tauri_plugin_log::Target;
+use tauri_plugin_store::{Store, StoreExt};
 
-mod misc;
 mod env;
+mod misc;
 mod projects;
 mod settings;
 
@@ -105,6 +105,8 @@ pub fn run() {
     let tauri_builder = tauri_builder.invoke_handler(tauri::generate_handler![
         greet,
         projects::actions::behavior::open_file_explorer,
+        projects::actions::behavior::get_system_username,
+        projects::actions::behavior::get_system_hostname,
         projects::actions::project_discovery::discover_projects,
         projects::actions::project_discovery::get_projects,
         projects::actions::project_discovery::remove_projects,
@@ -116,12 +118,11 @@ pub fn run() {
         projects::actions::project_cleaner::clean_project,
         projects::actions::project_compressor::compress_project,
         projects::actions::project_compressor::get_available_compression_algorithms,
-        projects::actions::project_compressor::get_system_username,
-        projects::actions::project_compressor::get_system_hostname,
         projects::actions::plugin_manager::scan_plugins,
         projects::actions::plugin_manager::refresh_all_plugins,
         projects::actions::engine_discovery::auto_detect_engines,
         projects::actions::engine_discovery::detect_engine_at_path,
+        projects::actions::project_packager::package_project,
         settings::actions::settings_manager::get_settings,
         settings::actions::settings_manager::save_settings,
         settings::actions::settings_manager::reset_settings,
@@ -142,7 +143,6 @@ pub fn run() {
         backend_event_handler(app, event);
     });
 }
-
 
 /// Handle backend events
 fn backend_event_handler(app: &AppHandle, event: RunEvent) {
@@ -165,7 +165,6 @@ fn frontend_event_handler(window: &Window, event: &WindowEvent) -> errors::Resul
             // misc::tray::update_tray_menu(window.app_handle())?;
             // api.prevent_close();
             quit_app(window.app_handle());
-            
 
             Ok(())
         }
@@ -189,7 +188,7 @@ fn application_setup(app: &mut App) -> errors::Result<()> {
             info!("Error setting up system tray: {}", error);
         }
     };
-    
+
     // match misc::menu::init_window_menu(app) {
     //     Ok(_) => {
     //         info!("Window menu initialized !");
@@ -250,19 +249,23 @@ fn application_setup(app: &mut App) -> errors::Result<()> {
     }
 
     // Fire the app initialized event
-    match app.emit(env::EVENT_INIT, AppInitializedPayload{
-        projects: Project::get_projects(app.handle())?
-    }) {
+    match app.emit(
+        env::EVENT_INIT,
+        AppInitializedPayload {
+            projects: Project::get_projects(app.handle())?,
+        },
+    ) {
         Ok(_) => {
-            info!("App initialized event emitted successfully, sent {} projects.", 
-                Project::get_projects(app.handle())?.len());
+            info!(
+                "App initialized event emitted successfully, sent {} projects.",
+                Project::get_projects(app.handle())?.len()
+            );
         }
         Err(e) => {
             error!("Error emitting app_initialized event: {:?}", e);
         }
     };
-    
-    
+
     Ok(())
 }
 

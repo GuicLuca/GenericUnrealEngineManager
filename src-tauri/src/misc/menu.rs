@@ -2,19 +2,19 @@
 
 // use tauri::{App, AppHandle};
 // use tauri::menu::{AboutMetadataBuilder, MenuBuilder, MenuEvent, PredefinedMenuItem, SubmenuBuilder};
-// 
+//
 // pub fn init_window_menu(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
-// 
+//
 //     let builder = MenuBuilder::new(app);
-//     
+//
 //     let actions_menu = SubmenuBuilder::new(app, "Actions")
 //         .text("actions", "Actions")
 //         .build()?;
-//     
+//
 //     let separator = PredefinedMenuItem::separator(app)?;
-//     
+//
 //     let about_menu = PredefinedMenuItem::about(
-//         app, 
+//         app,
 //         None,
 //         Some(
 //             AboutMetadataBuilder::new()
@@ -29,21 +29,21 @@
 //                 .build()
 //         )
 //     )?;
-//     
+//
 //     let menu = builder
 //         .items(&[&actions_menu,&separator, &about_menu])
 //         .build()?;
-//     
+//
 //     app.set_menu(menu)?;
-// 
+//
 //     app.on_menu_event(move |app_handle: &AppHandle, event: MenuEvent| {
 //         handle_menu_event(app_handle, event);
 //     });
-// 
+//
 //     Ok(())
 // }
-// 
-// 
+//
+//
 // fn handle_menu_event(_app: &AppHandle, event: MenuEvent) {
 //     match event.id().0.as_str() {
 //         "projects" => {

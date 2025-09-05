@@ -1,12 +1,6 @@
-use tauri::command;
-use std::process::Command;
 use log::info;
-use crate::projects::actions::project_cleaner::ProjectCleaner;
-use crate::projects::actions::project_compressor::ProjectCompressor;
-use crate::projects::actions::project_discovery::ProjectDiscovery;
-use crate::projects::actions::project_launcher::ProjectLauncher;
-use crate::projects::actions::project_packager::{ProjectPackager, PackageRequest};
-use crate::projects::actions::plugin_manager::PluginManager;
+use std::process::Command;
+use tauri::command;
 
 #[command]
 pub async fn open_file_explorer(path: String) -> Result<(), String> {
@@ -15,19 +9,13 @@ pub async fn open_file_explorer(path: String) -> Result<(), String> {
         info!("Opening file explorer at path: {}", path);
         let windows_path = path.replace("/", "\\"); // Ensure backslashes for Windows paths
 
-        Command::new("explorer")
-            .arg(windows_path)
-            .spawn()
+        Command::new("explorer").arg(windows_path).spawn()
     } else if cfg!(target_os = "macos") {
         // For macOS, use the open command
-        Command::new("open")
-            .arg(path)
-            .spawn()
+        Command::new("open").arg(path).spawn()
     } else {
         // For Linux, use xdg-open
-        Command::new("xdg-open")
-            .arg(path)
-            .spawn()
+        Command::new("xdg-open").arg(path).spawn()
     };
 
     match result {
@@ -36,19 +24,14 @@ pub async fn open_file_explorer(path: String) -> Result<(), String> {
     }
 }
 
-#[tauri::command]
-pub async fn package_project(
-    app_handle: AppHandle,
-    request: PackageRequest,
-) -> Result<(), String> {
-    let packager = ProjectPackager::new(app_handle);
-    
-    // Run packaging in background
-    tokio::spawn(async move {
-        if let Err(e) = packager.package_project(request).await {
-            eprintln!("Packaging failed: {}", e);
-        }
-    });
-    
-    Ok(())
+/// Get system username
+#[command]
+pub fn get_system_username() -> String {
+    whoami::username()
+}
+
+/// Get system hostname/computer name
+#[command]
+pub fn get_system_hostname() -> String {
+    whoami::fallible::hostname().unwrap_or_else(|_| "UnknownHostName".into())
 }

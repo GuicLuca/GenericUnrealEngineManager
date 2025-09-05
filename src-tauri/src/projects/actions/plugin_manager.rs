@@ -13,7 +13,7 @@ pub fn scan_plugins(app_handle: AppHandle, project_paths: Vec<String>) -> Result
     let progress = TaskProgress::new(
         app_handle.clone(),
         task_id,
-        format!("Scanning plugins for {} project(s)", project_paths.len())
+        format!("Scanning plugins for {} project(s)", project_paths.len()),
     );
 
     // Convert the project paths from strings to PathBuf
@@ -58,11 +58,14 @@ pub fn scan_plugins(app_handle: AppHandle, project_paths: Vec<String>) -> Result
 /// Refresh plugins for all tracked projects
 #[command]
 pub fn refresh_all_plugins(app_handle: AppHandle) -> Result<()> {
-    let task_id = format!("refresh_all_plugins_{}", chrono::Utc::now().timestamp_millis());
+    let task_id = format!(
+        "refresh_all_plugins_{}",
+        chrono::Utc::now().timestamp_millis()
+    );
     let progress = TaskProgress::new(
         app_handle.clone(),
         task_id,
-        "Refreshing plugins for all projects".to_string()
+        "Refreshing plugins for all projects".to_string(),
     );
 
     progress.update(0.3, Some("Loading project list...".to_string()));
