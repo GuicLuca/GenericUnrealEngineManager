@@ -7,15 +7,26 @@ use log::error;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
-use std::path::PathBuf;
-use tauri::Emitter;
+use std::ops::Deref;
+use std::path::{Path, PathBuf};
+use tauri::{AppHandle, Emitter};
 use tauri_plugin_store::StoreExt;
+use crate::projects::actions::engine_discovery::detect_engine_at_path;
 
 /// Represents the association of a project with a specific Unreal Engine version.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EngineAssociation {
     Standard(String), // For standard version (4.27, 5.0, etc.)
-    Custom,           // For custom engines (Unreal Source, etc.)
+    Custom(String),   // For custom engines (Unreal Source, etc.)
+}
+
+impl EngineAssociation {
+    pub fn display(&self) -> String {
+        match self {
+            EngineAssociation::Standard(version) => version.clone(),
+            EngineAssociation::Custom(version) => version.clone(),
+        }
+    }
 }
 
 /// A project represents an Unreal Engine project with its associated metadata.
@@ -34,9 +45,9 @@ pub struct Project {
 
 impl Project {
     /// Creates a new project instance.
-    pub fn try_from_path(path: &PathBuf) -> Result<Project, Box<dyn std::error::Error>> {
+    pub async fn try_from_path(app_handle: AppHandle, path: &PathBuf) -> Result<Project, Box<dyn std::error::Error>> {
         // try to read the contents of the .uproject file
-        let contents = std::fs::read_to_string(&path)?;
+        let contents = std::fs::read_to_string(path)?;
         let uproject_content: serde_json::Value = serde_json::from_str(&contents)?;
 
         // Extract the description, engine association, and plugins from the .uproject file
@@ -51,10 +62,20 @@ impl Project {
                 if engine_version.is_string() && !engine_version.as_str().unwrap().is_empty() {
                     EngineAssociation::Standard(engine_version.as_str().unwrap().to_string())
                 } else {
-                    EngineAssociation::Custom
+                    let parent_dir = path.parent().and_then(Path::parent).unwrap_or_else(|| path.deref());
+                    match detect_engine_at_path(app_handle, parent_dir.to_string_lossy().to_string()).await {
+                        Ok(detected_engine) => {
+                                EngineAssociation::Custom(detected_engine.version)
+                            
+                        },
+                        Err(_) => {
+                            // Fallback to the raw value in the .uproject file if detection fails
+                            EngineAssociation::Custom("Unknown".to_string())
+                        }
+                    }
                 }
             } else {
-                EngineAssociation::Custom // Default to Custom if not specified
+                EngineAssociation::Custom("Unknown".to_string()) // Default to Custom if not specified
             }
         };
 
@@ -174,14 +195,14 @@ impl Project {
         Ok(plugins)
     }
 
-    pub fn scan_projects(
-        app_handle: &tauri::AppHandle,
+    pub async fn scan_projects(
+        app_handle: &AppHandle,
         project_paths: &[PathBuf],
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut projects = Project::get_projects(app_handle)?;
 
         for project_path in project_paths {
-            let project = Project::try_from_path(project_path)?;
+            let project = Project::try_from_path(app_handle.clone(), project_path).await?;
 
             // Check if the project already exists
             if let Some(existing_project) = projects.iter_mut().find(|p| p.path == project.path) {
@@ -209,7 +230,7 @@ impl Project {
 
     /// Scan plugins for specific projects
     pub fn scan_project_plugins(
-        app_handle: &tauri::AppHandle,
+        app_handle: &AppHandle,
         project_paths: &[PathBuf],
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut projects = Project::get_projects(app_handle)?;

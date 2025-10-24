@@ -47,7 +47,7 @@ pub struct TaskProgressPayload {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PackageRequest {
-    pub project_path: String,
+    pub project: Project,
     pub build_type: String,
     pub target_platform: String,
     pub output_directory: String,

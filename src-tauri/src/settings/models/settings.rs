@@ -11,13 +11,13 @@ pub struct AppSettings {
     pub compression: CompressionSettings,
 }
 
-/// IDE program settings - only custom programs
+/// IDE program settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IdePrograms {
     pub custom_programs: HashMap<String, String>,
 }
 
-/// Engine program settings - only custom engines
+/// Engine program settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnginePrograms {
     pub custom_engines: HashMap<String, String>,

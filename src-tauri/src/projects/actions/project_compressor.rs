@@ -101,7 +101,7 @@ pub async fn compress_project(
 
     // Generate output filename using user's format
     let output_filename =
-        generate_filename(&app_handle, &project_path, &request.compression_algorithm)?;
+        generate_filename(&app_handle, &project_path, &request.compression_algorithm).await?;
     let output_path = PathBuf::from(&request.destination_path).join(output_filename);
 
     log(
@@ -173,7 +173,7 @@ pub async fn compress_project(
 }
 
 /// Generate filename based on user's format template
-fn generate_filename(
+async fn generate_filename(
     app_handle: &AppHandle,
     project_path: &Path,
     algorithm: &CompressionAlgorithm,
@@ -189,7 +189,7 @@ fn generate_filename(
         .unwrap_or("Unknown");
 
     // Try to get project details for additional formatting
-    let project_details = Project::try_from_path(&project_path.to_path_buf()).ok();
+    let project_details = Project::try_from_path(app_handle.clone(), &project_path.to_path_buf()).await.ok();
 
     // Get the current date/time
     let now = chrono::Local::now();
@@ -228,7 +228,9 @@ fn generate_filename(
             crate::projects::models::project::EngineAssociation::Standard(version) => {
                 version.replace(".", "-")
             }
-            crate::projects::models::project::EngineAssociation::Custom => "Custom".to_string(),
+            crate::projects::models::project::EngineAssociation::Custom(version) => {
+                version.replace(".", "-")
+            },
         };
         replacements.insert("Engine".to_string(), engine_version.clone());
         replacements.insert("EngineVersion".to_string(), engine_version); // Alternative

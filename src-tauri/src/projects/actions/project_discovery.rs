@@ -147,7 +147,7 @@ pub async fn scan_folder_for_projects(
 
         if !known_path.contains(&path) {
             // Create a new Project object
-            let new_project = match Project::try_from_path(&path) {
+            let new_project = match Project::try_from_path(app_handle.clone(), &path).await {
                 Ok(project) => project,
                 Err(e) => {
                     eprintln!("Error creating project from path {}: {}", path.display(), e);
@@ -245,7 +245,7 @@ pub fn get_projects(app_handle: AppHandle) -> Result<Vec<Project>, String> {
 }
 
 #[command]
-pub fn rescan_projects(app_handle: AppHandle, project_paths: Vec<String>) -> Result<(), String> {
+pub async fn rescan_projects(app_handle: AppHandle, project_paths: Vec<String>) -> Result<(), String> {
     let task_id = format!("rescan_projects_{}", chrono::Utc::now().timestamp_millis());
     let progress = TaskProgress::new(
         app_handle.clone(),
@@ -262,7 +262,7 @@ pub fn rescan_projects(app_handle: AppHandle, project_paths: Vec<String>) -> Res
     progress.update(0.5, Some("Scanning project metadata...".to_string()));
 
     // Refresh the projects in the store
-    match Project::scan_projects(&app_handle, &paths_to_refresh) {
+    match Project::scan_projects(&app_handle, &paths_to_refresh).await {
         Ok(_) => {
             log(
                 &app_handle,

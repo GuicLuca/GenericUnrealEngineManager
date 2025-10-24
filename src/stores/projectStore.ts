@@ -14,10 +14,11 @@ export interface Project {
     last_scan_date: number // Duration since UNIX epoch in seconds
 }
 
-// Match the backend EngineAssociation enum
-export type EngineAssociation =
-    | { Standard: string }
-    | "Custom"
+export type EngineAssociation = {
+    Standard?: string
+    Custom?: string
+}
+
 
 // Match the backend ProjectPlugin structure (updated with size, scan date, and docs URL)
 export interface ProjectPlugin {
@@ -167,15 +168,17 @@ export const useProjectStore = () => {
         }
     }
 
-    // Helper to get engine version string
-    const getEngineVersionString = (engineAssociation: EngineAssociation): string => {
-        if (typeof engineAssociation === 'string' && engineAssociation === 'Custom') {
-            return 'Custom'
-        }
-        if (typeof engineAssociation === 'object' && engineAssociation.Standard) {
-            return engineAssociation.Standard
-        }
-        return 'Unknown'
+    // Helper to know the engine version is custom or standard
+    const isEngineVersionCustom = (engineAssociation: EngineAssociation): boolean => {
+        console.log(typeof engineAssociation)
+        console.log(engineAssociation)
+        return !!engineAssociation.Custom
+    }
+    
+    const displayEngineVersion = (engineAssociation: EngineAssociation): string => {
+        if (!!engineAssociation.Standard) return engineAssociation.Standard;
+        if (!!engineAssociation.Custom) return `Custom-${engineAssociation.Custom}`;
+        return "Unknown"
     }
 
     // Helper to find a project by path
@@ -207,7 +210,8 @@ export const useProjectStore = () => {
         refreshAllPlugins,
 
         // Helpers
-        getEngineVersionString,
+        displayEngineVersion,
+        isEngineVersionCustom,
         findProjectByPath
     }
 }

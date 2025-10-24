@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use tauri::{command, AppHandle};
 
 #[derive(Debug, Deserialize)]
-struct BuildVersion {
+pub struct BuildVersion {
     #[serde(rename = "MajorVersion")]
     major_version: u32,
     #[serde(rename = "MinorVersion")]
@@ -180,23 +180,21 @@ pub async fn detect_engine_at_path(
         }
         Ok(None) => {
             // Not a valid engine at root level, check if it's the Engine folder itself
-            if path.file_name().map_or(false, |name| name == "Engine") {
+            if path.file_name().is_some_and(|name| name == "Engine") {
                 if let Some(parent) = path.parent() {
-                    match validate_engine_directory(parent) {
-                        Ok(Some(engine)) => {
-                            log(
-                                &app_handle,
-                                ErrorLevel::Info,
-                                &format!("Found valid engine: {} at {}", engine.name, engine.path),
-                            );
+                    if let Ok(Some(engine)) = validate_engine_directory(parent)
+                    {
+                        log(
+                            &app_handle,
+                            ErrorLevel::Info,
+                            &format!("Found valid engine: {} at {}", engine.name, engine.path),
+                        );
 
-                            save_detected_engines(&app_handle, &[engine.clone()])?;
-                            progress.complete(Some(format!("Found valid engine: {}", engine.name)));
-                            return Ok(engine);
-                        }
-                        _ => {}
+                        save_detected_engines(&app_handle, &[engine.clone()])?;
+                        progress.complete(Some(format!("Found valid engine: {}", engine.name)));
+                        return Ok(engine);
                     }
-                }
+                    }
             }
         }
         Err(e) => {
@@ -426,7 +424,7 @@ fn validate_engine_directory(engine_root: &Path) -> Result<Option<DetectedEngine
         build_version.major_version, build_version.minor_version, build_version.patch_version
     );
 
-    // Determine if it's a custom engine based on branch name
+    // Determine if it's a custom engine based on the branch name
     let is_custom = !is_precompiled_branch(&build_version.branch_name);
 
     // Create the engine name
@@ -476,7 +474,7 @@ fn save_detected_engines(app_handle: &AppHandle, engines: &[DetectedEngine]) -> 
                 engine.name, engine.path
             );
             log(
-                &app_handle,
+                app_handle,
                 ErrorLevel::Warning,
                 &format!(
                     "Engine {} at {} is already registered, skipping",

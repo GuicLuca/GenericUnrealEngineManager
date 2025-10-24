@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import {ref, computed, onMounted, onUnmounted} from 'vue'
-import { invoke } from '@tauri-apps/api/core'
+import {invoke} from '@tauri-apps/api/core'
 import InfoItem from './InfoItem.vue'
 import FileExplorerButton from './FileExplorerButton.vue'
-import { useProjectStore, type EngineAssociation } from '../stores/projectStore'
+import {EngineAssociation, useProjectStore} from '../stores/projectStore'
 import {formatSize, timeSince} from '../utils.ts'
 
 interface Props {
@@ -25,7 +25,11 @@ interface AppSettings {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
-const { selectedProject, getEngineVersionString } = useProjectStore()
+const {
+  selectedProject,
+  isEngineVersionCustom,
+  displayEngineVersion
+} = useProjectStore()
 const isResizing = ref(false)
 const settings = ref<AppSettings | null>(null)
 
@@ -41,22 +45,21 @@ const currentTimeSince = computed(() => {
 })
 
 const getEngineFolder = (engineAssociation: EngineAssociation): string | null => {
-  if (typeof engineAssociation === 'string' && engineAssociation === 'Custom') {
+  if (isEngineVersionCustom(engineAssociation)) {
     // For custom engines, try to find a matching registered engine
     if (settings.value?.engine_programs?.custom_engines) {
       // Return the first custom engine path (could be improved to match by name)
       const enginePaths = Object.values(settings.value.engine_programs.custom_engines)
-      if (enginePaths.length > 0 && enginePaths[0].trim()) {
-        return enginePaths[0]
+      if (enginePaths.length > 0) {
+        return enginePaths[0].trim()
       }
     }
-  } else if (typeof engineAssociation === 'object' && engineAssociation.Standard) {
-    // For standard engines, check if there's a registered engine with matching version
+  } else {
+    // For standard engines, check if there's a registered engine with the matching version
     if (settings.value?.engine_programs?.custom_engines) {
-      const engineVersion = engineAssociation.Standard
       for (const [name, path] of Object.entries(settings.value.engine_programs.custom_engines)) {
-        if (name.includes(engineVersion) && path.trim()) {
-          return path
+        if (name.includes(engineAssociation.Standard ?? '')) {
+          return path.trim()
         }
       }
     }
@@ -117,14 +120,14 @@ onUnmounted(() => {
 
 <template>
   <div class="info-panel" :style="{ width: width + 'px' }">
-    <div 
-      class="resize-handle" 
-      @mousedown="startResize"
+    <div
+        class="resize-handle"
+        @mousedown="startResize"
     ></div>
-    
+
     <div class="info-content">
       <h3 class="info-title">Project Information</h3>
-      
+
       <div v-if="selectedProject" class="info-section">
         <div class="info-item">
           <div class="info-header">
@@ -133,11 +136,11 @@ onUnmounted(() => {
           </div>
           <div class="info-value-with-action">
             <div class="info-value">
-              {{ getEngineVersionString(selectedProject.engine_association) }}
+              {{ displayEngineVersion(selectedProject.engine_association) }}
               <FileExplorerButton
                   v-if="getEngineFolder(selectedProject.engine_association)"
                   :project-path="getEngineFolder(selectedProject.engine_association)!"
-                  :project-name="`${getEngineVersionString(selectedProject.engine_association)} Engine`"
+                  :project-name="`${displayEngineVersion(selectedProject.engine_association)} Engine`"
                   size="mini"
                   title="Open engine directory"
                   class="engine-dir-button"
@@ -145,35 +148,35 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-        
+
         <InfoItem
             label="Size on disk"
             :value="formatSize(selectedProject.size_on_disk)"
             icon="📥"
         />
-        <InfoItem 
-          label="Has C++ code" 
-          :value="selectedProject.has_cpp ? 'Yes' : 'No'" 
-          icon="💻"
+        <InfoItem
+            label="Has C++ code"
+            :value="selectedProject.has_cpp ? 'Yes' : 'No'"
+            icon="💻"
         />
-        <InfoItem 
-          label="Description" 
-          :value="selectedProject.description || 'No description available'" 
-          icon="📝"
-          multiline
+        <InfoItem
+            label="Description"
+            :value="selectedProject.description || 'No description available'"
+            icon="📝"
+            multiline
         />
-        <InfoItem 
-          label="Plugins" 
-          :value="`${selectedProject.plugins.length} plugin(s)`" 
-          icon="🔌"
+        <InfoItem
+            label="Plugins"
+            :value="`${selectedProject.plugins.length} plugin(s)`"
+            icon="🔌"
         />
-        <InfoItem 
-          label="Last scan" 
-          :value="currentTimeSince" 
-          icon="🕒"
+        <InfoItem
+            label="Last scan"
+            :value="currentTimeSince"
+            icon="🕒"
         />
       </div>
-      
+
       <div v-else class="no-project">
         <div class="no-project-icon">📂</div>
         <div class="no-project-text">No project selected</div>

@@ -1,10 +1,17 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import {ref, reactive, computed, onMounted, watch} from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import InfoTooltip from '../InfoTooltip.vue'
 import { useLogStore } from '../../stores/logStore'
 import { useProjectStore } from '../../stores/projectStore'
+import { useCompression } from "../../composables/useCompression.ts";
+import { useSettingsStore } from '../../stores/settingsStore'
+
+const { addLog } = useLogStore()
+const { findProjectByPath } = useProjectStore()
+const { loadAvailableFormats } = useCompression()
+const { getSettings } = useSettingsStore()
 
 interface Props {
   projectName: string
@@ -15,12 +22,6 @@ interface PackageConfig {
   buildType: string
   targetPlatform: string
   outputDirectory: string
-  forDistribution: boolean
-  includePrerequisites: boolean
-  includeAppLocalPrerequisites: boolean
-  includeCrashReporter: boolean
-  usePakFile: boolean
-  compressContent: boolean
   createArchive: boolean
   archiveFormat: string
   archiveFilenameFormat: string
@@ -33,11 +34,11 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
-const { addLog } = useLogStore()
-const { findProjectByPath } = useProjectStore()
+
 
 const isPackaging = ref(false)
 const availableFormats = ref<Record<string, string>>({})
+const localEngines = reactive({... getSettings('engine_programs').custom_engines})
 
 const packageConfig = reactive<PackageConfig>({
   buildType: 'Development',
@@ -46,6 +47,20 @@ const packageConfig = reactive<PackageConfig>({
   createArchive: false,
   archiveFormat: 'Zip',
   archiveFilenameFormat: '[Project]_[Platform]_[BuildType]_[YYYY][MM][DD][HH][mm]'
+})
+
+// Watch for external changes to settings
+watch( () => getSettings('engine_programs').custom_engines, (newEngines) => {
+  Object.assign(localEngines, newEngines)
+}, {deep: true})
+
+const engineError: string = "The Unreal Engine version associated with this project is not registered in the app settings."
+
+const engineAvailable = computed(() => {
+  const project = findProjectByPath(props.projectPath)
+  if (!project) return false
+
+  return !!localEngines[project.engine_association];
 })
 
 const canPackage = computed(() => {
@@ -142,25 +157,6 @@ const selectOutputDirectory = async () => {
   }
 }
 
-const loadAvailableFormats = async () => {
-  try {
-    const settings = await invoke('get_settings') as any
-    availableFormats.value = {
-      'Default': '[Project]_[Platform]_[BuildType]_[YYYY][MM][DD][HH][mm]',
-      'Extended': '[Project]_[Platform]_[BuildType]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]',
-      'Simple': '[Project]_[Platform]_[BuildType]',
-      ...settings.compression.custom_presets
-    }
-  } catch (error) {
-    console.error('Failed to load compression settings:', error)
-    availableFormats.value = {
-      'Default': '[Project]_[Platform]_[BuildType]_[YYYY][MM][DD][HH][mm]',
-      'Extended': '[Project]_[Platform]_[BuildType]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]',
-      'Simple': '[Project]_[Platform]_[BuildType]'
-    }
-  }
-}
-
 const detectPlatform = async () => {
   try {
     const platform = await invoke('get_current_platform') as string
@@ -188,7 +184,7 @@ const startPackaging = async () => {
     isPackaging.value = true
 
     const request = {
-      project_path: props.projectPath,
+      project: findProjectByPath(props.projectPath),
       build_type: packageConfig.buildType,
       target_platform: packageConfig.targetPlatform,
       output_directory: packageConfig.outputDirectory,
@@ -209,7 +205,16 @@ const startPackaging = async () => {
 }
 
 onMounted(() => {
-  loadAvailableFormats()
+  loadAvailableFormats().then(
+      (result: {
+        availableFormats: Record<string, string>
+        selectedFormat: string
+      }) => {
+        // Set default format
+        availableFormats.value = result.availableFormats;
+        packageConfig.archiveFilenameFormat = result.selectedFormat;
+      }
+  )
   detectPlatform()
 })
 </script>

@@ -5,6 +5,7 @@ import { open } from '@tauri-apps/plugin-dialog'
 import InfoTooltip from '../InfoTooltip.vue'
 import { useLogStore } from '../../stores/logStore'
 import { useProjectStore } from '../../stores/projectStore'
+import { useCompression} from "../../composables/useCompression.ts";
 
 interface Props {
   projectName: string
@@ -40,6 +41,7 @@ const emit = defineEmits<{
 
 const { addLog } = useLogStore()
 const { findProjectByPath } = useProjectStore()
+const { loadAvailableFormats } = useCompression()
 
 const isCompressing = ref(false)
 const cleanBeforeCompress = ref(false)
@@ -193,27 +195,6 @@ const loadAvailableAlgorithms = async () => {
   }
 }
 
-const loadAvailableFormats = async () => {
-  try {
-    const settings = await invoke('get_settings') as AppSettings
-    availableFormats.value = settings.compression.custom_presets
-
-    // Set default format
-    if (settings.compression.filename_format) {
-      selectedFormat.value = settings.compression.filename_format
-    }
-  } catch (error) {
-    console.error('Failed to load compression settings:', error)
-    addLog('Failed to load compression settings', 'error')
-    // Fallback formats
-    availableFormats.value = {
-      'Default': '[Project]_[YYYY][MM][DD][HH][mm]',
-      'Default Extended': '[Project]_[YYYY]-[MM]-[DD]_[HH]-[mm]-[ss]',
-      'Simple': '[Project]_[Type]'
-    }
-  }
-}
-
 const updatePreview = () => {
   // Force reactivity update for the computed property
   // The computed property will automatically recalculate
@@ -277,7 +258,15 @@ const startCompression = async () => {
 onMounted(() => {
   loadSystemInfo()
   loadAvailableAlgorithms()
-  loadAvailableFormats()
+  loadAvailableFormats().then(
+    (result: {
+      availableFormats: Record<string, string>
+      selectedFormat: string
+    }) => {
+      // Set default format
+      availableFormats.value = result.availableFormats;
+      selectedFormat.value = result.selectedFormat;
+    })
 })
 </script>
 
