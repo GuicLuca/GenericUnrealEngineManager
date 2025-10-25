@@ -3,12 +3,12 @@ use crate::misc::errors::Verror::MessageError;
 use crate::misc::payloads::{CompressionRequest, CompressionResult, PackageRequest, PackageResult};
 use crate::misc::progress::TaskProgress;
 use crate::projects::actions::project_compressor;
+use crate::projects::actions::engine_discovery;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tauri::AppHandle;
 use tokio::fs;
 use crate::projects::models::project::Project;
-use crate::settings::actions::settings_manager::get_settings;
 
 #[tauri::command]
 pub async fn package_project(
@@ -66,7 +66,16 @@ async fn package_project_worker(
         Some("Finding Unreal Engine installation...".to_string()),
     );
 
-    let engine_path = find_engine_for_project(app_handle.clone(), &request.project).await?;
+    let engine_path_str = engine_discovery::find_engine_for_project(
+        app_handle.clone(),
+        request.project.path.display().to_string(),
+    )?
+    .ok_or_else(|| MessageError(format!(
+        "No compatible engine found for project requiring version: {}",
+        request.project.engine_association.display()
+    )))?;
+
+    let engine_path = PathBuf::from(engine_path_str);
 
     // Prepare output directory
     progress_manager.update(0.3, Some("Preparing output directory...".to_string()));
@@ -121,39 +130,6 @@ async fn package_project_worker(
         package_duration_ms: package_duration.as_millis() as u64,
         total_duration_ms: total_duration.as_millis() as u64,
     })
-}
-
-
-async fn find_engine_for_project(app_handle: AppHandle, project: &Project) -> Result<PathBuf> {
-    //  check if the associated engine version of the project is registered
-    // in the stored engines list.
-    
-    match get_settings(app_handle) {
-        Ok(settings) => {
-            if let Some(engine_path) = settings.engine_programs.custom_engines.get(&project.engine_association.display()) {
-                let engine_path = PathBuf::from(&engine_path);
-                if engine_path.exists() {
-                    Ok(engine_path)
-                } else {
-                    Err(MessageError(format!(
-                        "Registered engine path does not exist: {}",
-                        engine_path.display()
-                    )))
-                }
-            } else {
-                Err(MessageError(format!(
-                    "No registered engine found for version: {}",
-                    project.engine_association.display()
-                )))
-            }
-        }
-        Err(e) => {
-            Err(MessageError(format!(
-                "Failed to retrieve settings: {}",
-                e
-            )))
-        }
-    }
 }
 
 
