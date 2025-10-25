@@ -508,7 +508,8 @@ pub fn find_engine_for_project(
 }
 
 /// Find a compatible engine version with fallback logic
-/// For version 5.5.1, it will try: 5.5.1 -> 5.5 -> None
+/// For version 5.5.1, it will try: 5.5.1 -> 5.5 -> 5.5.x (any patch) -> None
+/// For version 5.4, it will try: 5.4 -> 5.4.x (any patch) -> None
 fn find_compatible_engine(
     app_handle: &AppHandle,
     requested_version: &str,
@@ -522,45 +523,109 @@ fn find_compatible_engine(
 
     info!("Exact match not found for version {}, searching for compatible version", requested_version);
 
-    // Parse the version to try fallback
-    let version_parts: Vec<&str> = requested_version.split('.').collect();
+    // Parse the requested version
+    let requested_parts: Vec<&str> = requested_version.split('.').collect();
 
-    if version_parts.len() >= 3 {
-        // Try major.minor (e.g., 5.5.1 -> 5.5)
-        let major_minor = format!("{}.{}", version_parts[0], version_parts[1]);
+    if requested_parts.is_empty() {
+        return Ok(None);
+    }
 
-        if let Some(engine_path) = custom_engines.get(&major_minor) {
-            info!(
-                "Found compatible version {} for requested version {}: {}",
-                major_minor, requested_version, engine_path
-            );
-            log(
-                app_handle,
-                ErrorLevel::Info,
-                &format!(
-                    "Using compatible engine version {} for project requiring {}",
-                    major_minor, requested_version
-                ),
-            );
-            return Ok(Some(engine_path.clone()));
+    // Try to find a compatible version among all registered engines
+    let mut compatible_engines: Vec<(&String, &String)> = Vec::new();
+
+    for (engine_name, engine_path) in custom_engines {
+        // Skip custom engines with prefix
+        if engine_name.starts_with("Custom-") {
+            continue;
         }
 
-        // Also check with "Custom-" prefix for custom builds
-        let custom_major_minor = format!("Custom-{}", major_minor);
-        if let Some(engine_path) = custom_engines.get(&custom_major_minor) {
-            info!(
-                "Found compatible custom version {} for requested version {}: {}",
-                custom_major_minor, requested_version, engine_path
-            );
-            log(
-                app_handle,
-                ErrorLevel::Info,
-                &format!(
-                    "Using compatible engine version {} for project requiring {}",
-                    custom_major_minor, requested_version
-                ),
-            );
-            return Ok(Some(engine_path.clone()));
+        let engine_parts: Vec<&str> = engine_name.split('.').collect();
+
+        // Check if this engine is compatible
+        let is_compatible = match (requested_parts.len(), engine_parts.len()) {
+            // Requested: 5.4, Engine: 5.4.4 -> Compatible
+            (2, 3) => {
+                requested_parts[0] == engine_parts[0] && requested_parts[1] == engine_parts[1]
+            }
+            // Requested: 5.4.1, Engine: 5.4 -> Compatible
+            (3, 2) => {
+                requested_parts[0] == engine_parts[0] && requested_parts[1] == engine_parts[1]
+            }
+            // Requested: 5.4.1, Engine: 5.4.2 -> Compatible if major.minor match
+            (3, 3) => {
+                requested_parts[0] == engine_parts[0] && requested_parts[1] == engine_parts[1]
+            }
+            // Same length but not 2 or 3 parts, or both have 2 parts (already checked exact match)
+            _ => false,
+        };
+
+        if is_compatible {
+            compatible_engines.push((engine_name, engine_path));
+        }
+    }
+
+    // Sort compatible engines to prefer exact major.minor.patch matches, then by version
+    if !compatible_engines.is_empty() {
+        // Sort by version (descending) to get the latest compatible version
+        compatible_engines.sort_by(|a, b| {
+            let a_parts: Vec<&str> = a.0.split('.').collect();
+            let b_parts: Vec<&str> = b.0.split('.').collect();
+
+            // Compare by major, minor, patch
+            for i in 0..3 {
+                let a_val = a_parts.get(i).and_then(|s| s.parse::<u32>().ok()).unwrap_or(0);
+                let b_val = b_parts.get(i).and_then(|s| s.parse::<u32>().ok()).unwrap_or(0);
+
+                if a_val != b_val {
+                    return b_val.cmp(&a_val); // Descending order
+                }
+            }
+            std::cmp::Ordering::Equal
+        });
+
+        let (engine_name, engine_path) = compatible_engines[0];
+        info!(
+            "Found compatible version {} for requested version {}: {}",
+            engine_name, requested_version, engine_path
+        );
+        log(
+            app_handle,
+            ErrorLevel::Info,
+            &format!(
+                "Using compatible engine version {} for project requiring {}",
+                engine_name, requested_version
+            ),
+        );
+        return Ok(Some(engine_path.clone()));
+    }
+
+    // Also check with "Custom-" prefix for custom builds with same major.minor
+    if requested_parts.len() >= 2 {
+        let major_minor = format!("{}.{}", requested_parts[0], requested_parts[1]);
+
+        for (engine_name, engine_path) in custom_engines {
+            if engine_name.starts_with("Custom-") {
+                let custom_version = engine_name.strip_prefix("Custom-").unwrap_or("");
+                let custom_parts: Vec<&str> = custom_version.split('.').collect();
+
+                if custom_parts.len() >= 2
+                    && custom_parts[0] == requested_parts[0]
+                    && custom_parts[1] == requested_parts[1] {
+                    info!(
+                        "Found compatible custom version {} for requested version {}: {}",
+                        engine_name, requested_version, engine_path
+                    );
+                    log(
+                        app_handle,
+                        ErrorLevel::Info,
+                        &format!(
+                            "Using compatible engine version {} for project requiring {}",
+                            engine_name, requested_version
+                        ),
+                    );
+                    return Ok(Some(engine_path.clone()));
+                }
+            }
         }
     }
 
