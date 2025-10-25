@@ -174,10 +174,12 @@ fn build_package_command(
 
     // Basic BuildCookRun command
     command.arg("BuildCookRun");
-    command.args(&["-project", request.project.path.as_os_str().to_string_lossy().trim()]);
-    command.args(&["-platform", &request.target_platform]);
-    command.args(&["-configuration", &request.build_type]);
-    command.args(&["-archivedirectory", &request.output_directory]);
+
+    // Use format! to create the -project argument with proper path handling
+    command.arg(format!("-project={}", request.project.path.display()));
+    command.arg(format!("-platform={}", request.target_platform));
+    command.arg(format!("-configuration={}", request.build_type));
+    command.arg(format!("-archivedirectory={}", request.output_directory));
 
     // Standard flags
     command.arg("-build");
