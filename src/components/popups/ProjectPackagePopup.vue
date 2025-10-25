@@ -191,13 +191,27 @@ const checkEngineAvailability = async () => {
 }
 
 const startPackaging = async () => {
-  if (!canPackage.value || isPackaging.value) return
+  console.log('startPackaging called', { canPackage: canPackage.value, isPackaging: isPackaging.value })
+
+  if (!canPackage.value || isPackaging.value) {
+    console.log('Cannot package - validation failed', {
+      canPackage: canPackage.value,
+      isPackaging: isPackaging.value,
+      outputDir: packageConfig.outputDirectory,
+      enginePath: engineAvailablePath.value
+    })
+    return
+  }
 
   try {
     isPackaging.value = true
+    addLog('Starting packaging process...', 'info')
+
+    const project = findProjectByPath(props.projectPath)
+    console.log('Found project:', project)
 
     const request = {
-      project: findProjectByPath(props.projectPath),
+      project,
       build_type: packageConfig.buildType,
       target_platform: packageConfig.targetPlatform,
       output_directory: packageConfig.outputDirectory,
@@ -206,12 +220,17 @@ const startPackaging = async () => {
       archive_filename_format: packageConfig.createArchive ? packageConfig.archiveFilenameFormat : null
     }
 
+    console.log('Packaging request:', request)
+    addLog(`Packaging ${project?.name || 'project'} for ${packageConfig.targetPlatform}...`, 'info')
+
     await invoke('package_project', { request })
 
+    addLog('Packaging completed successfully!', 'info')
     emit('close')
 
   } catch (error) {
-    // Backend will handle error logging
+    console.error('Packaging error:', error)
+    addLog(`Packaging failed: ${error}`, 'error')
   } finally {
     isPackaging.value = false
   }
