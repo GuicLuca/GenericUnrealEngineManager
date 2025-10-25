@@ -476,18 +476,7 @@ pub fn find_engine_for_project(
     // Match the project's engine association with registered engines
     match &project.engine_association {
         EngineAssociation::Standard(version) => {
-            // Look for this version in custom_engines
-            if let Some(engine_path) = settings.engine_programs.custom_engines.get(version) {
-                info!("Found engine for version {}: {}", version, engine_path);
-                Ok(Some(engine_path.clone()))
-            } else {
-                log(
-                    &app_handle,
-                    ErrorLevel::Warning,
-                    &format!("Engine version {} not found in settings", version),
-                );
-                Ok(None)
-            }
+            find_compatible_engine(&app_handle, version, &settings.engine_programs.custom_engines)
         }
         EngineAssociation::Custom(custom_id) => {
             // Look for custom engine by ID
@@ -504,6 +493,72 @@ pub fn find_engine_for_project(
             }
         }
     }
+}
+
+/// Find a compatible engine version with fallback logic
+/// For version 5.5.1, it will try: 5.5.1 -> 5.5 -> None
+fn find_compatible_engine(
+    app_handle: &AppHandle,
+    requested_version: &str,
+    custom_engines: &std::collections::HashMap<String, String>,
+) -> Result<Option<String>> {
+    // Try exact match first
+    if let Some(engine_path) = custom_engines.get(requested_version) {
+        info!("Found exact match for version {}: {}", requested_version, engine_path);
+        return Ok(Some(engine_path.clone()));
+    }
+
+    info!("Exact match not found for version {}, searching for compatible version", requested_version);
+
+    // Parse the version to try fallback
+    let version_parts: Vec<&str> = requested_version.split('.').collect();
+
+    if version_parts.len() >= 3 {
+        // Try major.minor (e.g., 5.5.1 -> 5.5)
+        let major_minor = format!("{}.{}", version_parts[0], version_parts[1]);
+
+        if let Some(engine_path) = custom_engines.get(&major_minor) {
+            info!(
+                "Found compatible version {} for requested version {}: {}",
+                major_minor, requested_version, engine_path
+            );
+            log(
+                app_handle,
+                ErrorLevel::Info,
+                &format!(
+                    "Using compatible engine version {} for project requiring {}",
+                    major_minor, requested_version
+                ),
+            );
+            return Ok(Some(engine_path.clone()));
+        }
+
+        // Also check with "Custom-" prefix for custom builds
+        let custom_major_minor = format!("Custom-{}", major_minor);
+        if let Some(engine_path) = custom_engines.get(&custom_major_minor) {
+            info!(
+                "Found compatible custom version {} for requested version {}: {}",
+                custom_major_minor, requested_version, engine_path
+            );
+            log(
+                app_handle,
+                ErrorLevel::Info,
+                &format!(
+                    "Using compatible engine version {} for project requiring {}",
+                    custom_major_minor, requested_version
+                ),
+            );
+            return Ok(Some(engine_path.clone()));
+        }
+    }
+
+    // No compatible version found
+    log(
+        app_handle,
+        ErrorLevel::Warning,
+        &format!("No compatible engine version found for {}", requested_version),
+    );
+    Ok(None)
 }
 
 /// Save detected engines to settings
