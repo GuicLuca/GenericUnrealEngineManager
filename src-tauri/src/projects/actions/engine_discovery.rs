@@ -468,17 +468,29 @@ pub fn find_engine_for_project(
     let project = projects
         .iter()
         .find(|p| p.path == path)
-        .ok_or_else(|| MessageError("Project not found".to_string()))?;
+        .ok_or_else(|| {
+            error!("Project not found at path: {}", project_path);
+            MessageError(format!("Project not found at path: {}", project_path))
+        })?;
+
+    info!("Found project: {} with engine association: {:?}", project.name, project.engine_association);
 
     // Load settings to get registered engines
     let settings = settings_manager::load_settings(&app_handle)?;
 
+    info!("Loaded {} registered engines", settings.engine_programs.custom_engines.len());
+    for (name, path) in &settings.engine_programs.custom_engines {
+        info!("  - Engine '{}' at '{}'", name, path);
+    }
+
     // Match the project's engine association with registered engines
     match &project.engine_association {
         EngineAssociation::Standard(version) => {
+            info!("Looking for standard engine version: {}", version);
             find_compatible_engine(&app_handle, version, &settings.engine_programs.custom_engines)
         }
         EngineAssociation::Custom(custom_id) => {
+            info!("Looking for custom engine: {}", custom_id);
             // Look for custom engine by ID
             if let Some(engine_path) = settings.engine_programs.custom_engines.get(custom_id) {
                 info!("Found custom engine {}: {}", custom_id, engine_path);

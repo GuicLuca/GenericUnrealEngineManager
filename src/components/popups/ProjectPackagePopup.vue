@@ -169,18 +169,23 @@ const detectPlatform = async () => {
 
 const checkEngineAvailability = async () => {
   try {
+    console.log('Checking engine availability for project:', props.projectPath)
+
     const result = await invoke('find_engine_for_project', {
       projectPath: props.projectPath
     }) as string | null
 
+    console.log('Engine availability result:', result)
     engineAvailablePath.value = result
 
-    if (!result) {
+    if (result) {
+      addLog(`Found compatible engine at: ${result}`, 'info')
+    } else {
       addLog('Engine not found for this project', 'warn')
     }
   } catch (error) {
     console.error('Failed to check engine availability:', error)
-    addLog('Failed to check engine availability', 'error')
+    addLog(`Failed to check engine availability: ${error}`, 'error')
     engineAvailablePath.value = null
   }
 }

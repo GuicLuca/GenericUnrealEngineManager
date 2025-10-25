@@ -35,3 +35,19 @@ pub fn get_system_username() -> String {
 pub fn get_system_hostname() -> String {
     whoami::fallible::hostname().unwrap_or_else(|_| "UnknownHostName".into())
 }
+
+/// Get current platform
+#[command]
+pub fn get_current_platform() -> String {
+    #[cfg(target_os = "windows")]
+    return "windows".to_string();
+
+    #[cfg(target_os = "macos")]
+    return "macos".to_string();
+
+    #[cfg(target_os = "linux")]
+    return "linux".to_string();
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    return "unknown".to_string();
+}

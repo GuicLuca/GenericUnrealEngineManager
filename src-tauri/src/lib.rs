@@ -107,6 +107,7 @@ pub fn run() {
         projects::actions::behavior::open_file_explorer,
         projects::actions::behavior::get_system_username,
         projects::actions::behavior::get_system_hostname,
+        projects::actions::behavior::get_current_platform,
         projects::actions::project_discovery::discover_projects,
         projects::actions::project_discovery::get_projects,
         projects::actions::project_discovery::remove_projects,
