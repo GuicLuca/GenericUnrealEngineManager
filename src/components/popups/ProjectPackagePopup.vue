@@ -1,17 +1,15 @@
 <script setup lang="ts">
-import {ref, reactive, computed, onMounted, watch} from 'vue'
+import {ref, reactive, computed, onMounted} from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import InfoTooltip from '../InfoTooltip.vue'
 import { useLogStore } from '../../stores/logStore'
 import { useProjectStore } from '../../stores/projectStore'
-import { useCompression } from "../../composables/useCompression.ts";
-import { useSettingsStore } from '../../stores/settingsStore'
+import { useCompression } from "../../composables/useCompression.ts"
 
 const { addLog } = useLogStore()
 const { findProjectByPath } = useProjectStore()
 const { loadAvailableFormats } = useCompression()
-const { getSettings } = useSettingsStore()
 
 interface Props {
   projectName: string
@@ -38,7 +36,7 @@ const emit = defineEmits<{
 
 const isPackaging = ref(false)
 const availableFormats = ref<Record<string, string>>({})
-const localEngines = reactive({... getSettings('engine_programs').custom_engines})
+const engineAvailablePath = ref<string | null>(null)
 
 const packageConfig = reactive<PackageConfig>({
   buildType: 'Development',
@@ -49,18 +47,11 @@ const packageConfig = reactive<PackageConfig>({
   archiveFilenameFormat: '[Project]_[Platform]_[BuildType]_[YYYY][MM][DD][HH][mm]'
 })
 
-// Watch for external changes to settings
-watch( () => getSettings('engine_programs').custom_engines, (newEngines) => {
-  Object.assign(localEngines, newEngines)
-}, {deep: true})
 
 const engineError: string = "The Unreal Engine version associated with this project is not registered in the app settings."
 
 const engineAvailable = computed(() => {
-  const project = findProjectByPath(props.projectPath)
-  if (!project) return false
-
-  return !!localEngines[project.engine_association];
+  return engineAvailablePath.value !== null
 })
 
 const canPackage = computed(() => {
@@ -173,7 +164,24 @@ const detectPlatform = async () => {
     }
   } catch (error) {
     console.error('Failed to detect platform:', error)
-    // Keep default Win64
+  }
+}
+
+const checkEngineAvailability = async () => {
+  try {
+    const result = await invoke('find_engine_for_project', {
+      projectPath: props.projectPath
+    }) as string | null
+
+    engineAvailablePath.value = result
+
+    if (!result) {
+      addLog('Engine not found for this project', 'warn')
+    }
+  } catch (error) {
+    console.error('Failed to check engine availability:', error)
+    addLog('Failed to check engine availability', 'error')
+    engineAvailablePath.value = null
   }
 }
 
@@ -210,12 +218,12 @@ onMounted(() => {
         availableFormats: Record<string, string>
         selectedFormat: string
       }) => {
-        // Set default format
         availableFormats.value = result.availableFormats;
         packageConfig.archiveFilenameFormat = result.selectedFormat;
       }
   )
   detectPlatform()
+  checkEngineAvailability()
 })
 </script>
 

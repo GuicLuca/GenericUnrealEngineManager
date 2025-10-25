@@ -3,6 +3,7 @@ use crate::misc::errors::{ErrorLevel, Result};
 use crate::misc::payloads::EngineDiscoveryResult;
 use crate::misc::prelude::log;
 use crate::misc::progress::TaskProgress;
+use crate::projects::models::project::{EngineAssociation, Project};
 use crate::settings::actions::settings_manager;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
@@ -448,6 +449,61 @@ fn is_precompiled_branch(branch_name: &str) -> bool {
     // "++UE5+Release-5.1", "++UE4+Release-4.25", etc.
     let pattern = regex::Regex::new(r"^\+\+UE[45]\+Release-\d+\.\d+").unwrap();
     pattern.is_match(branch_name)
+}
+
+/// Find the engine path for a given project
+#[command]
+pub fn find_engine_for_project(
+    app_handle: AppHandle,
+    project_path: String,
+) -> Result<Option<String>> {
+    info!("Finding engine for project at: {}", project_path);
+
+    let path = PathBuf::from(&project_path);
+
+    // Get the project from the store
+    let projects = Project::get_projects(&app_handle)
+        .map_err(|e| MessageError(format!("Failed to get projects: {}", e)))?;
+
+    let project = projects
+        .iter()
+        .find(|p| p.path == path)
+        .ok_or_else(|| MessageError("Project not found".to_string()))?;
+
+    // Load settings to get registered engines
+    let settings = settings_manager::load_settings(&app_handle)?;
+
+    // Match the project's engine association with registered engines
+    match &project.engine_association {
+        EngineAssociation::Standard(version) => {
+            // Look for this version in custom_engines
+            if let Some(engine_path) = settings.engine_programs.custom_engines.get(version) {
+                info!("Found engine for version {}: {}", version, engine_path);
+                Ok(Some(engine_path.clone()))
+            } else {
+                log(
+                    &app_handle,
+                    ErrorLevel::Warning,
+                    &format!("Engine version {} not found in settings", version),
+                );
+                Ok(None)
+            }
+        }
+        EngineAssociation::Custom(custom_id) => {
+            // Look for custom engine by ID
+            if let Some(engine_path) = settings.engine_programs.custom_engines.get(custom_id) {
+                info!("Found custom engine {}: {}", custom_id, engine_path);
+                Ok(Some(engine_path.clone()))
+            } else {
+                log(
+                    &app_handle,
+                    ErrorLevel::Warning,
+                    &format!("Custom engine {} not found in settings", custom_id),
+                );
+                Ok(None)
+            }
+        }
+    }
 }
 
 /// Save detected engines to settings
