@@ -601,8 +601,6 @@ fn find_compatible_engine(
 
     // Also check with "Custom-" prefix for custom builds with same major.minor
     if requested_parts.len() >= 2 {
-        let major_minor = format!("{}.{}", requested_parts[0], requested_parts[1]);
-
         for (engine_name, engine_path) in custom_engines {
             if engine_name.starts_with("Custom-") {
                 let custom_version = engine_name.strip_prefix("Custom-").unwrap_or("");
