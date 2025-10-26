@@ -6,10 +6,9 @@ use crate::projects::actions::project_compressor;
 use crate::projects::actions::engine_discovery;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 use tokio::fs;
 use tokio::io::{AsyncBufReadExt, BufReader};
-use crate::projects::models::project::Project;
 
 #[tauri::command]
 pub async fn package_project(
