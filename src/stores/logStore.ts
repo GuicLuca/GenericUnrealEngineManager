@@ -8,6 +8,7 @@ export interface LogEntry {
     level?: 'info' | 'warn' | 'error' | 'debug' | 'trace'
 }
 
+const MAX_MESSAGE_SAVED = 1600;
 const logs = ref<LogEntry[]>([])
 
 export const useLogStore = () => {
@@ -23,8 +24,8 @@ export const useLogStore = () => {
         })
 
         // Keep only the last 200 logs to prevent memory issues
-        if (logs.value.length > 200) {
-            logs.value = logs.value.slice(-200)
+        if (logs.value.length > MAX_MESSAGE_SAVED) {
+            logs.value = logs.value.slice(-MAX_MESSAGE_SAVED)
         }
     }
 

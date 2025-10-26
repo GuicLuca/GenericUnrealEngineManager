@@ -84,14 +84,14 @@ onUpdated(() => {
   padding: var(--spacing-sm);
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
-  line-height: 1.4;
+  line-height: 1;
 }
 
 .log-entry {
   display: flex;
   gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-xs);
-  padding: var(--spacing-xs);
+  margin-bottom: var(--spacing-xxs);
+  padding: var(--spacing-xxs);
   border-radius: var(--border-radius-sm);
   transition: background-color var(--transition-fast);
 }
