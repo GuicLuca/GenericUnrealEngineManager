@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import {ref, computed, onMounted, onUnmounted} from 'vue'
+import {ref, computed, watch, onMounted, onUnmounted} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import InfoItem from './InfoItem.vue'
 import FileExplorerButton from './FileExplorerButton.vue'
-import {EngineAssociation, useProjectStore} from '../stores/projectStore'
+import {useProjectStore} from '../stores/projectStore'
 import {formatSize, timeSince} from '../utils.ts'
 
 interface Props {
@@ -16,22 +16,16 @@ interface Emits {
   (e: 'resize', width: number): void
 }
 
-interface AppSettings {
-  engine_programs?: {
-    custom_engines?: Record<string, string>
-  }
-}
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const {
   selectedProject,
-  isEngineVersionCustom,
   displayEngineVersion
 } = useProjectStore()
 const isResizing = ref(false)
-const settings = ref<AppSettings | null>(null)
+const engineFolder = ref<string | null>(null)
 
 // Timer for updating time-based fields
 let timeUpdateInterval: number | null = null
@@ -44,37 +38,28 @@ const currentTimeSince = computed(() => {
   return timeSince(selectedProject.value.last_scan_date)
 })
 
-const getEngineFolder = (engineAssociation: EngineAssociation): string | null => {
-  if (isEngineVersionCustom(engineAssociation)) {
-    // For custom engines, try to find a matching registered engine
-    if (settings.value?.engine_programs?.custom_engines) {
-      // Return the first custom engine path (could be improved to match by name)
-      const enginePaths = Object.values(settings.value.engine_programs.custom_engines)
-      if (enginePaths.length > 0) {
-        return enginePaths[0].trim()
-      }
-    }
-  } else {
-    // For standard engines, check if there's a registered engine with the matching version
-    if (settings.value?.engine_programs?.custom_engines) {
-      for (const [name, path] of Object.entries(settings.value.engine_programs.custom_engines)) {
-        if (name.includes(engineAssociation.Standard ?? '')) {
-          return path.trim()
-        }
-      }
-    }
+const loadEngineFolder = async () => {
+  if (!selectedProject.value) {
+    engineFolder.value = null
+    return
   }
 
-  return null
-}
-
-const loadSettings = async () => {
   try {
-    settings.value = await invoke('get_settings') as AppSettings
+    const result = await invoke('find_engine_for_project', {
+      projectPath: selectedProject.value.path
+    }) as string | null
+
+    engineFolder.value = result
   } catch (error) {
-    console.error('Failed to load settings:', error)
+    console.error('Failed to find engine folder:', error)
+    engineFolder.value = null
   }
 }
+
+// Watch for selected project changes and reload engine folder
+watch(() => selectedProject.value, () => {
+  loadEngineFolder()
+}, { immediate: true })
 
 const startResize = (event: MouseEvent) => {
   isResizing.value = true
@@ -102,8 +87,6 @@ const stopResize = () => {
 
 // Setup timer for updating time-based fields
 onMounted(() => {
-  loadSettings()
-
   // Update every minute (60 000 ms)
   timeUpdateInterval = window.setInterval(async () => {
     forceUpdate.value = (forceUpdate.value + 1) % 60
@@ -138,8 +121,8 @@ onUnmounted(() => {
             <div class="info-value">
               {{ displayEngineVersion(selectedProject.engine_association) }}
               <FileExplorerButton
-                  v-if="getEngineFolder(selectedProject.engine_association)"
-                  :project-path="getEngineFolder(selectedProject.engine_association)!"
+                  v-if="engineFolder"
+                  :project-path="engineFolder"
                   :project-name="`${displayEngineVersion(selectedProject.engine_association)} Engine`"
                   size="mini"
                   title="Open engine directory"
