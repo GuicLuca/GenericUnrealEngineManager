@@ -223,15 +223,22 @@ const startPackaging = async () => {
     console.log('Packaging request:', request)
     addLog(`Packaging ${project?.name || 'project'} for ${packageConfig.targetPlatform}...`, 'info')
 
-    await invoke('package_project', { request })
-
-    addLog('Packaging completed successfully!', 'info')
+    // Close the popup immediately after starting the packaging
     emit('close')
+
+    // Start packaging in the background (don't await)
+    invoke('package_project', { request })
+      .then(() => {
+        addLog('Packaging completed successfully!', 'info')
+      })
+      .catch((error) => {
+        console.error('Packaging error:', error)
+        addLog(`Packaging failed: ${error}`, 'error')
+      })
 
   } catch (error) {
     console.error('Packaging error:', error)
     addLog(`Packaging failed: ${error}`, 'error')
-  } finally {
     isPackaging.value = false
   }
 }
