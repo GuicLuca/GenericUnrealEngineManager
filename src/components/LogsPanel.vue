@@ -131,6 +131,10 @@ onUpdated(() => {
   color: #805ad5;
 }
 
+.log-trace .log-level {
+  color: #38a169;
+}
+
 .log-message {
   color: var(--text-primary);
   word-wrap: break-word;

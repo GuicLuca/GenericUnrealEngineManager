@@ -194,7 +194,7 @@ async fn execute_with_streaming(
             let message = format!("{} {}", prefix_stdout, line);
             let _ = app_handle_stdout.emit("log-message", serde_json::json!({
                 "message": message,
-                "level": "info"
+                "level": "trace"
             }));
         }
     });
@@ -205,7 +205,7 @@ async fn execute_with_streaming(
             let message = format!("{} {}", prefix_stderr, line);
             let _ = app_handle_stderr.emit("log-message", serde_json::json!({
                 "message": message,
-                "level": "info"
+                "level": "trace"
             }));
         }
     });

@@ -5,13 +5,13 @@ export interface LogEntry {
     id: number
     timestamp: string
     message: string
-    level?: 'info' | 'warn' | 'error' | 'debug'
+    level?: 'info' | 'warn' | 'error' | 'debug' | 'trace'
 }
 
 const logs = ref<LogEntry[]>([])
 
 export const useLogStore = () => {
-    const addLog = (message: string, level: 'info' | 'warn' | 'error' | 'debug' = 'info') => {
+    const addLog = (message: string, level: 'info' | 'warn' | 'error' | 'debug' | 'trace' = 'info') => {
         const now = new Date()
         const timestamp = now.toISOString().slice(0, 19).replace('T', ' ')
 
