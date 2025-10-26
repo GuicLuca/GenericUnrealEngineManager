@@ -40,6 +40,12 @@ export const useLogStore = () => {
                 const {message, level} = event.payload
                 addLog(message, level || 'info')
             })
+
+            // Listen for streaming build output
+            await listen('log-message', (event: any) => {
+                const {message, level} = event.payload
+                addLog(message, level || 'info')
+            })
         } catch (error) {
             console.error('Failed to initialize log listener:', error)
         }
