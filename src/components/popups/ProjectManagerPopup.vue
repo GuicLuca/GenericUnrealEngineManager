@@ -15,7 +15,7 @@ const {
   setSelectedProject,
   removeProjects,
   refreshProjects,
-  displayEngineVersion
+  getEngineVersionString
 } = useProjectStore()
 
 const { addLog } = useLogStore()
@@ -123,8 +123,8 @@ const standardSortCompare = (a: Project, b: Project): number => {
         comparison = -1
       } else {
         // Both custom or both standard - compare versions
-        const aVersion = displayEngineVersion(a.engine_association)
-        const bVersion = displayEngineVersion(b.engine_association)
+        const aVersion = getEngineVersionString(a.engine_association)
+        const bVersion = getEngineVersionString(b.engine_association)
         comparison = aVersion.localeCompare(bVersion, undefined, { numeric: true })
       }
       break
@@ -148,8 +148,8 @@ const tieBreakingCompare = (a: Project, b: Project): number => {
   } else if (!aIsCustom && bIsCustom) {
     comparison = -1
   } else {
-    const aVersion = displayEngineVersion(a.engine_association)
-    const bVersion = displayEngineVersion(b.engine_association)
+    const aVersion = getEngineVersionString(a.engine_association)
+    const bVersion = getEngineVersionString(b.engine_association)
     comparison = aVersion.localeCompare(bVersion, undefined, { numeric: true })
   }
   if (comparison !== 0) return comparison
@@ -463,7 +463,7 @@ onUnmounted(() => {
               <div class="project-name">{{ project.name }}</div>
               <div class="project-path">{{ project.path }}</div>
               <div class="project-meta">
-                <span class="engine-version">{{ displayEngineVersion(project.engine_association) }}</span>
+                <span class="engine-version">{{ getEngineVersionString(project.engine_association) }}</span>
                 <span class="has-cpp">{{ project.has_cpp ? 'C++' : 'Blueprint' }}</span>
                 <span class="plugin-count">{{ project.plugins.length }} plugin(s)</span>
                 <span class="size-on-disk">{{ formatSize(project.size_on_disk) }}</span>
