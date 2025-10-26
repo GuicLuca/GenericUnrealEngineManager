@@ -3,9 +3,9 @@ import { ref, computed } from 'vue'
 import { useProjectStore, type ProjectPlugin } from '../stores/projectStore'
 import { useLogStore } from '../stores/logStore'
 import FileExplorerButton from './FileExplorerButton.vue'
-import { formatSize } from '../utils'
+import { formatSize, timeSince } from '../utils'
 
-const { selectedProject } = useProjectStore()
+const { selectedProject, isLoading } = useProjectStore()
 const { addLog } = useLogStore()
 
 const activeFilter = ref('all')

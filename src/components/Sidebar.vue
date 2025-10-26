@@ -16,7 +16,7 @@ interface Props {
   items: SidebarItem[]
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 const { selectedProject, hasSelectedProject, removeProjects } = useProjectStore()
 const { addLog } = useLogStore()

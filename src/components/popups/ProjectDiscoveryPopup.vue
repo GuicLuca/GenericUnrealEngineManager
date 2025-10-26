@@ -64,7 +64,7 @@ const handleSubmit = async () => {
       ignore_samples: formData.ignoreSamples
     }
 
-    const result = await discoverProjects(request) as { total_found: number; scan_duration_ms: number }
+    const result = await discoverProjects(request)
 
     addLog(`Project discovery completed. Found ${result.total_found} new projects in ${result.scan_duration_ms}ms`)
     emit('close')

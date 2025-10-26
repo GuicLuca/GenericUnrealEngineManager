@@ -125,7 +125,7 @@ export const mockProjects: Project[] = [
     {
         name: "CustomEngine_Project",
         description: "Experimental project using a custom Unreal Engine build with proprietary rendering features and custom tools for procedural content generation.",
-        engine_association: { Custom: "Custom-5.3.0" },
+        engine_association: "Custom",
         path: "E:/CustomEngine/Projects/CustomEngine_Project/CustomEngine_Project.uproject",
         has_cpp: true,
         plugins: [

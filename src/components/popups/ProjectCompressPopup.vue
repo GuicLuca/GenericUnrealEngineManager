@@ -27,6 +27,13 @@ interface CleaningSelection {
 
 type CompressionAlgorithm = 'Zip' | 'SevenZip' | 'Tar' | 'TarGz'
 
+interface AppSettings {
+  compression: {
+    filename_format: string
+    custom_presets: Record<string, string>
+  }
+}
+
 const props = defineProps<Props>()
 const emit = defineEmits<{
   (e: 'close'): void
