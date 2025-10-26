@@ -489,29 +489,24 @@ pub fn find_engine_for_project(
             info!("Looking for standard engine version: {}", version);
             find_compatible_engine(&app_handle, version, &settings.engine_programs.custom_engines)
         }
-        EngineAssociation::Custom(custom_id) => {
-            info!("Looking for custom engine: {}", custom_id);
+        EngineAssociation::Custom(version) => {
+            let version_id = format!("Custom-{}", version);
+            info!("Looking for custom engine: {}", version_id);
 
-            // Try exact match first
-            if let Some(engine_path) = settings.engine_programs.custom_engines.get(custom_id) {
-                info!("Found exact custom engine match {}: {}", custom_id, engine_path);
+            // Try exact match only
+            if let Some(engine_path) = settings.engine_programs.custom_engines.get(&version_id) {
+                info!("Found exact custom engine match {}: {}", version, engine_path);
                 return Ok(Some(engine_path.clone()));
             }
+            info!("Custom engine not found by exact name, cannot fallback on generic detection due to potential missing engine features.");
 
-            // If custom_id is "Custom-X.Y.Z", also try to find a compatible version
-            // by stripping the "Custom-" prefix and using the same fallback logic
-            if custom_id.starts_with("Custom-") {
-                let version = custom_id.strip_prefix("Custom-").unwrap_or("");
-                info!("Custom engine not found by exact name, trying compatible version search for: {}", version);
-                find_compatible_engine(&app_handle, version, &settings.engine_programs.custom_engines)
-            } else {
-                log(
-                    &app_handle,
-                    ErrorLevel::Warning,
-                    &format!("Custom engine {} not found in settings", custom_id),
-                );
-                Ok(None)
-            }
+            log(
+                &app_handle,
+                ErrorLevel::Warning,
+                &format!("Custom engine {} not found in settings! Add it or build manually", version),
+            );
+            Ok(None)
+
         }
     }
 }
@@ -522,10 +517,10 @@ pub fn find_engine_for_project(
 fn find_compatible_engine(
     app_handle: &AppHandle,
     requested_version: &str,
-    custom_engines: &std::collections::HashMap<String, String>,
+    engines: &std::collections::HashMap<String, String>,
 ) -> Result<Option<String>> {
     // Try exact match first
-    if let Some(engine_path) = custom_engines.get(requested_version) {
+    if let Some(engine_path) = engines.get(requested_version) {
         info!("Found exact match for version {}: {}", requested_version, engine_path);
         return Ok(Some(engine_path.clone()));
     }
@@ -542,7 +537,7 @@ fn find_compatible_engine(
     // Try to find a compatible version among all registered engines
     let mut compatible_engines: Vec<(&String, &String)> = Vec::new();
 
-    for (engine_name, engine_path) in custom_engines {
+    for (engine_name, engine_path) in engines {
         // Skip custom engines with prefix
         if engine_name.starts_with("Custom-") {
             continue;
@@ -610,7 +605,7 @@ fn find_compatible_engine(
 
     // Also check with "Custom-" prefix for custom builds with same major.minor
     if requested_parts.len() >= 2 {
-        for (engine_name, engine_path) in custom_engines {
+        for (engine_name, engine_path) in engines {
             if engine_name.starts_with("Custom-") {
                 let custom_version = engine_name.strip_prefix("Custom-").unwrap_or("");
                 let custom_parts: Vec<&str> = custom_version.split('.').collect();
