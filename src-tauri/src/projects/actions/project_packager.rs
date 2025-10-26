@@ -163,7 +163,6 @@ async fn execute_with_streaming(
     // Hide console window on Windows
     #[cfg(target_os = "windows")]
     {
-        use std::os::windows::process::CommandExt;
         command.creation_flags(0x08000000); // CREATE_NO_WINDOW
     }
 
