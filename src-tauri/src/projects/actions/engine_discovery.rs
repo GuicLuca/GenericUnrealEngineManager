@@ -592,14 +592,7 @@ fn find_compatible_engine(
             "Found compatible version {} for requested version {}: {}",
             engine_name, requested_version, engine_path
         );
-        log(
-            app_handle,
-            ErrorLevel::Info,
-            &format!(
-                "Using compatible engine version {} for project requiring {}",
-                engine_name, requested_version
-            ),
-        );
+
         return Ok(Some(engine_path.clone()));
     }
 
@@ -616,14 +609,6 @@ fn find_compatible_engine(
                     info!(
                         "Found compatible custom version {} for requested version {}: {}",
                         engine_name, requested_version, engine_path
-                    );
-                    log(
-                        app_handle,
-                        ErrorLevel::Info,
-                        &format!(
-                            "Using compatible engine version {} for project requiring {}",
-                            engine_name, requested_version
-                        ),
                     );
                     return Ok(Some(engine_path.clone()));
                 }
