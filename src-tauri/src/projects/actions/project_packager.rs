@@ -5,9 +5,10 @@ use crate::misc::progress::TaskProgress;
 use crate::projects::actions::project_compressor;
 use crate::projects::actions::engine_discovery;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::Stdio;
 use tauri::AppHandle;
 use tokio::fs;
+use tokio::io::{AsyncBufReadExt, BufReader};
 use crate::projects::models::project::Project;
 
 #[tauri::command]
@@ -87,20 +88,24 @@ async fn package_project_worker(
     progress_manager.update(0.4, Some("Building packaging command...".to_string()));
 
     let runuat_path = get_runuat_path(&engine_path)?;
-    let mut command = build_package_command(&runuat_path, &request)?;
+    let command_args = build_package_command_args(&runuat_path, &request)?;
 
-    // Execute packaging
+    // Execute packaging with real-time output streaming
     progress_manager.update(0.5, Some("Starting Unreal Engine packaging...".to_string()));
 
     let package_start = std::time::Instant::now();
-    let output = command.output()?;
+    let exit_status = execute_with_streaming(
+        &runuat_path,
+        &command_args,
+        app_handle,
+        &format!("[BUILD-{}]", request.project.name),
+    ).await?;
     let package_duration = package_start.elapsed();
 
-    if !output.status.success() {
+    if !exit_status.success() {
         return Err(MessageError(format!(
-            "Packaging failed. Stdout: {}\nStderr: {}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
+            "Packaging failed with exit code: {:?}",
+            exit_status.code()
         )));
     }
 
@@ -133,6 +138,90 @@ async fn package_project_worker(
 }
 
 
+async fn execute_with_streaming(
+    runuat_path: &Path,
+    args: &[String],
+    app_handle: &AppHandle,
+    log_prefix: &str,
+) -> Result<std::process::ExitStatus> {
+    let mut command = if cfg!(target_os = "windows") {
+        let mut cmd = tokio::process::Command::new("cmd");
+        cmd.args(&["/C", &runuat_path.to_string_lossy()]);
+        cmd
+    } else {
+        let mut cmd = tokio::process::Command::new("bash");
+        cmd.arg(&runuat_path.as_os_str());
+        cmd
+    };
+
+    // Add all arguments
+    command.args(args);
+
+    // Configure to capture stdout and stderr
+    command.stdout(Stdio::piped());
+    command.stderr(Stdio::piped());
+
+    // Hide console window on Windows
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+
+    // Spawn the process
+    let mut child = command
+        .spawn()
+        .map_err(|e| MessageError(format!("Failed to spawn process: {}", e)))?;
+
+    // Get stdout and stderr handles
+    let stdout = child.stdout.take()
+        .ok_or_else(|| MessageError("Failed to capture stdout".to_string()))?;
+    let stderr = child.stderr.take()
+        .ok_or_else(|| MessageError("Failed to capture stderr".to_string()))?;
+
+    // Create async readers
+    let stdout_reader = BufReader::new(stdout);
+    let stderr_reader = BufReader::new(stderr);
+
+    let app_handle_stdout = app_handle.clone();
+    let app_handle_stderr = app_handle.clone();
+    let prefix_stdout = log_prefix.to_string();
+    let prefix_stderr = log_prefix.to_string();
+
+    // Spawn tasks to read stdout and stderr concurrently
+    let stdout_task = tokio::spawn(async move {
+        let mut lines = stdout_reader.lines();
+        while let Ok(Some(line)) = lines.next_line().await {
+            let message = format!("{} {}", prefix_stdout, line);
+            let _ = app_handle_stdout.emit("log-message", serde_json::json!({
+                "message": message,
+                "level": "info"
+            }));
+        }
+    });
+
+    let stderr_task = tokio::spawn(async move {
+        let mut lines = stderr_reader.lines();
+        while let Ok(Some(line)) = lines.next_line().await {
+            let message = format!("{} {}", prefix_stderr, line);
+            let _ = app_handle_stderr.emit("log-message", serde_json::json!({
+                "message": message,
+                "level": "info"
+            }));
+        }
+    });
+
+    // Wait for the process to complete
+    let status = child.wait().await
+        .map_err(|e| MessageError(format!("Failed to wait for process: {}", e)))?;
+
+    // Wait for output tasks to complete
+    let _ = stdout_task.await;
+    let _ = stderr_task.await;
+
+    Ok(status)
+}
+
 fn get_runuat_path(engine_path: &Path) -> Result<PathBuf> {
     let runuat_path = if cfg!(target_os = "windows") {
         engine_path
@@ -158,59 +247,51 @@ fn get_runuat_path(engine_path: &Path) -> Result<PathBuf> {
     Ok(runuat_path)
 }
 
-fn build_package_command(
-    runuat_path: &Path,
+fn build_package_command_args(
+    _runuat_path: &Path,
     request: &PackageRequest,
-) -> Result<Command> {
-    let mut command = if cfg!(target_os = "windows") {
-        let mut cmd = Command::new("cmd");
-        cmd.args(&["/C", &runuat_path.to_string_lossy()]);
-        cmd
-    } else {
-        let mut cmd = Command::new("bash");
-        cmd.arg(&runuat_path.as_os_str());
-        cmd
-    };
+) -> Result<Vec<String>> {
+    let mut args = Vec::new();
 
     // Basic BuildCookRun command
-    command.arg("BuildCookRun");
+    args.push("BuildCookRun".to_string());
 
-    // Use format! to create the -project argument with proper path handling
-    command.arg(format!("-project={}", request.project.path.display()));
-    command.arg(format!("-platform={}", request.target_platform));
-    command.arg(format!("-configuration={}", request.build_type));
-    command.arg(format!("-archivedirectory={}", request.output_directory));
+    // Use format! to create the arguments with proper path handling
+    args.push(format!("-project={}", request.project.path.display()));
+    args.push(format!("-platform={}", request.target_platform));
+    args.push(format!("-configuration={}", request.build_type));
+    args.push(format!("-archivedirectory={}", request.output_directory));
 
     // Standard flags
-    command.arg("-build");
-    command.arg("-cook");
-    command.arg("-stage");
-    command.arg("-archive");
-    command.arg("-unattended");
-    command.arg("-nop4");
+    args.push("-build".to_string());
+    args.push("-cook".to_string());
+    args.push("-stage".to_string());
+    args.push("-archive".to_string());
+    args.push("-unattended".to_string());
+    args.push("-nop4".to_string());
 
     // Platform-specific optimizations
     match request.target_platform.as_str() {
         "Win64" => {
-            command.arg("-targetplatform=Win64");
+            args.push("-targetplatform=Win64".to_string());
         }
         "Mac" => {
-            command.arg("-targetplatform=Mac");
+            args.push("-targetplatform=Mac".to_string());
         }
         "Linux" => {
-            command.arg("-targetplatform=Linux");
+            args.push("-targetplatform=Linux".to_string());
         }
         "Android" => {
-            command.arg("-targetplatform=Android");
-            command.arg("-cookflavor=ASTC");
+            args.push("-targetplatform=Android".to_string());
+            args.push("-cookflavor=ASTC".to_string());
         }
         "iOS" => {
-            command.arg("-targetplatform=IOS");
+            args.push("-targetplatform=IOS".to_string());
         }
         _ => {}
     }
 
-    Ok(command)
+    Ok(args)
 }
 
 fn find_packaged_output(output_dir: &Path, platform: &str) -> Result<PathBuf> {
