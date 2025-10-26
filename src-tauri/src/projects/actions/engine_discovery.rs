@@ -491,10 +491,19 @@ pub fn find_engine_for_project(
         }
         EngineAssociation::Custom(custom_id) => {
             info!("Looking for custom engine: {}", custom_id);
-            // Look for custom engine by ID
+
+            // Try exact match first
             if let Some(engine_path) = settings.engine_programs.custom_engines.get(custom_id) {
-                info!("Found custom engine {}: {}", custom_id, engine_path);
-                Ok(Some(engine_path.clone()))
+                info!("Found exact custom engine match {}: {}", custom_id, engine_path);
+                return Ok(Some(engine_path.clone()));
+            }
+
+            // If custom_id is "Custom-X.Y.Z", also try to find a compatible version
+            // by stripping the "Custom-" prefix and using the same fallback logic
+            if custom_id.starts_with("Custom-") {
+                let version = custom_id.strip_prefix("Custom-").unwrap_or("");
+                info!("Custom engine not found by exact name, trying compatible version search for: {}", version);
+                find_compatible_engine(&app_handle, version, &settings.engine_programs.custom_engines)
             } else {
                 log(
                     &app_handle,
